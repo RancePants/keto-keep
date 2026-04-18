@@ -12,6 +12,8 @@ import Profile from './pages/Profile.jsx';
 import ForumHome from './pages/ForumHome.jsx';
 import SpaceView from './pages/SpaceView.jsx';
 import PostDetail from './pages/PostDetail.jsx';
+import EventsHome from './pages/EventsHome.jsx';
+import EventDetail from './pages/EventDetail.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -70,6 +72,22 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <PostDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/events"
+              element={
+                <ProtectedRoute>
+                  <EventsHome />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/events/:id"
+              element={
+                <ProtectedRoute>
+                  <EventDetail />
                 </ProtectedRoute>
               }
             />

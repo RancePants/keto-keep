@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 8 — Phase 3 schema applied)
+> **Canonical version date:** 2026-04-18 (Session 9 — Phase 3 frontend complete, v0.3.0 deployed)
 
 ---
 
@@ -80,9 +80,9 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.2.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 6 — Phase 2 Forums |
+| Frontend app | v0.3.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 9 — Phase 3 Events & Media |
 | Supabase schema | v3 (Phase 3 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migration: `phase3_events_schema` |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 8 — Phase 3 schema applied |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 9 — Phase 3 frontend complete |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 
 ---
@@ -271,7 +271,7 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Pagination (20 posts per page, Load More)
 - [x] Permalink route `/forums/:slug/:postId`
 
-### Phase 3: Events & Media 🟡 (IN PROGRESS — design drafted, not yet applied)
+### Phase 3: Events & Media ✅ (COMPLETE — v0.3.0 deployed)
 - [x] Decide Zoom-link visibility → **all logged-in members** (no RSVP gate); attendee count shown as soft nudge
 - [x] Draft schema: `events`, `event_rsvps` with enums (`event_type`, `event_status`, `rsvp_status`) → `Project Reference/PHASE3_SCHEMA_DRAFT.sql`
 - [x] Draft RLS policies (events: admin-only write, all-auth read; event_rsvps: own-write, all-auth read)
@@ -280,12 +280,16 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Rance reviewed schema draft → approved with one change (`meetup` → `coaching_circle`); `end_time` stays nullable; `event_rsvps.SELECT` stays open
 - [x] Applied migration `phase3_events_schema` (session 8, 2026-04-18)
 - [x] Ran security + performance advisors. No new findings. Zero `auth_rls_initplan` — the `(select auth.uid())` wrapping is clean. Only pre-existing WARN is `auth_leaked_password_protection` (dashboard toggle, deferred). INFO `unused_index` findings expected on fresh tables.
-- [ ] Event creation UI (admin only) — single event; recurrence UI deferred
-- [ ] Event listing + upcoming calendar view (cards with attendee count)
-- [ ] Event detail + RSVP action (attending / maybe / declined)
-- [ ] Past livestreams section with YouTube embeds
-- [ ] Admin management of events and recordings
-- [ ] Mobile + RLS verification pass
+- [x] Event creation UI (admin only) — `EventFormModal` with title/description/type/status/start/end/zoom/youtube. Recurrence UI deferred as planned.
+- [x] Event listing + upcoming calendar view — `/events` with "Coming up" (cards w/ date block, type badge, attendee count, inline RSVP) + "Past sessions" grid (lazy YouTube embeds).
+- [x] Event detail + RSVP action — `/events/:id` with description, zoom CTA (auth only), three-way RSVP (attending/maybe/declined), attendee list with avatars + profile links.
+- [x] Past livestreams section with YouTube embeds (IntersectionObserver lazy load, no-IO fallback).
+- [x] Admin management — "+ New event" button + per-card ✎ Edit, delete-with-confirm inside the form modal.
+- [x] Dashboard `UpcomingEventsCard` (next 2 upcoming, deep-links to detail).
+- [x] Navbar Events link + Dashboard quick-link activated.
+- [x] Mobile layout pass (stacked header, single-column form rows, responsive padding).
+- [x] RLS smoke test via SQL — all 8 policies confirmed: events SELECT=authenticated, INSERT/UPDATE/DELETE=is_admin; event_rsvps SELECT=authenticated, INSERT/UPDATE require own user_id, DELETE self-or-admin. All `auth.uid()` wrapped.
+- [x] Bumped to v0.3.0, committed, pushed, verified Cloudflare deploy.
 
 ### Phase 4: Lifestyle Course / LMS 🔲 (NOT STARTED)
 - [ ] Database schema: `courses`, `modules`, `lessons`, `lesson_progress`
@@ -344,6 +348,10 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Phase 3: event_rsvps SELECT open to all authenticated members | Enables attendee lists and counts without a SECURITY DEFINER view. Matches the community ethos. Easy to tighten later if privacy becomes a requirement. |
 | 2026-04-18 | Phase 3: dedicated enums (`event_type`, `event_status`, `rsvp_status`) | Type safety at the DB level. Matches the `app_role` precedent from Phase 1. Extensible via `ALTER TYPE ADD VALUE`. |
 | 2026-04-18 | Phase 3: `created_by` FK → `auth.users` (not profiles) | Consistent with forum_posts.author_id. Client-side join fetches the display_name + avatar. |
+| 2026-04-18 | Phase 3: event type badges use subtle palette differentiation (not saturated colors) | Community bulletin board vibe, not corporate calendar. Each type gets a tinted background + matching border + readable text — live_call=amber, workshop=green, coaching_circle=terracotta, q_and_a=plum, other=sand. |
+| 2026-04-18 | Phase 3: admin event CRUD uses a modal (new primitive) — not inline composer like forums | Forms for events have more fields (title, description, type, status, 2 datetimes, zoom, youtube) than forum posts. Modal keeps the `/events` page clean and reuses for both create and edit. First time we've introduced a modal primitive — `Modal.jsx` under `components/events/` for now; promote to shared if another feature needs it. |
+| 2026-04-18 | Phase 3: YouTube embed is IntersectionObserver-gated (200px rootMargin) | Past sessions grid can render many iframes. Lazy-loading avoids hammering the browser on scroll and respects data. Fallback path (`IntersectionObserver` undefined) also passes the `react-hooks/set-state-in-effect` lint rule by deferring via `setTimeout(0)`. |
+| 2026-04-18 | Phase 3: data-loading effects defer with `await Promise.resolve()` before any setState | Matches SpaceView / ForumHome pattern. Satisfies `react-hooks/set-state-in-effect` (no synchronous setState inside an effect body) and `react-hooks/preserve-manual-memoization` when `useCallback` deps use full objects (`user`) rather than narrower properties (`user?.id`) the compiler inferred. |
 
 ---
 
@@ -394,11 +402,11 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 3 — IN PROGRESS (schema applied and advisor-clean; frontend build next)
-**Last Updated:** 2026-04-18 (Session 8)
-**Frontend Version:** v0.2.0 (unchanged — no deploy this session)
-**Supabase Schema:** v3 — `phase3_events_schema` migration applied. Tables `events`, `event_rsvps` live with RLS. Enums `event_type` (includes `coaching_circle`, NOT `meetup`), `event_status`, `rsvp_status` created.
-**Status:** Schema applied. Advisors clean — zero new findings. Ready for Phase 3 frontend build next session (event listing/calendar, event detail + RSVP, past livestreams, admin CRUD).
+**Current Phase:** Phase 3 — COMPLETE (Events & Media frontend shipped as v0.3.0)
+**Last Updated:** 2026-04-18 (Session 9)
+**Frontend Version:** v0.3.0 (deployed via Cloudflare Workers auto-deploy from main)
+**Supabase Schema:** v3 — unchanged this session. Tables `events`, `event_rsvps` live with RLS.
+**Status:** `/events` list + `/events/:id` detail + admin CRUD modal + dashboard `UpcomingEventsCard` + navbar entry all live. Lint clean, build clean, RLS policies verified by inspection. Ready for Phase 4 (Lifestyle Course / LMS).
 
 ---
 
@@ -475,6 +483,43 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 - Third task: Plan the UI (space listing, post list, post detail, create post, reply threading)
 - Decision needed: image support in posts — public or private storage bucket?
 - No blockers. Ready to build.
+
+### Session 9 — 2026-04-18 (Claude Code — Phase 3 frontend build + deploy v0.3.0)
+**Goal:** Build `/events` + `/events/:id`, admin event CRUD, dashboard Upcoming Events card, navbar link, mobile + RLS test, ship v0.3.0.
+
+**What was done:**
+- Created `src/lib/eventHelpers.js` — enum labels, RSVP labels/emoji, date formatters, YouTube URL parser (watch/youtu.be/shorts/embed), `datetime-local` ↔ ISO round-trip.
+- Built shared primitives under `src/components/events/`:
+  - `EventTypeBadge.jsx` — subtle tinted pill per type.
+  - `YoutubeEmbed.jsx` — IntersectionObserver-gated iframe (200px rootMargin), lazy loaded.
+  - `Modal.jsx` — reusable modal primitive (backdrop click, Escape key, body scroll lock).
+  - `RsvpControls.jsx` — three-way RSVP buttons (attending/maybe/declined) with Supabase upsert + toggle-off delete.
+  - `AttendeeList.jsx` — Going / Maybe groups with UserAvatar + profile link chips.
+  - `EventCard.jsx` — upcoming-event card with date block, badges, truncated description, attendee count footer, inline RSVP.
+  - `EventFormModal.jsx` — admin create/edit/delete form inside Modal primitive. Validates title, start, end-after-start, parseable YouTube URL.
+  - `UpcomingEventsCard.jsx` — dashboard panel showing next 2 upcoming events with "See all →" link.
+- Built pages:
+  - `src/pages/EventsHome.jsx` — `/events`. Parallel queries for upcoming (scheduled/live, ASC) and past (completed + youtube, DESC, limit 12). Single RSVP fetch keyed by `event_id`. Optimistic RSVP updates. Admin: "+ New event" header button + per-card edit.
+  - `src/pages/EventDetail.jsx` — `/events/:id`. Fetches event, RSVPs, attendee profiles. Branches render: upcoming shows description + zoom CTA + RSVP + "Who's coming"; completed shows YouTube embed front-and-center + description + "Who was there". Admin edit opens form modal.
+- Wired routes (`/events`, `/events/:id` — both `ProtectedRoute`), added navbar Events link, replaced dashboard's "Events coming soon" disabled-link with real link + inserted `<UpcomingEventsCard />`.
+- Authored `src/styles/events.css` (~530 lines) — matches forum card rhythm, subtle type-badge palette, full event-detail layout, modal primitive styles, 560px mobile breakpoint. Imported from `index.css`.
+- Lint pass → fixed `react-hooks/set-state-in-effect` and `react-hooks/preserve-manual-memoization` by (a) deferring effect setState via `await Promise.resolve()`, (b) using `user` (not `user?.id`) in useCallback deps.
+- `npm run build` → 490 KB JS / 34 KB CSS, clean.
+- RLS smoke test via SQL (`execute_sql`): confirmed 8 policies across events + event_rsvps, all `auth.uid()` wrapped in `(select ...)`.
+- Bumped `package.json` to `0.3.0`, rebuilt to confirm footer pulls from `pkg.version`, committed + pushed — Cloudflare auto-deploy picks up from `main`.
+
+**Decisions made:**
+- Modal as a new primitive (see Architecture & Design Decisions table). Lives under `components/events/` until a second feature needs it.
+- Subtle per-type badge palette — community bulletin board, not corporate calendar.
+- Effect data-loaders always defer setState via `await Promise.resolve()` (matches SpaceView pattern and satisfies React Compiler lint rules).
+
+**Next Session Handoff:**
+- Begin **Phase 4: Lifestyle Course / LMS**.
+- First design pass: `courses`, `modules`, `lessons`, `lesson_progress` schema + RLS. Reuse `(select auth.uid())` wrapping, `is_admin()`, `handle_updated_at()` pattern.
+- Scope call needed up-front: lesson content format (markdown text, embedded video, both?) and whether progress is per-lesson-completed or per-percent-watched.
+- Recurring event UI is still deferred — if scheduling needs it before Phase 5 polish, add a lightweight RRULE editor before LMS lands.
+- Open question still open (non-blocking): Co-Host #3 name.
+- No blockers.
 
 ### Session 8 — 2026-04-18 (Claude Code — Phase 3 schema applied)
 **Goal:** Apply Phase 3 schema, run both advisors, fix any findings. No frontend build this session.

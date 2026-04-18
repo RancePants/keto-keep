@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
+import UpcomingEventsCard from '../components/events/UpcomingEventsCard.jsx';
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -22,6 +23,8 @@ export default function Dashboard() {
         </p>
       </section>
 
+      <UpcomingEventsCard />
+
       <section className="panel">
         <h2 className="panel-title">Quick links</h2>
         <ul className="quick-links">
@@ -34,8 +37,8 @@ export default function Dashboard() {
             <span className="muted">Posts, replies, and reactions.</span>
           </li>
           <li>
-            <span className="disabled-link">Events</span>
-            <span className="muted">Coming soon.</span>
+            <Link to="/events">Events</Link>
+            <span className="muted">Live calls, workshops, recordings.</span>
           </li>
           <li>
             <span className="disabled-link">Course</span>

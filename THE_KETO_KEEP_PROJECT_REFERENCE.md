@@ -325,6 +325,12 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Stay on Cloudflare Workers with Git auto-deploy | Workers Builds supports GitHub integration natively. No need to migrate to Pages. |
 | 2026-04-18 | Dedicated build API token per project | Avoid cross-project token dependencies. `keto-keep build token` replaces shared FSH token. |
 | 2026-04-18 | Start gate reads reference file via Filesystem MCP | No need to maintain stale project attachment. Disk read is always current. |
+| 2026-04-18 | Private `forum-images` bucket (not public) | Low image volume expected (~10/week even in large communities). Consistent pattern with avatars. Easier to loosen later than tighten. |
+| 2026-04-18 | Feed/wall-style forum UI (not traditional click-through) | Matches Mighty Networks Spaces and Facebook feed UX that members are used to. Posts render inline with full body; replies expand underneath. |
+| 2026-04-18 | Two-level reply threading (post → reply → reply-to-reply, no deeper) | Balances conversation depth with UI simplicity. Enforced at DB level (trigger) and UI level (no reply button on nested replies). |
+| 2026-04-18 | Curated emoji reaction set in frontend code, not DB | 6 emojis (🥩 ❤️ 😂 🎉 🔥 💪) can be changed without schema migration. 🥩 chosen over 👍 for community brand fit. |
+| 2026-04-18 | RLS policies use `(select auth.uid())` wrapper | Performance advisor flagged `auth_rls_initplan` — wrapping in subselect ensures auth.uid() is evaluated once per query, not per row. |
+| 2026-04-18 | Author profiles fetched via client-side join | FK on forum_posts points to `auth.users`, not `profiles`. Separate profile fetch avoids cross-table RLS complexity. |
 
 ---
 
@@ -367,6 +373,9 @@ The `protect_role_change` trigger prevents non-admins from changing roles — bu
 
 ### Always use try/catch/finally in AuthContext
 Every async operation in the auth context must have error handling that guarantees loading states are cleared. A single unhandled rejection can leave the app stuck on a spinner forever.
+
+### Wrap auth.uid() in (select ...) in RLS policies
+The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is used directly in RLS policies — it gets evaluated per-row instead of once per query. Wrapping it as `(select auth.uid())` turns it into a subselect that's evaluated once. Apply this pattern to all RLS policies from the start.
 
 ---
 
@@ -427,29 +436,6 @@ Every async operation in the auth context must have error handling that guarante
 **What was done:** Diagnosed via Chrome DevTools. Fixed: removed StrictMode, raised `lockAcquireTimeout` to 10s, hardened `onAuthStateChange` cleanup. Deployed v0.1.1. Verified working. Established GitHub reference file as single source of truth.
 **Next:** Password reset flow, Workers vs Pages decision, auto-deploy pipeline, mobile testing.
 
-### Session 6 — 2026-04-18 (Claude Code — Phase 2 build)
-**Goal:** Build and deploy Phase 2: Forums (schema, RLS, storage, frontend).
-**What was done:**
-- Applied `phase2_forums_schema` migration: `forum_spaces`, `forum_posts`, `forum_replies`, `forum_reactions`. RLS enabled on all, policies for view/insert/update/delete. Admin-only enforcement via `is_admin()` (reused from Phase 1). Two-level reply depth enforced by `enforce_reply_depth()` trigger.
-- Seeded 4 spaces: General Discussion, Help & Support, Celebrating Wins, Admin HQ (locked).
-- Created private `forum-images` storage bucket with INSERT (own folder), SELECT (all authenticated), DELETE (owner or admin) policies.
-- Added performance indexes on all FK columns and sort keys.
-- After perf advisor flagged `auth_rls_initplan`, reworked all RLS policies to use `(select auth.uid())` via `phase2_forums_rls_initplan_optimization` migration. Advisors clean except pre-existing `auth_leaked_password_protection` and INFO-level unused-index notices (expected on fresh tables).
-- Built frontend: `/forums` (space grid), `/forums/:slug` (feed with composer + paginated post cards), `/forums/:slug/:postId` (permalink with breadcrumbs). Components: `PostComposer`, `PostCard`, `ReplySection`, `ReplyItem`, `ReplyComposer`, `EmojiReactionBar`, `ForumModTools`, `UserAvatar`. Shared `usePrivateImage` hook (cached blob URLs) powers both avatars and forum images.
-- Curated 6-emoji reaction set (🥩 ❤️ 😂 🎉 🔥 💪) defined in `forumHelpers.js` — change without schema updates.
-- Added Forums to navbar; unwired "coming soon" Dashboard link.
-- Lint + production build clean. Bumped to v0.2.0.
-
-**Decisions made:**
-- Private `forum-images` bucket (matches avatars pattern; images only meaningful to members)
-- Emoji set in code, not DB, so it can be tuned without a migration
-- Optimistic-ish reactions via insert/delete + re-fetch (simple, avoids drift)
-- Author profiles fetched separately (client-side join) since FK points to `auth.users`, not `profiles`
-
-**Next Session Handoff:**
-- Begin **Phase 3: Events & Media**. No blockers.
-- Open question still pending from Phase 2 roadmap: Co-Host #3 name (not blocking).
-
 ### Session 5 — 2026-04-18 (Chat + Claude Code)
 **Goal:** Complete remaining Phase 1 items and close out the phase.
 **What was done:**
@@ -476,6 +462,48 @@ Every async operation in the auth context must have error handling that guarante
 - Decision needed: image support in posts — public or private storage bucket?
 - No blockers. Ready to build.
 
+### Session 6 — 2026-04-18 (Chat + Claude Code — Phase 2)
+**Goal:** Design and build Phase 2: Forums.
+**What was done:**
+
+*Chat (design):*
+- Decided private `forum-images` bucket (low image volume, consistent with avatars pattern)
+- Designed full schema: `forum_spaces`, `forum_posts`, `forum_replies`, `forum_reactions`
+- Designed RLS policies for all 4 tables with admin-only Admin HQ enforcement
+- Designed two-level reply nesting with `parent_reply_id` + depth enforcement trigger
+- Added emoji reactions table with curated picker (🥩 ❤️ 😂 🎉 🔥 💪)
+- Chose feed/wall-style UI over traditional click-through forum
+- Wrote comprehensive Claude Code handoff
+
+*Claude Code (build):*
+- Applied `phase2_forums_schema` migration with all tables, RLS, triggers
+- Seeded 4 forum spaces
+- Created private `forum-images` storage bucket with policies
+- After perf advisor flagged `auth_rls_initplan`, optimized all RLS policies to use `(select auth.uid())`
+- Built feed-style frontend: space grid, post composer, post cards with inline replies, emoji reactions, admin mod tools, pagination, permalinks
+- Shared `usePrivateImage` hook for avatar and forum image fetching
+- Added Forums to navbar, activated Dashboard quick-link
+- Deployed v0.2.0 (commit 894b90b)
+
+**Decisions made:**
+- Private `forum-images` bucket (low volume, consistent pattern, easier to loosen than tighten)
+- Feed/wall-style UI (matches Mighty Networks and Facebook UX members are used to)
+- Two-level reply threading (post → reply → reply-to-reply, enforced by DB trigger + UI)
+- Curated emoji set in frontend code, not DB (🥩 replaces 👍 for brand fit)
+- RLS policies use `(select auth.uid())` wrapper per performance advisor
+- Author profiles fetched via client-side join (FK points to auth.users, not profiles)
+- Emoji set in code so it can be tuned without migration
+- Optimistic-ish reactions via insert/delete + re-fetch
+
+**Next Session Handoff:**
+- Begin **Phase 3: Events & Media**
+- First task: Design schema for `events` and `event_rsvps` tables
+- Second task: Design RLS policies (admin-only event creation, member RSVP)
+- Third task: Plan UI for event listing, RSVP, and past livestreams (YouTube embeds)
+- Decision needed: Zoom link visibility — visible to all members, or only after RSVP?
+- Remaining from Phase 2: manual RLS testing as member vs admin, mobile verification of forums
+- No blockers. Ready to build.
+
 ---
 
 ## OPEN QUESTIONS & DECISIONS NEEDED
@@ -484,7 +512,6 @@ Every async operation in the auth context must have error handling that guarante
 - Community branding: logo, color palette, typography (can be decided later, but needed before public launch)
 - Custom domain name (if desired — Cloudflare provides a free `*.workers.dev` subdomain to start)
 - Messaging approach in Phase 5: in-app DMs vs. email-based communication
-- Forum image uploads: public or private storage bucket? (Phase 2 decision)
 
 ---
 

@@ -14,6 +14,9 @@ import SpaceView from './pages/SpaceView.jsx';
 import PostDetail from './pages/PostDetail.jsx';
 import EventsHome from './pages/EventsHome.jsx';
 import EventDetail from './pages/EventDetail.jsx';
+import CoursesHome from './pages/CoursesHome.jsx';
+import CourseDetail from './pages/CourseDetail.jsx';
+import LessonView from './pages/LessonView.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -88,6 +91,30 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <EventDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/courses"
+              element={
+                <ProtectedRoute>
+                  <CoursesHome />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/courses/:slug"
+              element={
+                <ProtectedRoute>
+                  <CourseDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/courses/:slug/:lessonId"
+              element={
+                <ProtectedRoute>
+                  <LessonView />
                 </ProtectedRoute>
               }
             />

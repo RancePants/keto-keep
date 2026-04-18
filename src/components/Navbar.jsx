@@ -66,6 +66,9 @@ export default function Navbar() {
               <NavLink to="/events" onClick={close} className="nav-link">
                 Events
               </NavLink>
+              <NavLink to="/courses" onClick={close} className="nav-link">
+                Courses
+              </NavLink>
               <NavLink to="/profile" onClick={close} className="nav-link">
                 Profile
               </NavLink>

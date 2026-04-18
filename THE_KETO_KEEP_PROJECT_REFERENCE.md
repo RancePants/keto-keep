@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 6 — Phase 2)
+> **Canonical version date:** 2026-04-18 (Session 7 — Phase 3 design)
 
 ---
 
@@ -82,7 +82,8 @@ All three co-hosts need full admin access within the platform.
 |----------|---------|----------|-------------|
 | Frontend app | v0.2.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 6 — Phase 2 Forums |
 | Supabase schema | v2 (Phase 2 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | migrations: phase2_forums_schema, phase2_forum_images_bucket_policies, phase2_forums_rls_initplan_optimization |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 6 finalized |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 7 — Phase 3 design |
+| Phase 3 schema draft | DRAFT — not applied | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 7 |
 
 ---
 
@@ -270,15 +271,21 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Pagination (20 posts per page, Load More)
 - [x] Permalink route `/forums/:slug/:postId`
 
-### Phase 3: Events & Media 🔲 (NOT STARTED)
-- [ ] Database schema: `events`, `event_rsvps`
-- [ ] RLS policies for events tables
-- [ ] Event creation (admin only)
-- [ ] Event listing / calendar view
-- [ ] RSVP functionality for members
-- [ ] Zoom link display (members only or post-RSVP)
+### Phase 3: Events & Media 🟡 (IN PROGRESS — design drafted, not yet applied)
+- [x] Decide Zoom-link visibility → **all logged-in members** (no RSVP gate); attendee count shown as soft nudge
+- [x] Draft schema: `events`, `event_rsvps` with enums (`event_type`, `event_status`, `rsvp_status`) → `Project Reference/PHASE3_SCHEMA_DRAFT.sql`
+- [x] Draft RLS policies (events: admin-only write, all-auth read; event_rsvps: own-write, all-auth read)
+- [x] Include `recurrence_rule` (RFC 5545 RRULE) + `recurrence_parent_id` columns from the start (UI won't exercise them in Phase 3)
+- [x] Past livestreams share the events table (`status='completed'` + `youtube_embed_url`) — no separate table
+- [ ] Rance reviews schema draft → approves / requests edits
+- [ ] Apply migration as `phase3_events_schema`
+- [ ] Run security + performance advisors; remediate findings
+- [ ] Event creation UI (admin only) — single event; recurrence UI deferred
+- [ ] Event listing + upcoming calendar view (cards with attendee count)
+- [ ] Event detail + RSVP action (attending / maybe / declined)
 - [ ] Past livestreams section with YouTube embeds
 - [ ] Admin management of events and recordings
+- [ ] Mobile + RLS verification pass
 
 ### Phase 4: Lifestyle Course / LMS 🔲 (NOT STARTED)
 - [ ] Database schema: `courses`, `modules`, `lessons`, `lesson_progress`
@@ -331,6 +338,12 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Curated emoji reaction set in frontend code, not DB | 6 emojis (🥩 ❤️ 😂 🎉 🔥 💪) can be changed without schema migration. 🥩 chosen over 👍 for community brand fit. |
 | 2026-04-18 | RLS policies use `(select auth.uid())` wrapper | Performance advisor flagged `auth_rls_initplan` — wrapping in subselect ensures auth.uid() is evaluated once per query, not per row. |
 | 2026-04-18 | Author profiles fetched via client-side join | FK on forum_posts points to `auth.users`, not `profiles`. Separate profile fetch avoids cross-table RLS complexity. |
+| 2026-04-18 | Phase 3: Zoom links visible to all logged-in members (no RSVP gate) | Matches small-trust-based community ethos. RSVP is still tracked and shown as soft attendee count nudge. Simpler RLS, less friction. |
+| 2026-04-18 | Phase 3: include `recurrence_rule` (RFC 5545) from day one | Recurring events are a near-certain future requirement. Retrofitting a recurrence column later would require re-writing event queries. RRULE is the standard, one row per series. Phase 3 UI leaves it NULL. |
+| 2026-04-18 | Phase 3: past livestreams share the events table | A completed event with a `youtube_embed_url` IS a past livestream. Separate table would duplicate fields and fragment the calendar. Single source of truth. |
+| 2026-04-18 | Phase 3: event_rsvps SELECT open to all authenticated members | Enables attendee lists and counts without a SECURITY DEFINER view. Matches the community ethos. Easy to tighten later if privacy becomes a requirement. |
+| 2026-04-18 | Phase 3: dedicated enums (`event_type`, `event_status`, `rsvp_status`) | Type safety at the DB level. Matches the `app_role` precedent from Phase 1. Extensible via `ALTER TYPE ADD VALUE`. |
+| 2026-04-18 | Phase 3: `created_by` FK → `auth.users` (not profiles) | Consistent with forum_posts.author_id. Client-side join fetches the display_name + avatar. |
 
 ---
 
@@ -381,10 +394,10 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 2 — COMPLETE ✅
-**Last Updated:** 2026-04-18 (Session 6)
-**Frontend Version:** v0.2.0 (Cloudflare Workers auto-deploy on push to `main`)
-**Status:** Phase 2 Forums fully built and deployed. 4 spaces (3 public + Admin HQ), feed-style UI, posts with images, two-level reply threading with depth-enforcement trigger, emoji reactions on posts + replies, admin mod tools (pin/edit/delete), pagination, permalinks. RLS optimized per performance advisor. Ready for Phase 3: Events & Media.
+**Current Phase:** Phase 3 — IN PROGRESS (design drafted, awaiting schema review)
+**Last Updated:** 2026-04-18 (Session 7)
+**Frontend Version:** v0.2.0 (unchanged — no deploy this session)
+**Status:** Phase 3 design session. Schema + RLS for `events` and `event_rsvps` drafted in `Project Reference/PHASE3_SCHEMA_DRAFT.sql` (NOT YET APPLIED). Includes `event_type` / `event_status` / `rsvp_status` enums, `recurrence_rule` + `recurrence_parent_id` columns for future-proofing, past livestreams via `status='completed'` + `youtube_embed_url` on the events table. Zoom-link decision: visible to all logged-in members (no RSVP gate). Attendee-count nudge on cards. Next: Rance reviews, approves, then we apply migration and start frontend build.
 
 ---
 
@@ -461,6 +474,35 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 - Third task: Plan the UI (space listing, post list, post detail, create post, reply threading)
 - Decision needed: image support in posts — public or private storage bucket?
 - No blockers. Ready to build.
+
+### Session 7 — 2026-04-18 (Claude Code — Phase 3 design)
+**Goal:** Phase 3 kick-off. Confirm version parity, draft Events & Media schema + RLS, update reference file. No deploy this session.
+
+**What was done:**
+- Start gate: confirmed `package.json` v0.2.0 = reference canonical v0.2.0 = Layout.jsx footer (`v{pkg.version}`). All 9 Supabase migrations match the reference. No mismatches.
+- Committed + pushed a docs-only cleanup of the Session 6 log (commit e331b95, consolidating the split Chat/Code entries and adding the Phase 2 design decisions to the table).
+- Drafted `Project Reference/PHASE3_SCHEMA_DRAFT.sql`:
+  - Enums: `event_type` (`live_call`, `workshop`, `q_and_a`, `special_guest`, `meetup`, `other`), `event_status` (`scheduled`, `live`, `completed`, `cancelled`), `rsvp_status` (`attending`, `maybe`, `declined`).
+  - `events` table: title, description, event_type, start_time, end_time, zoom_link, youtube_embed_url, status, recurrence_rule (RRULE, nullable), recurrence_parent_id (nullable self-FK), created_by → auth.users, timestamps, CHECK end ≥ start.
+  - `event_rsvps` table: composite PK (event_id, user_id), rsvp_status, timestamps, FKs cascade on delete.
+  - Indexes on start_time, status, created_by, user_id, and a partial index on recurrence_parent_id.
+  - RLS: events = admin-only write, all-auth read. event_rsvps = own-write, own-cancel-or-admin-delete, all-auth read (enables attendee lists + counts).
+  - All `auth.uid()` wrapped as `(select auth.uid())` per Phase 2 pattern.
+  - Reuses Phase 1 `handle_updated_at()` and `is_admin()`.
+
+**Decisions made:**
+- Zoom link visible to all logged-in members (no RSVP gate). Attendee count shown as soft nudge.
+- `recurrence_rule` (RFC 5545) + `recurrence_parent_id` included from the start even though Phase 3 UI won't exercise them.
+- Past livestreams share the events table (`status='completed'` + `youtube_embed_url`).
+- `event_rsvps.SELECT` open to all authenticated members for simple attendee lists/counts — easy to tighten later.
+- Dedicated enums for type/status/rsvp_status.
+- `created_by` FK → `auth.users` (same pattern as forum_posts.author_id).
+
+**Next Session Handoff:**
+- Rance reviews `Project Reference/PHASE3_SCHEMA_DRAFT.sql`. Push back on any design point.
+- On approval: apply as migration `phase3_events_schema` via Supabase MCP. Run `security` + `performance` advisors. Remediate any `auth_rls_initplan` findings (should be none — already wrapped).
+- Then begin Phase 3 frontend: event listing + calendar, event detail + RSVP, past livestreams section, admin event CRUD.
+- Open question still open: Co-Host #3 name (non-blocking).
 
 ### Session 6 — 2026-04-18 (Chat + Claude Code — Phase 2)
 **Goal:** Design and build Phase 2: Forums.

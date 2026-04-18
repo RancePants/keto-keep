@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 7 — Phase 3 design)
+> **Canonical version date:** 2026-04-18 (Session 8 — Phase 3 schema applied)
 
 ---
 
@@ -81,9 +81,9 @@ All three co-hosts need full admin access within the platform.
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
 | Frontend app | v0.2.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 6 — Phase 2 Forums |
-| Supabase schema | v2 (Phase 2 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | migrations: phase2_forums_schema, phase2_forum_images_bucket_policies, phase2_forums_rls_initplan_optimization |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 7 — Phase 3 design |
-| Phase 3 schema draft | DRAFT — not applied | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 7 |
+| Supabase schema | v3 (Phase 3 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migration: `phase3_events_schema` |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 8 — Phase 3 schema applied |
+| Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 
 ---
 
@@ -277,9 +277,9 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Draft RLS policies (events: admin-only write, all-auth read; event_rsvps: own-write, all-auth read)
 - [x] Include `recurrence_rule` (RFC 5545 RRULE) + `recurrence_parent_id` columns from the start (UI won't exercise them in Phase 3)
 - [x] Past livestreams share the events table (`status='completed'` + `youtube_embed_url`) — no separate table
-- [ ] Rance reviews schema draft → approves / requests edits
-- [ ] Apply migration as `phase3_events_schema`
-- [ ] Run security + performance advisors; remediate findings
+- [x] Rance reviewed schema draft → approved with one change (`meetup` → `coaching_circle`); `end_time` stays nullable; `event_rsvps.SELECT` stays open
+- [x] Applied migration `phase3_events_schema` (session 8, 2026-04-18)
+- [x] Ran security + performance advisors. No new findings. Zero `auth_rls_initplan` — the `(select auth.uid())` wrapping is clean. Only pre-existing WARN is `auth_leaked_password_protection` (dashboard toggle, deferred). INFO `unused_index` findings expected on fresh tables.
 - [ ] Event creation UI (admin only) — single event; recurrence UI deferred
 - [ ] Event listing + upcoming calendar view (cards with attendee count)
 - [ ] Event detail + RSVP action (attending / maybe / declined)
@@ -394,10 +394,11 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 3 — IN PROGRESS (design drafted, awaiting schema review)
-**Last Updated:** 2026-04-18 (Session 7)
+**Current Phase:** Phase 3 — IN PROGRESS (schema applied and advisor-clean; frontend build next)
+**Last Updated:** 2026-04-18 (Session 8)
 **Frontend Version:** v0.2.0 (unchanged — no deploy this session)
-**Status:** Phase 3 design session. Schema + RLS for `events` and `event_rsvps` drafted in `Project Reference/PHASE3_SCHEMA_DRAFT.sql` (NOT YET APPLIED). Includes `event_type` / `event_status` / `rsvp_status` enums, `recurrence_rule` + `recurrence_parent_id` columns for future-proofing, past livestreams via `status='completed'` + `youtube_embed_url` on the events table. Zoom-link decision: visible to all logged-in members (no RSVP gate). Attendee-count nudge on cards. Next: Rance reviews, approves, then we apply migration and start frontend build.
+**Supabase Schema:** v3 — `phase3_events_schema` migration applied. Tables `events`, `event_rsvps` live with RLS. Enums `event_type` (includes `coaching_circle`, NOT `meetup`), `event_status`, `rsvp_status` created.
+**Status:** Schema applied. Advisors clean — zero new findings. Ready for Phase 3 frontend build next session (event listing/calendar, event detail + RSVP, past livestreams, admin CRUD).
 
 ---
 
@@ -474,6 +475,32 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 - Third task: Plan the UI (space listing, post list, post detail, create post, reply threading)
 - Decision needed: image support in posts — public or private storage bucket?
 - No blockers. Ready to build.
+
+### Session 8 — 2026-04-18 (Claude Code — Phase 3 schema applied)
+**Goal:** Apply Phase 3 schema, run both advisors, fix any findings. No frontend build this session.
+
+**What was done:**
+- Updated `Project Reference/PHASE3_SCHEMA_DRAFT.sql` per Rance's review: `event_type` enum value `meetup` replaced with `coaching_circle`. Final set: `live_call`, `workshop`, `q_and_a`, `special_guest`, `coaching_circle`, `other`. `end_time` confirmed nullable. `event_rsvps.SELECT` stays open to all authenticated.
+- Applied migration `phase3_events_schema` via Supabase MCP. Created tables `public.events`, `public.event_rsvps`, three enums, six indexes, two `handle_updated_at` triggers, nine RLS policies.
+- Ran security advisor: only pre-existing `auth_leaked_password_protection` WARN (dashboard toggle, deferred). No schema-level findings.
+- Ran performance advisor: zero `auth_rls_initplan` findings (confirms the `(select auth.uid())` wrapping pattern is applied correctly). Eleven INFO-level `unused_index` findings — all expected on fresh tables with no query history yet; includes legacy forum indexes that were also flagged last session. No action.
+- No remediation required.
+
+**Decisions made:**
+- Defer enabling leaked-password protection to Phase 5 (Polish) — it's a dashboard toggle with no code impact, and it sometimes affects signup UX during development.
+- Keep the "unused_index" findings as-is — they turn green automatically once real queries hit the indexes in Phase 3 frontend.
+
+**Next Session Handoff:**
+- Begin Phase 3 **frontend build** (Claude Code, Opus 4.7).
+- Scope for the first Phase 3 frontend session:
+  1. `/events` page — upcoming events list + past livestreams section (YouTube embeds).
+  2. `/events/:id` detail page — full description, zoom link (all authenticated), RSVP action + attendee count.
+  3. Admin event CRUD — create/edit/delete forms (admins only). Recurrence UI intentionally deferred.
+  4. Navbar link for "Events". Dashboard quick-link activation.
+  5. Mobile verification + RLS smoke test (member vs admin).
+  6. Bump version to v0.3.0 on deploy.
+- Reuse patterns from Phase 2: `UserAvatar`, `usePrivateImage` (if event images added later — not scoped now), existing admin-gating via `useAuth` + `is_admin`.
+- Open question still open (non-blocking): Co-Host #3 name.
 
 ### Session 7 — 2026-04-18 (Claude Code — Phase 3 design)
 **Goal:** Phase 3 kick-off. Confirm version parity, draft Events & Media schema + RLS, update reference file. No deploy this session.

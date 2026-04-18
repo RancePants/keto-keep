@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 14 — Phase 5A frontend shipped, v0.5.0)
+> **Canonical version date:** 2026-04-18 (Session 15 — Phase 5B-1 schema applied)
 
 ---
 
@@ -81,11 +81,12 @@ All three co-hosts need full admin access within the platform.
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
 | Frontend app | v0.5.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 14 — Phase 5A frontend (Enhanced Profiles + Badges + Interest Tags) |
-| Supabase schema | v5A (Phase 5A applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migrations: `phase5a_profiles_badges_tags` + `phase5a_cover_fk_indexes` |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 14 — Phase 5A frontend shipped |
+| Supabase schema | v5B1 (Phase 5B-1 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migration: `phase5b1_directory_admin_tags_member_mgmt` |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 15 — Phase 5B-1 schema applied |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 | Phase 5A schema draft | APPLIED (reference copy) | `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` | session 13 — matches applied migration (incl. FK cover indexes) |
+| Phase 5B-1 schema draft | APPLIED (reference copy) | `Project Reference/PHASE5B1_SCHEMA_DRAFT.sql` | session 15 — matches applied migration |
 
 ---
 
@@ -320,16 +321,26 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Ran security + performance advisors. Security: only pre-existing `auth_leaked_password_protection` WARN. Performance: two new `unindexed_foreign_keys` INFOs on `member_badges.awarded_by` and `tags.created_by` → remediated with follow-on migration `phase5a_cover_fk_indexes`. Zero `auth_rls_initplan` findings (confirms `(select auth.uid())` wrapping). Remaining `unused_index` INFOs all expected on fresh indexes.
 - [x] Frontend shipped (v0.5.0, session 14): profile edit form with 6 new fields + interest-tag chip row; public profile view (dietary pill, journey, location, about, my-why, badge showcase, interest chips); admin badge-award modal (coach_spotlight manual; tenure + course_complete auto-award stubs reserved); admin tag management page at `/admin/tags`; dietary + badges rendered inline on forum posts, replies, event attendees, and dashboard welcome header.
 
+**Phase 5B-1 — Directory + Admin Tags + Member Management** (schema applied session 15)
+- [x] Draft schema: `member_status` enum + `profiles.status` column; `admin_tags` + `member_admin_tags` tables (admin-only RLS); RESTRICTIVE write-gate policies on six member-writable tables (`forum_posts`, `forum_replies`, `forum_reactions`, `event_rsvps`, `lesson_progress`, `member_tags`); helper functions `is_active_or_admin()`, `set_member_status()`, `delete_member()`; 6 seed admin tags → `Project Reference/PHASE5B1_SCHEMA_DRAFT.sql`
+- [x] Applied migration `phase5b1_directory_admin_tags_member_mgmt` (session 15, 2026-04-18)
+- [x] Ran security + performance advisors. Security: only pre-existing `auth_leaked_password_protection` WARN. Performance: zero `auth_rls_initplan`, zero `unindexed_foreign_keys` (draft ships FK indexes for `admin_tags.created_by`, `member_admin_tags.assigned_by`, `member_admin_tags.tag_id`). Remaining `unused_index` INFOs expected on fresh indexes.
+- [ ] Frontend: `/members` directory page with search + filters (dietary, journey, state, interest tags)
+- [ ] Frontend: admin-only views — admin tag chips on directory cards, admin tag filter, status filter, admin tag assignment UI
+- [ ] Frontend: suspend / ban / delete member actions in admin management view
+- [ ] Frontend: status indicator for admins, suspended/banned UX (banner + friendly write-gate error)
+- [ ] Frontend: AuthContext sign-out-if-banned check (defense-in-depth; Supabase Auth ban is later hardening)
+- [ ] `/admin` hub index page linking `/admin/tags`, `/members` admin view, directory filters (deferred from Phase 5A)
+
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email)
-- [ ] Internal admin-only tag system (separate from public interest tags — §7 of feature requirements)
-- [ ] Member directory / search (leverages new profile fields + tags)
 - [ ] Notification system (at minimum: in-app indicators)
 - [ ] Performance and UX polish
 - [ ] Accessibility review
 - [ ] Supabase security + performance advisor audit (both types, run separately)
 - [ ] Final RLS policy review across all tables
 - [ ] Enable Supabase leaked-password protection (deferred from Phase 3)
+- [ ] Auth-level ban via Edge Function / `supabase.auth.admin.updateUserById` (hardening on top of Phase 5B-1 status column)
 
 ---
 
@@ -397,6 +408,12 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Phase 5A frontend: `useMemberBadges(userIds)` shared hook for inline badge rendering | Single query regardless of how many author IDs in view (forum feed, reply list, attendee list). Hook takes a sorted+deduped join key to avoid effect thrash when callers pass fresh arrays with the same IDs. Lets new surfaces drop in badge rendering without re-implementing the fetch. |
 | 2026-04-18 | Phase 5A frontend: inline profile meta fetched per surface, not via a central store | Each surface (SpaceView / ReplySection / PostDetail / EventDetail / Dashboard) already has its own data-loading path. Adding a global member-profile cache would be premature — the per-surface fetch costs one query per page load and the data is stable. Revisit if multiple surfaces start stepping on each other. |
 | 2026-04-18 | Phase 5A frontend: `/admin/tags` page (not inline on an Admin hub) | No admin hub exists yet. A focused page keeps the surface area minimal; later Phase 5B can introduce an `/admin` index that links to it alongside the upcoming admin-tag system and directory tools. |
+| 2026-04-18 | Phase 5B-1: RESTRICTIVE RLS policies as the write-gate mechanism for suspended/banned members | RESTRICTIVE policies are AND'd with the existing PERMISSIVE "own your own row" policies. This means no existing policy needs to be rewritten to add the suspension check — one `is_active_or_admin()` gate per write path covers every table. SELECT is never gated so suspended users can still read (banned users can't log in anyway; this is defense-in-depth). |
+| 2026-04-18 | Phase 5B-1: `member_status` enum on `profiles` (active / suspended / banned) | Three tiers matches the intended admin UX: soft pause (suspend = read-only) and hard block (ban = can't log in + RLS fallback). Enum is extensible via `ALTER TYPE ADD VALUE` if a future "probation" tier is needed. Partial index `WHERE status != 'active'` keeps the RLS lookup cheap — most rows are active. |
+| 2026-04-18 | Phase 5B-1: admin tags are a separate table from public interest tags (`admin_tags` + `member_admin_tags`, not a flag on `tags`) | The visibility story is opposite: public interest tags are readable by all authenticated members, admin tags are invisible to members entirely (admin-only SELECT). Mixing them in one table would require tag-row-level RLS and a "kind" column — more policy surface, easier to leak. Two tables = two simple policy sets. |
+| 2026-04-18 | Phase 5B-1: hard delete for `delete_member()` (cascade auth.users → profiles → everything) | Matches the "it's a community, not a content platform" ethos — when someone is removed, their posts/replies/reactions go with them. Soft-delete-and-anonymize is a heavier pattern that can be added later if members ever ask us to preserve conversations after a deletion. Starting strict, loosening on demand. |
+| 2026-04-18 | Phase 5B-1: `is_active_or_admin()` SECURITY DEFINER helper called from RLS | Same pattern as `is_admin()`: SECURITY DEFINER + `(select auth.uid())` wrapping lets the restrictive policies do a single profiles lookup per query without RLS recursion, and keeps the gate expression one function call instead of an inline subquery. Zero `auth_rls_initplan` advisor findings confirms the wrapping is clean. |
+| 2026-04-18 | Phase 5B-1: admin management functions guard self-action + admin-on-admin | `set_member_status()` and `delete_member()` both refuse to act when `target_id = auth.uid()` or when the target is an admin. Prevents foot-guns (accidentally suspending yourself) and prevents an admin from being weaponized against the other hosts. Auth-level ban (the actual login block) is a later hardening step via Edge Function. |
 
 ---
 
@@ -447,15 +464,44 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5A — COMPLETE (frontend shipped, v0.5.0 deployed)
-**Last Updated:** 2026-04-18 (Session 14)
-**Frontend Version:** v0.5.0 — built and pushed this session; Cloudflare Workers Builds auto-deploys from `main`. Adds Profile editor/viewer with 6 new fields, badge showcase, interest tag chips, admin tag management page, admin badge-award modal, and inline dietary+badge meta on forum posts, replies, event attendees, and dashboard welcome.
-**Supabase Schema:** v5A (unchanged this session) — migrations `phase5a_profiles_badges_tags` + `phase5a_cover_fk_indexes` applied. 14 Phase 5A RLS policies active; RLS smoke test this session confirms all four new tables have `rowsecurity = true` and expected policy set.
-**Status:** Phase 5A end-to-end complete. Lint clean, build clean. Next wave: Phase 5B — member-to-member messaging, internal admin tags, member directory/search, notifications, polish.
+**Current Phase:** Phase 5B-1 — schema applied (frontend pending)
+**Last Updated:** 2026-04-18 (Session 15)
+**Frontend Version:** v0.5.0 (unchanged this session) — Phase 5A frontend deployed on Cloudflare Workers. No frontend changes this session; Phase 5B-1 UI (directory, admin tag management, member management actions) comes next.
+**Supabase Schema:** v5B1 — migration `phase5b1_directory_admin_tags_member_mgmt` applied. Adds `member_status` enum, `profiles.status` column + partial index, `admin_tags` + `member_admin_tags` tables with admin-only RLS (7 policies), 13 RESTRICTIVE write-gate policies across 6 member-writable tables, 3 helper/admin functions (`is_active_or_admin`, `set_member_status`, `delete_member`), 3 FK cover indexes, and 6 seed admin tag rows. Advisors clean: security — only pre-existing `auth_leaked_password_protection` WARN; performance — zero `auth_rls_initplan`, zero `unindexed_foreign_keys`.
+**Status:** Phase 5B-1 schema end-to-end applied and advisor-clean. Next: Phase 5B-1 frontend (directory, admin tag UI, member management actions).
 
 ---
 
 ## SESSION LOG
+
+### Session 15 — 2026-04-18 (Claude Code — Phase 5B-1 schema applied)
+**Goal:** Apply the approved Phase 5B-1 schema draft (member directory, internal admin tags, member management, RLS write gates), run both advisors, remediate any new findings, update reference file, commit + push.
+
+**What was done:**
+- Applied migration `phase5b1_directory_admin_tags_member_mgmt` via Supabase MCP. Created enum `member_status` (active/suspended/banned); added `profiles.status` column (NOT NULL, DEFAULT 'active') with partial index `profiles_status_idx_v2 WHERE status != 'active'`; created `public.admin_tags` + `public.member_admin_tags` tables with admin-only RLS (4 policies on `admin_tags`, 3 on `member_admin_tags`); 3 FK cover indexes (`admin_tags_created_by_idx`, `member_admin_tags_tag_id_idx`, `member_admin_tags_assigned_by_idx`); 3 SECURITY DEFINER functions (`is_active_or_admin()`, `set_member_status(uuid, member_status)`, `delete_member(uuid)`); 13 RESTRICTIVE write-gate policies across 6 member-writable tables (`forum_posts`, `forum_replies`, `forum_reactions`, `event_rsvps`, `lesson_progress`, `member_tags`); seeded 6 admin tags (Needs Follow-up, VIP, New Member, At Risk, Coaching Lead, Inactive).
+- Verified post-apply state via `execute_sql`: `profiles.status` column present with correct enum type and default, `member_status` enum has 3 values in order, both new tables created with `rowsecurity = true`, all 13 RESTRICTIVE `active_gate%` policies registered, all 7 admin tag policies registered, 6 seeded admin tag rows present, all 3 functions exist, partial index exists.
+- Ran security advisor: only pre-existing `auth_leaked_password_protection` WARN (dashboard toggle, still deferred). No schema-level findings.
+- Ran performance advisor: **zero** `auth_rls_initplan` findings (confirms `(select auth.uid())` wrapping is clean on every new policy and on every call through `is_active_or_admin()`). **Zero** `unindexed_foreign_keys` findings (the draft shipped cover indexes for `admin_tags.created_by`, `member_admin_tags.assigned_by`, and `member_admin_tags.tag_id`). Remaining advisor output is `unused_index` INFOs, all expected on fresh indexes and on the pre-existing forum/event/courses tables — they go green once the Phase 5B-1 frontend lands and real queries hit them.
+- Updated reference file: canonical version date (session 15), canonical versions table (schema → v5B1 + Phase 5B-1 draft row as APPLIED), Phase 5 roadmap (5B-1 checklist with schema items checked, 5B later-waves list trimmed), six new entries in Architecture & Design Decisions (RESTRICTIVE gates, `member_status` enum, admin-only tag visibility, hard-delete approach, `is_active_or_admin()` helper, admin self/admin-on-admin guards), Current Status block.
+- Copied `Project Reference/PHASE5B1_SCHEMA_DRAFT.sql` to reflect applied reality (file already existed from Chat drafting session; no content change needed).
+
+**Decisions made:**
+- Phase 5B-1 handoff expected 14 RESTRICTIVE policies; actual draft SQL has 13 (forum_posts ×2, forum_replies ×2, forum_reactions ×2, event_rsvps ×3, lesson_progress ×2, member_tags ×2). Applied as drafted — this matches the "gate every member write path" intent, and `member_tags` has no UPDATE path (self-select is insert-or-delete only). No remediation needed; handoff number was a miscount.
+- Keep `unused_index` INFOs as-is on the new `profiles_status_idx_v2` and admin-tag indexes. They flip to green once the directory/admin UI lands and real queries execute against them.
+- Continue deferring leaked-password protection and auth-level ban (Edge Function path) to later 5B waves. Phase 5B-1 gives us profile-status + RLS write gates, which is enough to ship the admin UX; auth-level hardening stacks on top later.
+
+**Next Session Handoff:**
+- Begin **Phase 5B-1 frontend** design in Chat before the next Code session.
+- Expected frontend scope:
+  1. `/members` directory — grid of profile cards (avatar, display_name, dietary pill, journey, location, interest chips, badge row). Text search on `display_name`, dropdown filters for `dietary_approach` / `journey_duration` / `state`, interest-tag multi-select.
+  2. Admin overlay on directory — admin-tag filter, status filter (active / suspended / banned), per-card admin tag chips (admin SELECT only), "Manage" dropdown with Assign Tag / Suspend / Unsuspend / Ban / Delete actions.
+  3. Admin tag assignment UI — reuse tag management patterns; call `member_admin_tags` insert/delete directly (admin RLS) with optional `note` field.
+  4. Member management actions — call `set_member_status(target, 'suspended' | 'banned' | 'active')` and `delete_member(target)` RPCs with confirmation dialogs. Show target's status on profile viewer (admins only) with change history via `updated_at`.
+  5. Suspended/banned UX — AuthContext sign-out-if-banned guard on session load; friendly banner + toast text for the RLS error when a suspended user tries to post/reply/RSVP.
+  6. `/admin` hub index (deferred from Phase 5A) linking `/admin/tags`, `/members` admin view, and directory filters in one place.
+  7. Mobile verification + RLS smoke test (member can see public profiles but not admin tags / status; admin sees everything; suspended user can log in + read but any write returns the restrictive gate error).
+- Open question still open (non-blocking): Co-Host #3 name.
+- No blockers.
 
 ### Session 14 — 2026-04-18 (Claude Code — Phase 5A frontend build + deploy v0.5.0)
 **Goal:** Build the Phase 5A frontend — enhanced profile edit + view, badges surfacing inline across the app, interest-tag self-select, admin tag management + badge-award UI — and ship as v0.5.0.

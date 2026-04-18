@@ -52,10 +52,10 @@ export default function SpaceView() {
     const authorIds = Array.from(new Set(postRows.map((p) => p.author_id)));
     const postIds = postRows.map((p) => p.id);
 
-    const [profRes, reactRes, replyRes] = await Promise.all([
+    const [profRes, reactRes, replyRes, badgeRes] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, display_name, avatar_url, role')
+        .select('id, display_name, avatar_url, role, dietary_approach')
         .in('id', authorIds),
       supabase
         .from('forum_reactions')
@@ -65,11 +65,26 @@ export default function SpaceView() {
         .from('forum_replies')
         .select('post_id')
         .in('post_id', postIds),
+      supabase
+        .from('member_badges')
+        .select('user_id, badges!inner(badge_type, name)')
+        .in('user_id', authorIds),
     ]);
+
+    const badgeMap = {};
+    for (const row of badgeRes.data || []) {
+      if (!badgeMap[row.user_id]) badgeMap[row.user_id] = [];
+      badgeMap[row.user_id].push({
+        badge_type: row.badges?.badge_type,
+        name: row.badges?.name,
+      });
+    }
 
     setAuthors((prev) => {
       const next = { ...prev };
-      for (const p of profRes.data || []) next[p.id] = p;
+      for (const p of profRes.data || []) {
+        next[p.id] = { ...p, badges: badgeMap[p.id] || [] };
+      }
       return next;
     });
     setReactions((prev) => {

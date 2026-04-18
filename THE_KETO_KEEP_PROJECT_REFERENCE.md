@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 13 — Phase 5A schema applied)
+> **Canonical version date:** 2026-04-18 (Session 14 — Phase 5A frontend shipped, v0.5.0)
 
 ---
 
@@ -80,9 +80,9 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.4.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 11 — Phase 4 LMS frontend (commit d9628f3) |
+| Frontend app | v0.5.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 14 — Phase 5A frontend (Enhanced Profiles + Badges + Interest Tags) |
 | Supabase schema | v5A (Phase 5A applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migrations: `phase5a_profiles_badges_tags` + `phase5a_cover_fk_indexes` |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 13 — Phase 5A schema applied |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 14 — Phase 5A frontend shipped |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 | Phase 5A schema draft | APPLIED (reference copy) | `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` | session 13 — matches applied migration (incl. FK cover indexes) |
@@ -318,7 +318,7 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Rance reviews draft → approved as-is
 - [x] Applied migration `phase5a_profiles_badges_tags` (session 13, 2026-04-18)
 - [x] Ran security + performance advisors. Security: only pre-existing `auth_leaked_password_protection` WARN. Performance: two new `unindexed_foreign_keys` INFOs on `member_badges.awarded_by` and `tags.created_by` → remediated with follow-on migration `phase5a_cover_fk_indexes`. Zero `auth_rls_initplan` findings (confirms `(select auth.uid())` wrapping). Remaining `unused_index` INFOs all expected on fresh indexes.
-- [ ] Frontend: profile edit form new fields, public profile display (location, about, why, badges, interest tags), self-select tag UI, admin badge-award UI
+- [x] Frontend shipped (v0.5.0, session 14): profile edit form with 6 new fields + interest-tag chip row; public profile view (dietary pill, journey, location, about, my-why, badge showcase, interest chips); admin badge-award modal (coach_spotlight manual; tenure + course_complete auto-award stubs reserved); admin tag management page at `/admin/tags`; dietary + badges rendered inline on forum posts, replies, event attendees, and dashboard welcome header.
 
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email)
@@ -390,6 +390,13 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Phase 5A: `member_badges.awarded_by` nullable — null means auto-awarded | Supports future tenure-milestone triggers that have no human "awarder." When an admin awards manually, the column is populated so profile display can show "Awarded by Rance" if desired. FK `on delete set null` preserves award history if the awarder leaves. |
 | 2026-04-18 | Phase 5A: no UPDATE policy on `member_badges` — revoke = delete, re-award = insert | Badges are conceptually held or not held. `awarded_at`/`awarded_by` are historical, not mutable. Simpler RLS surface; cleaner audit story. |
 | 2026-04-18 | Phase 5A: interest tags are admin-curated, member-self-selected | Keeps the tag set clean (no "Keto!!!" / "keto" / "KETO" fragmentation) while letting members express their own secondary interests. Distinct from the future internal admin-only tag system, which will be a separate table with admin-only SELECT. |
+| 2026-04-18 | Phase 5A frontend: `/profile/edit` route (not `/settings/profile`) + keep `/profile/:id` as viewer | Reuses the existing `Profile` component and isOwn detection, avoids a new top-level settings surface, and matches the "one-scrollable-page" brief. Route-driven editor switch uses `useLocation().pathname`, not a query param, so the URL is shareable and the back button works naturally. |
+| 2026-04-18 | Phase 5A frontend: dietary approach rendered via `dietary-tag-{enum}` CSS class, not inline styles | Palette lives in `profiles.css`, one rule per approach. Component stays dumb; theme changes are one-file edits. Six muted earth-tone variants keep the pill readable without screaming colors. |
+| 2026-04-18 | Phase 5A frontend: badges as inline SVG shields (no raster icons) | Matches the navbar brand mark, scales losslessly, recolors via `currentColor` per badge_type CSS class. No icon-pack dependency, ~0 KB asset cost. Per-type glyph (check / I / VI / X / star) is painted inside the shield. |
+| 2026-04-18 | Phase 5A frontend: manual badge award restricted to `coach_spotlight` | Tenure badges (1 month / 6 months / 1 year) are time-derived — a future trigger will award them. `course_complete` will be awarded by the LMS progress path. Surfacing them in the manual award dropdown would invite drift between "how the badge is earned" and "who actually got it." Already-awarded tenure/course badges still render in the "Currently awarded" list for visibility and revocation. |
+| 2026-04-18 | Phase 5A frontend: `useMemberBadges(userIds)` shared hook for inline badge rendering | Single query regardless of how many author IDs in view (forum feed, reply list, attendee list). Hook takes a sorted+deduped join key to avoid effect thrash when callers pass fresh arrays with the same IDs. Lets new surfaces drop in badge rendering without re-implementing the fetch. |
+| 2026-04-18 | Phase 5A frontend: inline profile meta fetched per surface, not via a central store | Each surface (SpaceView / ReplySection / PostDetail / EventDetail / Dashboard) already has its own data-loading path. Adding a global member-profile cache would be premature — the per-surface fetch costs one query per page load and the data is stable. Revisit if multiple surfaces start stepping on each other. |
+| 2026-04-18 | Phase 5A frontend: `/admin/tags` page (not inline on an Admin hub) | No admin hub exists yet. A focused page keeps the surface area minimal; later Phase 5B can introduce an `/admin` index that links to it alongside the upcoming admin-tag system and directory tools. |
 
 ---
 
@@ -440,15 +447,46 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5A — schema APPLIED (frontend not started)
-**Last Updated:** 2026-04-18 (Session 13)
-**Frontend Version:** v0.4.0 — live on Cloudflare Workers (bundle `index-En1TdZJP.js` / `index-CJIVLMm9.css`, commit d9628f3). No frontend changes this session.
-**Supabase Schema:** v5A — migrations `phase5a_profiles_badges_tags` + `phase5a_cover_fk_indexes` applied. `profiles` now has 6 new nullable columns; tables `badges` / `member_badges` / `tags` / `member_tags` live with RLS (14 policies total: 4×badges, 3×member_badges, 4×tags, 3×member_tags). Five indexes on Phase 5A objects (`member_badges_badge_id_idx`, `member_badges_awarded_by_idx`, `member_tags_tag_id_idx`, `tags_created_by_idx`, `profiles_state_idx`). Three new enums (`dietary_approach_type`, `journey_duration_type`, `badge_type`). Seeds: 5 badge catalog rows + 8 starter interest tags.
-**Status:** Phase 5A schema end-to-end complete on the database side. Advisors clean: no security findings beyond pre-existing `auth_leaked_password_protection` WARN; zero `auth_rls_initplan` findings (confirms `(select auth.uid())` wrapping); two unindexed-FK findings remediated with covering indexes; remaining `unused_index` INFOs expected on fresh indexes. Ready for Phase 5A frontend planning in Chat.
+**Current Phase:** Phase 5A — COMPLETE (frontend shipped, v0.5.0 deployed)
+**Last Updated:** 2026-04-18 (Session 14)
+**Frontend Version:** v0.5.0 — built and pushed this session; Cloudflare Workers Builds auto-deploys from `main`. Adds Profile editor/viewer with 6 new fields, badge showcase, interest tag chips, admin tag management page, admin badge-award modal, and inline dietary+badge meta on forum posts, replies, event attendees, and dashboard welcome.
+**Supabase Schema:** v5A (unchanged this session) — migrations `phase5a_profiles_badges_tags` + `phase5a_cover_fk_indexes` applied. 14 Phase 5A RLS policies active; RLS smoke test this session confirms all four new tables have `rowsecurity = true` and expected policy set.
+**Status:** Phase 5A end-to-end complete. Lint clean, build clean. Next wave: Phase 5B — member-to-member messaging, internal admin tags, member directory/search, notifications, polish.
 
 ---
 
 ## SESSION LOG
+
+### Session 14 — 2026-04-18 (Claude Code — Phase 5A frontend build + deploy v0.5.0)
+**Goal:** Build the Phase 5A frontend — enhanced profile edit + view, badges surfacing inline across the app, interest-tag self-select, admin tag management + badge-award UI — and ship as v0.5.0.
+
+**What was done:**
+- New shared primitives under `src/components/profile/`: `DietaryApproachTag` (pill with palette via CSS class), `BadgeIcon` (inline SVG shield + per-type glyph), `BadgesInline` (truncated row with +N overflow), `InterestTagChip` (toggleable / static), `useMemberBadges` (shared data hook), `AwardBadgeModal` (admin award/revoke).
+- New `src/lib/profileHelpers.js` with `DIETARY_APPROACHES`, `JOURNEY_DURATIONS`, `US_STATES`, label lookups, `dietaryPaletteClass`, `formatLocation`, `ABOUT_SOFT_LIMIT`, `BADGE_TYPE_LABEL`.
+- Extended `AuthContext.updateProfile` with an 8-column allow-list (adds `dietary_approach`, `journey_duration`, `state`, `city`, `about_me`, `my_why`).
+- Rewrote `src/pages/Profile.jsx` — one scrollable editor (avatar + two-column personal-info grid + about/my-why textareas + short headline + interest-chip row) and a viewer (dietary pill, journey, location, about, my-why, badge showcase, read-only interest chips). Viewer on `/profile/:id` exposes "Manage badges" to admins. Own profile adds an "Edit profile" link that routes to `/profile/edit`.
+- New `src/pages/AdminTags.jsx` — admin-only list/add/delete interest tags; admin-gated via role check + `<Navigate>`. Linked from the dashboard admin quick-links row.
+- Routes added in `App.jsx`: `/profile/edit` (same Profile component, edit mode detected via `useLocation`) and `/admin/tags`.
+- Wired inline profile meta across feed surfaces: `SpaceView` + `PostCard` (post authors), `ReplySection` + `ReplyItem` (reply authors), `PostDetail` (single-post author), `EventDetail` + `AttendeeList` (attendees), `Dashboard` (welcome header). Each surface fetches `profiles.dietary_approach` + an aggregated `member_badges` join in parallel with its existing load.
+- New `src/styles/profiles.css` — dietary palette (6 approaches), shield badge color variants, interest chip filled/outlined states, two-column edit grid with `my-why-section` warmth tint, badge showcase grid, admin tag list, plus mobile breakpoint collapsing to single column. Imported from `styles/index.css`.
+- RLS smoke test via `execute_sql`: all four Phase 5A tables have `rowsecurity = true`; 14 expected policies present (badges: select/admin insert/update/delete; member_badges: select/admin insert/admin delete; tags: select/admin insert/update/delete; member_tags: select/insert/delete).
+- `npm run lint` clean. `npm run build` clean (568 KB JS / 63 KB CSS gzipped).
+- Bumped `package.json` from 0.4.0 → 0.5.0.
+
+**Decisions made:**
+- `/profile/edit` route drives editor mode (shareable URL, back-button friendly) over a query param or top-level settings surface.
+- Dietary approach pill palette lives in CSS classes (`dietary-tag-{enum}`) so swapping the palette is a one-file edit.
+- Badges rendered as inline SVG shields matching the navbar brand mark, recolored per type via `currentColor`.
+- Manual badge award surface is restricted to `coach_spotlight`; tenure and course_complete are reserved for future auto-award paths. Already-awarded tenure/course rows still appear in the "Currently awarded" list for visibility.
+- Shared `useMemberBadges` hook (dedupe+sort key) so any surface with a set of user IDs can piggyback one query.
+- No central profile cache — each surface piggybacks one query alongside its existing load. Premature to centralize.
+- `/admin/tags` as a focused page — `/admin` index deferred to Phase 5B when there's more than one tool to house.
+
+**Next Session Handoff:**
+- Verify Cloudflare Workers Builds picked up the new bundle and that `/profile/edit`, `/profile/:id`, and `/admin/tags` render live.
+- Begin **Phase 5B** planning in Chat: messaging approach (in-app DM table vs. email), internal admin-only tag system (§7 of feature requirements), member directory / search leveraging the new profile fields + tags, notifications (at minimum in-app), and final accessibility + performance advisor sweep before a v1.0 cut.
+- Open question still open (non-blocking): Co-Host #3 name.
+- No blockers.
 
 ### Session 13 — 2026-04-18 (Claude Code — Phase 5A schema applied)
 **Goal:** Apply the approved Phase 5A schema draft, run both advisors, remediate any new findings, update reference file, commit + push.

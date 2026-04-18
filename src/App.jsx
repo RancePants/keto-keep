@@ -9,6 +9,7 @@ import ResetPassword from './pages/ResetPassword.jsx';
 import UpdatePassword from './pages/UpdatePassword.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Profile from './pages/Profile.jsx';
+import AdminTags from './pages/AdminTags.jsx';
 import ForumHome from './pages/ForumHome.jsx';
 import SpaceView from './pages/SpaceView.jsx';
 import PostDetail from './pages/PostDetail.jsx';
@@ -47,10 +48,26 @@ export default function App() {
               }
             />
             <Route
+              path="/profile/edit"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/profile/:id"
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/tags"
+              element={
+                <ProtectedRoute>
+                  <AdminTags />
                 </ProtectedRoute>
               }
             />

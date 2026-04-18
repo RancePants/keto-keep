@@ -1,8 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
 import { supabase } from '../lib/supabase.js';
+import {
+  ABOUT_SOFT_LIMIT,
+  DIETARY_APPROACHES,
+  JOURNEY_DURATIONS,
+  US_STATES,
+  dietaryLabel,
+  formatLocation,
+  journeyLabel,
+  stateName,
+} from '../lib/profileHelpers.js';
+import DietaryApproachTag from '../components/profile/DietaryApproachTag.jsx';
+import BadgeIcon from '../components/profile/BadgeIcon.jsx';
+import InterestTagChip from '../components/profile/InterestTagChip.jsx';
+import AwardBadgeModal from '../components/profile/AwardBadgeModal.jsx';
 
+// ---------------- Avatar ----------------
 function Avatar({ path, displayName, size = 128 }) {
   const { getAvatarUrl } = useAuth();
   const [url, setUrl] = useState(null);
@@ -44,52 +59,161 @@ function formatDate(iso) {
   }
 }
 
-function useFetchedProfile(id, skip) {
-  const [state, setState] = useState({
-    loading: !skip && !!id,
-    data: null,
-    error: null,
-  });
+// ---------------- data helpers ----------------
 
-  useEffect(() => {
-    if (skip || !id) return undefined;
-    let cancelled = false;
-    (async () => {
-      const res = await supabase.from('profiles').select('*').eq('id', id).single();
-      if (cancelled) return;
-      if (res.error) {
-        setState({ loading: false, data: null, error: res.error.message });
-      } else {
-        setState({ loading: false, data: res.data, error: null });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, skip]);
-
-  return state;
+async function loadAllTags() {
+  const { data, error } = await supabase
+    .from('tags')
+    .select('id, name')
+    .order('name', { ascending: true });
+  if (error) {
+    console.error('loadAllTags:', error.message);
+    return [];
+  }
+  return data || [];
 }
 
-function ProfileEditor({ profile, updateProfile, uploadAvatar }) {
-  const [displayName, setDisplayName] = useState(profile.display_name || '');
-  const [bio, setBio] = useState(profile.bio || '');
+async function loadMemberTags(userId) {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('member_tags')
+    .select('tag_id')
+    .eq('user_id', userId);
+  if (error) {
+    console.error('loadMemberTags:', error.message);
+    return [];
+  }
+  return (data || []).map((r) => r.tag_id);
+}
+
+async function loadMemberBadges(userId) {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('member_badges')
+    .select('awarded_at, badges!inner(badge_type, name, description, icon_url)')
+    .eq('user_id', userId)
+    .order('awarded_at', { ascending: false });
+  if (error) {
+    console.error('loadMemberBadges:', error.message);
+    return [];
+  }
+  return (data || []).map((r) => ({
+    awarded_at: r.awarded_at,
+    badge_type: r.badges?.badge_type,
+    name: r.badges?.name,
+    description: r.badges?.description,
+    icon_url: r.badges?.icon_url,
+  }));
+}
+
+// ---------------- Editor ----------------
+
+function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
+  const [form, setForm] = useState({
+    display_name: profile.display_name || '',
+    bio: profile.bio || '',
+    dietary_approach: profile.dietary_approach || '',
+    journey_duration: profile.journey_duration || '',
+    city: profile.city || '',
+    state: profile.state || '',
+    about_me: profile.about_me || '',
+    my_why: profile.my_why || '',
+  });
+
+  const [allTags, setAllTags] = useState([]);
+  const [selectedTagIds, setSelectedTagIds] = useState(new Set());
+  const [initialTagIds, setInitialTagIds] = useState(new Set());
+  const [tagsLoading, setTagsLoading] = useState(true);
+
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      const [catalog, owned] = await Promise.all([
+        loadAllTags(),
+        loadMemberTags(profile.id),
+      ]);
+      if (cancelled) return;
+      setAllTags(catalog);
+      const ownedSet = new Set(owned);
+      setSelectedTagIds(ownedSet);
+      setInitialTagIds(ownedSet);
+      setTagsLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile.id]);
+
+  const onField = (k) => (e) => {
+    const v = e.target.value;
+    setForm((prev) => ({ ...prev, [k]: v }));
+  };
+
+  const toggleTag = (tag) => {
+    setSelectedTagIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag.id)) next.delete(tag.id);
+      else next.add(tag.id);
+      return next;
+    });
+  };
+
   const onSave = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setSaving(true);
     setMessage(null);
     try {
-      const { error } = await updateProfile({ display_name: displayName, bio });
+      const payload = {
+        display_name: form.display_name.trim(),
+        bio: form.bio.trim() || null,
+        dietary_approach: form.dietary_approach || null,
+        journey_duration: form.journey_duration || null,
+        city: form.city.trim() || null,
+        state: form.state || null,
+        about_me: form.about_me.trim() || null,
+        my_why: form.my_why.trim() || null,
+      };
+      const { error } = await updateProfile(payload);
       if (error) {
         setMessage({ type: 'error', text: error.message || 'Could not save.' });
-      } else {
-        setMessage({ type: 'success', text: 'Saved.' });
+        return;
       }
+
+      // Diff tag selections and write deltas.
+      const toAdd = [...selectedTagIds].filter((id) => !initialTagIds.has(id));
+      const toRemove = [...initialTagIds].filter((id) => !selectedTagIds.has(id));
+
+      if (toAdd.length) {
+        const rows = toAdd.map((tag_id) => ({ user_id: profile.id, tag_id }));
+        const { error: addErr } = await supabase.from('member_tags').insert(rows);
+        if (addErr) {
+          setMessage({ type: 'error', text: addErr.message });
+          return;
+        }
+      }
+      if (toRemove.length) {
+        const { error: rmErr } = await supabase
+          .from('member_tags')
+          .delete()
+          .eq('user_id', profile.id)
+          .in('tag_id', toRemove);
+        if (rmErr) {
+          setMessage({ type: 'error', text: rmErr.message });
+          return;
+        }
+      }
+
+      setInitialTagIds(new Set(selectedTagIds));
+      setMessage({ type: 'success', text: 'Saved.' });
+      if (onSaved) onSaved();
     } catch (err) {
       setMessage({ type: 'error', text: err?.message || 'Could not save.' });
     } finally {
@@ -127,86 +251,236 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar }) {
     }
   };
 
+  const aboutCount = form.about_me.length;
+  const aboutOver = aboutCount > ABOUT_SOFT_LIMIT;
+
   return (
-    <>
-      <div className="profile-top">
-        <div className="avatar-wrap avatar-editable">
-          <Avatar
-            key={profile.avatar_url || 'none'}
-            path={profile.avatar_url}
-            displayName={profile.display_name}
-            size={140}
-          />
-          <button
-            type="button"
-            className="avatar-overlay"
-            onClick={onPickFile}
-            disabled={uploading}
-            aria-label="Upload new avatar"
-          >
-            {uploading ? 'Uploading…' : 'Change photo'}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={onFileChange}
-            hidden
-          />
-        </div>
-
-        <div className="profile-meta">
-          <div className="profile-badges">
-            <span className={`role-badge role-${profile.role}`}>{profile.role}</span>
+    <form onSubmit={onSave} className="profile-edit">
+      {/* Avatar block */}
+      <section className="profile-edit-section">
+        <div className="profile-top">
+          <div className="avatar-wrap avatar-editable">
+            <Avatar
+              key={profile.avatar_url || 'none'}
+              path={profile.avatar_url}
+              displayName={form.display_name || profile.display_name}
+              size={140}
+            />
+            <button
+              type="button"
+              className="avatar-overlay"
+              onClick={onPickFile}
+              disabled={uploading}
+              aria-label="Upload new avatar"
+            >
+              {uploading ? 'Uploading…' : 'Change photo'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={onFileChange}
+              hidden
+            />
           </div>
-          <div className="profile-email">{profile.email}</div>
-          <div className="profile-since">
-            Member since {formatDate(profile.created_at)}
+
+          <div className="profile-meta">
+            <div className="profile-badges">
+              <span className={`role-badge role-${profile.role}`}>{profile.role}</span>
+            </div>
+            <label className="field profile-name-field">
+              <span className="field-label">Display name</span>
+              <input
+                type="text"
+                value={form.display_name}
+                onChange={onField('display_name')}
+                required
+                maxLength={60}
+              />
+            </label>
+            <div className="profile-email">{profile.email}</div>
+            <div className="profile-since">
+              Member since {formatDate(profile.created_at)}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <form onSubmit={onSave} className="form profile-form">
-        <label className="field">
-          <span className="field-label">Display name</span>
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            required
-          />
-        </label>
+      {/* Personal info */}
+      <section className="profile-edit-section">
+        <h2 className="section-title">Personal info</h2>
+        <div className="grid-2">
+          <label className="field">
+            <span className="field-label">Dietary approach</span>
+            <select value={form.dietary_approach} onChange={onField('dietary_approach')}>
+              <option value="">Prefer not to say</option>
+              {DIETARY_APPROACHES.map((d) => (
+                <option key={d.value} value={d.value}>{d.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="field-label">Journey duration</span>
+            <select value={form.journey_duration} onChange={onField('journey_duration')}>
+              <option value="">Prefer not to say</option>
+              {JOURNEY_DURATIONS.map((d) => (
+                <option key={d.value} value={d.value}>{d.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="field-label">City</span>
+            <input
+              type="text"
+              value={form.city}
+              onChange={onField('city')}
+              placeholder="e.g. Austin"
+              maxLength={80}
+            />
+          </label>
+          <label className="field">
+            <span className="field-label">State</span>
+            <select value={form.state} onChange={onField('state')}>
+              <option value="">—</option>
+              {US_STATES.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.name} ({s.code})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </section>
 
+      {/* About me */}
+      <section className="profile-edit-section">
+        <h2 className="section-title">About me</h2>
         <label className="field">
-          <span className="field-label">Bio</span>
           <textarea
             rows={5}
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="Share a little about your journey, your goals, or your favorite meal."
+            value={form.about_me}
+            onChange={onField('about_me')}
+            placeholder="Tell the community a little about yourself."
+          />
+          <span className={`char-hint ${aboutOver ? 'char-hint-over' : ''}`}>
+            {aboutCount} / {ABOUT_SOFT_LIMIT}
+          </span>
+        </label>
+      </section>
+
+      {/* My why */}
+      <section className="profile-edit-section my-why-section">
+        <h2 className="section-title">My why</h2>
+        <p className="section-sub">
+          What brought you here matters. If you're comfortable sharing, this is a
+          place that helps others feel less alone.
+        </p>
+        <label className="field">
+          <textarea
+            rows={6}
+            value={form.my_why}
+            onChange={onField('my_why')}
+            placeholder="What brought you to metabolic health?"
           />
         </label>
+      </section>
 
-        {message && (
-          <div
-            className={message.type === 'error' ? 'form-error' : 'form-success'}
-            role={message.type === 'error' ? 'alert' : 'status'}
-          >
-            {message.text}
+      {/* Bio (kept for backwards compat — brief headline) */}
+      <section className="profile-edit-section">
+        <h2 className="section-title">Short headline</h2>
+        <p className="section-sub">One line that captures the gist.</p>
+        <label className="field">
+          <input
+            type="text"
+            value={form.bio}
+            onChange={onField('bio')}
+            placeholder='e.g. "Dad of three, 18 months keto, slow and steady."'
+            maxLength={160}
+          />
+        </label>
+      </section>
+
+      {/* Interest tags */}
+      <section className="profile-edit-section">
+        <h2 className="section-title">Interests</h2>
+        <p className="section-sub">
+          Tap to choose the topics you want to see more of. You can change these anytime.
+        </p>
+        {tagsLoading ? (
+          <div className="muted">Loading interests…</div>
+        ) : allTags.length === 0 ? (
+          <div className="muted">No interest tags available yet.</div>
+        ) : (
+          <div className="interest-chip-row">
+            {allTags.map((t) => (
+              <InterestTagChip
+                key={t.id}
+                tag={t}
+                selected={selectedTagIds.has(t.id)}
+                onToggle={toggleTag}
+              />
+            ))}
           </div>
         )}
+      </section>
 
-        <div className="form-actions">
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
+      {message && (
+        <div
+          className={message.type === 'error' ? 'form-error' : 'form-success'}
+          role={message.type === 'error' ? 'alert' : 'status'}
+        >
+          {message.text}
         </div>
-      </form>
-    </>
+      )}
+
+      <div className="profile-edit-actions">
+        <button type="submit" className="btn btn-primary btn-large" disabled={saving}>
+          {saving ? 'Saving…' : 'Save profile'}
+        </button>
+      </div>
+    </form>
   );
 }
 
-function ProfileView({ profile }) {
+// ---------------- Viewer ----------------
+
+function ProfileView({ profile, isOwnProfile, isAdmin, onAwardBadge }) {
+  const [badges, setBadges] = useState([]);
+  const [memberTags, setMemberTags] = useState([]);
+  const [loadingMeta, setLoadingMeta] = useState(true);
+
+  const load = useCallback(async () => {
+    await Promise.resolve();
+    const [b, tagRows] = await Promise.all([
+      loadMemberBadges(profile.id),
+      supabase
+        .from('member_tags')
+        .select('tag_id, tags!inner(id, name)')
+        .eq('user_id', profile.id),
+    ]);
+    setBadges(b);
+    if (tagRows.error) {
+      console.error('member_tags load failed:', tagRows.error.message);
+      setMemberTags([]);
+    } else {
+      setMemberTags((tagRows.data || []).map((r) => r.tags).filter(Boolean));
+    }
+    setLoadingMeta(false);
+  }, [profile.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
+
+  const location = formatLocation({ city: profile.city, state: profile.state });
+
   return (
     <>
       <div className="profile-top">
@@ -222,25 +496,171 @@ function ProfileView({ profile }) {
           <h2 className="profile-name">{profile.display_name}</h2>
           <div className="profile-badges">
             <span className={`role-badge role-${profile.role}`}>{profile.role}</span>
+            {profile.dietary_approach && (
+              <DietaryApproachTag value={profile.dietary_approach} size="md" />
+            )}
           </div>
+          {profile.journey_duration && (
+            <div className="profile-sub">
+              {journeyLabel(profile.journey_duration)} on this path
+            </div>
+          )}
+          {location && <div className="profile-sub">{location}</div>}
           <div className="profile-since">
             Member since {formatDate(profile.created_at)}
           </div>
+          {profile.bio && <div className="profile-headline">{profile.bio}</div>}
+          {isOwnProfile ? (
+            <div className="profile-actions">
+              <Link to="/profile/edit" className="btn btn-primary">Edit profile</Link>
+            </div>
+          ) : (
+            isAdmin && (
+              <div className="profile-actions">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={onAwardBadge}
+                >
+                  Manage badges
+                </button>
+              </div>
+            )
+          )}
         </div>
       </div>
 
-      <div className="profile-bio">
-        {profile.bio ? <p>{profile.bio}</p> : <p className="muted">No bio yet.</p>}
-      </div>
+      {profile.about_me && (
+        <section className="profile-block">
+          <h3 className="profile-block-title">About</h3>
+          <p className="profile-block-body">{profile.about_me}</p>
+        </section>
+      )}
+
+      {profile.my_why && (
+        <section className="profile-block profile-why">
+          <h3 className="profile-block-title">My why</h3>
+          <p className="profile-block-body">{profile.my_why}</p>
+        </section>
+      )}
+
+      <section className="profile-block">
+        <h3 className="profile-block-title">Badges</h3>
+        {loadingMeta ? (
+          <div className="muted">Loading badges…</div>
+        ) : badges.length === 0 ? (
+          <p className="muted">No badges yet.</p>
+        ) : (
+          <div className="badge-showcase">
+            {badges.map((b) => (
+              <div key={b.badge_type} className="badge-showcase-item">
+                <BadgeIcon badgeType={b.badge_type} size={40} />
+                <div className="badge-showcase-meta">
+                  <div className="badge-showcase-name">{b.name}</div>
+                  {b.description && (
+                    <div className="badge-showcase-desc">{b.description}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="profile-block">
+        <h3 className="profile-block-title">Interests</h3>
+        {loadingMeta ? (
+          <div className="muted">Loading interests…</div>
+        ) : memberTags.length === 0 ? (
+          <p className="muted">No interests selected.</p>
+        ) : (
+          <div className="interest-chip-row">
+            {memberTags.map((t) => (
+              <InterestTagChip key={t.id} tag={t} readOnly />
+            ))}
+          </div>
+        )}
+      </section>
     </>
   );
 }
 
+// ---------------- Page container ----------------
+
+function useFetchedProfile(id, skip) {
+  const [state, setState] = useState({
+    loading: !skip && !!id,
+    data: null,
+    error: null,
+    version: 0,
+  });
+
+  const refresh = useCallback(() => {
+    setState((prev) => ({ ...prev, version: prev.version + 1 }));
+  }, []);
+
+  useEffect(() => {
+    if (skip || !id) return undefined;
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setState((prev) => ({ ...prev, loading: true }));
+      const res = await supabase.from('profiles').select('*').eq('id', id).single();
+      if (cancelled) return;
+      if (res.error) {
+        setState((prev) => ({ ...prev, loading: false, data: null, error: res.error.message }));
+      } else {
+        setState((prev) => ({ ...prev, loading: false, data: res.data, error: null }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, skip, state.version]);
+
+  return { ...state, refresh };
+}
+
 export default function Profile() {
   const { id } = useParams();
-  const { user, profile: ownProfile, updateProfile, uploadAvatar } = useAuth();
+  const location = useLocation();
+  const { user, profile: ownProfile, updateProfile, uploadAvatar, refreshProfile } = useAuth();
+  const isAdmin = ownProfile?.role === 'admin';
+  const isEditRoute = location.pathname.replace(/\/+$/, '').endsWith('/profile/edit');
 
   const isOwn = !id || id === user?.id;
+
+  if (isEditRoute && !ownProfile) {
+    return (
+      <div className="page-center">
+        <div className="spinner" aria-label="Loading" />
+      </div>
+    );
+  }
+
+  // /profile → own view; /profile/edit → own editor; /profile/:id → view
+  if (isEditRoute) {
+    return (
+      <div className="page page-narrow">
+        <header className="page-header">
+          <h1 className="page-title">Edit your profile</h1>
+          <p className="page-sub">
+            This is your space in The Keep. Take your time.
+          </p>
+        </header>
+        <section className="panel profile-panel">
+          <ProfileEditor
+            key={ownProfile.id}
+            profile={ownProfile}
+            updateProfile={updateProfile}
+            uploadAvatar={uploadAvatar}
+            onSaved={refreshProfile}
+          />
+        </section>
+      </div>
+    );
+  }
 
   if (isOwn) {
     if (!ownProfile) {
@@ -250,29 +670,42 @@ export default function Profile() {
         </div>
       );
     }
-    return (
-      <div className="page page-narrow">
-        <header className="page-header">
-          <h1 className="page-title">Your profile</h1>
-          <p className="page-sub">Tell the community a bit about yourself.</p>
-        </header>
-        <section className="panel profile-panel">
-          <ProfileEditor
-            key={ownProfile.id}
-            profile={ownProfile}
-            updateProfile={updateProfile}
-            uploadAvatar={uploadAvatar}
-          />
-        </section>
-      </div>
-    );
+    return <ProfilePage profile={ownProfile} isOwnProfile isAdmin={isAdmin} refresh={refreshProfile} />;
   }
 
-  return <OtherProfile key={id} id={id} />;
+  return <OtherProfile key={id} id={id} isAdmin={isAdmin} />;
 }
 
-function OtherProfile({ id }) {
-  const { data: fetched, error, loading } = useFetchedProfile(id, false);
+function ProfilePage({ profile, isOwnProfile, isAdmin, refresh }) {
+  const [awardOpen, setAwardOpen] = useState(false);
+
+  return (
+    <div className="page page-narrow">
+      <header className="page-header">
+        <h1 className="page-title">{isOwnProfile ? 'Your profile' : profile.display_name}</h1>
+      </header>
+      <section className="panel profile-panel">
+        <ProfileView
+          profile={profile}
+          isOwnProfile={isOwnProfile}
+          isAdmin={isAdmin}
+          onAwardBadge={() => setAwardOpen(true)}
+        />
+      </section>
+      <AwardBadgeModal
+        open={awardOpen}
+        onClose={() => setAwardOpen(false)}
+        targetUserId={profile.id}
+        targetName={profile.display_name}
+        onChanged={refresh}
+      />
+    </div>
+  );
+}
+
+function OtherProfile({ id, isAdmin }) {
+  const { data: fetched, error, loading, refresh } = useFetchedProfile(id, false);
+  const [awardOpen, setAwardOpen] = useState(false);
 
   if (loading) {
     return (
@@ -291,14 +724,37 @@ function OtherProfile({ id }) {
     );
   }
 
+  const subtitle = [
+    dietaryLabel(fetched.dietary_approach),
+    journeyLabel(fetched.journey_duration),
+    formatLocation({ city: fetched.city, state: fetched.state }),
+    stateName(fetched.state) && !fetched.city ? stateName(fetched.state) : null,
+  ]
+    .filter(Boolean)
+    .slice(0, 1)
+    .join(' · ');
+
   return (
     <div className="page page-narrow">
       <header className="page-header">
         <h1 className="page-title">{fetched.display_name}</h1>
+        {subtitle && <p className="page-sub">{subtitle}</p>}
       </header>
       <section className="panel profile-panel">
-        <ProfileView profile={fetched} />
+        <ProfileView
+          profile={fetched}
+          isOwnProfile={false}
+          isAdmin={isAdmin}
+          onAwardBadge={() => setAwardOpen(true)}
+        />
       </section>
+      <AwardBadgeModal
+        open={awardOpen}
+        onClose={() => setAwardOpen(false)}
+        targetUserId={fetched.id}
+        targetName={fetched.display_name}
+        onChanged={refresh}
+      />
     </div>
   );
 }

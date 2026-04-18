@@ -2,17 +2,31 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
 import UpcomingEventsCard from '../components/events/UpcomingEventsCard.jsx';
 import MyLearningCard from '../components/courses/MyLearningCard.jsx';
+import DietaryApproachTag from '../components/profile/DietaryApproachTag.jsx';
+import BadgesInline from '../components/profile/BadgesInline.jsx';
+import { useMemberBadges } from '../components/profile/useMemberBadges.js';
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const name = profile?.display_name || 'friend';
   const isAdmin = profile?.role === 'admin';
+  const userIds = user?.id ? [user.id] : [];
+  const badgeMap = useMemberBadges(userIds);
+  const myBadges = user?.id ? badgeMap[user.id] || [] : [];
 
   return (
     <div className="page page-narrow">
       <header className="page-header">
         <h1 className="page-title">Welcome back, {name}!</h1>
         <p className="page-sub">Good to see you in The Keep.</p>
+        {(profile?.dietary_approach || myBadges.length > 0) && (
+          <div className="dashboard-meta">
+            {profile?.dietary_approach && (
+              <DietaryApproachTag value={profile.dietary_approach} size="md" />
+            )}
+            <BadgesInline badges={myBadges} limit={5} size={16} />
+          </div>
+        )}
       </header>
 
       <section className="panel">
@@ -49,8 +63,8 @@ export default function Dashboard() {
           </li>
           {isAdmin && (
             <li>
-              <Link to="/admin">Admin panel</Link>
-              <span className="muted">Management tools (Phase 2+).</span>
+              <Link to="/admin/tags">Admin · Interest tags</Link>
+              <span className="muted">Curate the tags members can pick.</span>
             </li>
           )}
         </ul>

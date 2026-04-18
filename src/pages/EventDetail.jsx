@@ -60,12 +60,28 @@ export default function EventDetail() {
 
     const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
     if (userIds.length > 0) {
-      const { data: profileRows } = await supabase
-        .from('profiles')
-        .select('id, display_name, avatar_url, role')
-        .in('id', userIds);
+      const [profRes, badgeRes] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url, role, dietary_approach')
+          .in('id', userIds),
+        supabase
+          .from('member_badges')
+          .select('user_id, badges!inner(badge_type, name)')
+          .in('user_id', userIds),
+      ]);
+      const badgeMap = {};
+      for (const row of badgeRes.data || []) {
+        if (!badgeMap[row.user_id]) badgeMap[row.user_id] = [];
+        badgeMap[row.user_id].push({
+          badge_type: row.badges?.badge_type,
+          name: row.badges?.name,
+        });
+      }
       const byId = {};
-      for (const p of profileRows || []) byId[p.id] = p;
+      for (const p of profRes.data || []) {
+        byId[p.id] = { ...p, badges: badgeMap[p.id] || [] };
+      }
       setProfiles(byId);
     } else {
       setProfiles({});

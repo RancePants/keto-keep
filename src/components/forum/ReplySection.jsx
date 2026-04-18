@@ -28,12 +28,28 @@ export default function ReplySection({ postId, onReplyCountChange }) {
 
       const authorIds = Array.from(new Set((replyRows || []).map((r) => r.author_id)));
       if (authorIds.length) {
-        const { data: profs } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url, role')
-          .in('id', authorIds);
+        const [profRes, badgeRes] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, display_name, avatar_url, role, dietary_approach')
+            .in('id', authorIds),
+          supabase
+            .from('member_badges')
+            .select('user_id, badges!inner(badge_type, name)')
+            .in('user_id', authorIds),
+        ]);
+        const badgeMap = {};
+        for (const row of badgeRes.data || []) {
+          if (!badgeMap[row.user_id]) badgeMap[row.user_id] = [];
+          badgeMap[row.user_id].push({
+            badge_type: row.badges?.badge_type,
+            name: row.badges?.name,
+          });
+        }
         const map = {};
-        for (const p of profs || []) map[p.id] = p;
+        for (const p of profRes.data || []) {
+          map[p.id] = { ...p, badges: badgeMap[p.id] || [] };
+        }
         setAuthors(map);
       } else {
         setAuthors({});

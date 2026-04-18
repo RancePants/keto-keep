@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import UserAvatar from './UserAvatar.jsx';
 import EmojiReactionBar from './EmojiReactionBar.jsx';
 import ReplyComposer from './ReplyComposer.jsx';
+import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
+import BadgesInline from '../profile/BadgesInline.jsx';
 import { formatRelative, isEdited } from '../../lib/forumHelpers.js';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
@@ -67,6 +69,10 @@ export default function ReplyItem({
             ) : (
               <span className="reply-author">Member</span>
             )}
+            {author?.dietary_approach && (
+              <DietaryApproachTag value={author.dietary_approach} size="sm" />
+            )}
+            <BadgesInline badges={author?.badges} limit={3} size={12} />
             <span className="reply-time">
               {formatRelative(reply.created_at)}
               {isEdited(reply.created_at, reply.updated_at) ? ' · edited' : ''}

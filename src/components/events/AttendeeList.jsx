@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import UserAvatar from '../forum/UserAvatar.jsx';
+import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
+import BadgesInline from '../profile/BadgesInline.jsx';
 
 export default function AttendeeList({ rsvps, profiles, limit = null }) {
   const attending = (rsvps || []).filter((r) => r.rsvp_status === 'attending');
@@ -36,6 +38,10 @@ export default function AttendeeList({ rsvps, profiles, limit = null }) {
                 ) : (
                   <span className="attendee-name">{name}</span>
                 )}
+                {profile?.dietary_approach && (
+                  <DietaryApproachTag value={profile.dietary_approach} size="sm" />
+                )}
+                <BadgesInline badges={profile?.badges} limit={3} size={12} />
               </li>
             );
           })}

@@ -33,18 +33,26 @@ export default function PostDetail() {
     setPost(postRes.data);
     setError(null);
 
-    const [profRes, reactRes] = await Promise.all([
+    const [profRes, reactRes, badgeRes] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, display_name, avatar_url, role')
+        .select('id, display_name, avatar_url, role, dietary_approach')
         .eq('id', postRes.data.author_id)
         .maybeSingle(),
       supabase
         .from('forum_reactions')
         .select('emoji, user_id, post_id')
         .eq('post_id', postId),
+      supabase
+        .from('member_badges')
+        .select('badges!inner(badge_type, name)')
+        .eq('user_id', postRes.data.author_id),
     ]);
-    setAuthor(profRes.data || null);
+    const badges = (badgeRes.data || []).map((row) => ({
+      badge_type: row.badges?.badge_type,
+      name: row.badges?.name,
+    }));
+    setAuthor(profRes.data ? { ...profRes.data, badges } : null);
     setReactions(reactRes.data || []);
     setLoading(false);
   }, [slug, postId]);

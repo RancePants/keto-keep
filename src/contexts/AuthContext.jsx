@@ -163,11 +163,23 @@ export function AuthProvider({ children }) {
   const updateProfile = useCallback(
     async (updates) => {
       if (!session?.user) return { data: null, error: new Error('Not authenticated') };
-      const payload = {
-        display_name: updates.display_name,
-        bio: updates.bio,
-      };
-      Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+      // Allow-list of columns a user can self-update. `role`, `email`,
+      // `avatar_url` (handled by uploadAvatar), and timestamps are not
+      // user-editable from here.
+      const allowed = [
+        'display_name',
+        'bio',
+        'dietary_approach',
+        'journey_duration',
+        'state',
+        'city',
+        'about_me',
+        'my_why',
+      ];
+      const payload = {};
+      for (const k of allowed) {
+        if (updates[k] !== undefined) payload[k] = updates[k];
+      }
 
       try {
         const { data, error } = await supabase

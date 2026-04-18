@@ -4,6 +4,8 @@ import UserAvatar from './UserAvatar.jsx';
 import EmojiReactionBar from './EmojiReactionBar.jsx';
 import ReplySection from './ReplySection.jsx';
 import ForumModTools from './ForumModTools.jsx';
+import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
+import BadgesInline from '../profile/BadgesInline.jsx';
 import { usePrivateImage } from './usePrivateImage.js';
 import { formatRelative, isEdited } from '../../lib/forumHelpers.js';
 import { supabase } from '../../lib/supabase.js';
@@ -87,13 +89,19 @@ export default function PostCard({
       <header className="post-header">
         <UserAvatar author={author} size="sm" />
         <div className="post-byline">
-          {author?.id ? (
-            <Link to={`/profile/${author.id}`} className="post-author">
-              {author.display_name || 'Member'}
-            </Link>
-          ) : (
-            <span className="post-author">Member</span>
-          )}
+          <div className="post-author-row">
+            {author?.id ? (
+              <Link to={`/profile/${author.id}`} className="post-author">
+                {author.display_name || 'Member'}
+              </Link>
+            ) : (
+              <span className="post-author">Member</span>
+            )}
+            {author?.dietary_approach && (
+              <DietaryApproachTag value={author.dietary_approach} size="sm" />
+            )}
+            <BadgesInline badges={author?.badges} limit={3} size={14} />
+          </div>
           <div className="post-meta">
             <span>{formatRelative(post.created_at)}</span>
             {isEdited(post.created_at, post.updated_at) && <span>· edited</span>}

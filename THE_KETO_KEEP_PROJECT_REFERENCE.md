@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18
+> **Canonical version date:** 2026-04-18 (Session 6 — Phase 2)
 
 ---
 
@@ -80,9 +80,9 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.1.2 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | 1db8d85 (password reset flow complete) |
-| Supabase schema | v1 (Phase 1 complete) | Supabase project madzamkdedtbfhuesmej (us-east-1) | N/A — applied via MCP |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 5 finalized |
+| Frontend app | v0.2.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 6 — Phase 2 Forums |
+| Supabase schema | v2 (Phase 2 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | migrations: phase2_forums_schema, phase2_forum_images_bucket_policies, phase2_forums_rls_initplan_optimization |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 6 finalized |
 
 ---
 
@@ -257,16 +257,18 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Dedicated API token for builds (`keto-keep build token`)
 - [x] Mobile-responsive layout verified on phone
 
-### Phase 2: Forums 🔲 (NOT STARTED)
-- [ ] Database schema: `forum_spaces`, `forum_posts`, `forum_replies`
-- [ ] RLS policies for all forum tables (admin-only space enforcement)
-- [ ] Create the 4 forum spaces (General, Help, Wins, Admin HQ)
-- [ ] Post creation and display
-- [ ] Reply/comment threading
-- [ ] Admin moderation tools (pin, edit, delete posts)
-- [ ] Admin HQ access restricted to admin role
-- [ ] Image support in posts (Supabase Storage — decide public vs. private bucket)
-- [ ] Pagination for post lists (don't load everything at once)
+### Phase 2: Forums ✅ (COMPLETE — v0.2.0)
+- [x] Database schema: `forum_spaces`, `forum_posts`, `forum_replies`, `forum_reactions`
+- [x] RLS policies for all forum tables (admin-only space enforcement) — optimized with `(select auth.uid())` per perf advisor
+- [x] Create the 4 forum spaces (General, Help, Wins, Admin HQ)
+- [x] Post creation and display (feed layout, newest first, pinned float to top)
+- [x] Reply/comment threading (2-level max, enforced by DB trigger)
+- [x] Emoji reactions (curated set: 🥩 ❤️ 😂 🎉 🔥 💪) on posts and replies
+- [x] Admin moderation tools (pin, edit, delete posts)
+- [x] Admin HQ access restricted to admin role
+- [x] Image support in posts (private `forum-images` Supabase Storage bucket, authenticated fetch pattern)
+- [x] Pagination (20 posts per page, Load More)
+- [x] Permalink route `/forums/:slug/:postId`
 
 ### Phase 3: Events & Media 🔲 (NOT STARTED)
 - [ ] Database schema: `events`, `event_rsvps`
@@ -370,10 +372,10 @@ Every async operation in the auth context must have error handling that guarante
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 1 — COMPLETE ✅
-**Last Updated:** 2026-04-18 (Session 5)
-**Frontend Version:** v0.1.2 (deployed to Cloudflare Workers via auto-deploy)
-**Status:** Phase 1 is fully complete. Auth (signup, login, logout, password reset), profiles with RLS, landing page, dashboard, profile page, mobile-responsive layout, and CI/CD pipeline all working. Ready for Phase 2: Forums.
+**Current Phase:** Phase 2 — COMPLETE ✅
+**Last Updated:** 2026-04-18 (Session 6)
+**Frontend Version:** v0.2.0 (Cloudflare Workers auto-deploy on push to `main`)
+**Status:** Phase 2 Forums fully built and deployed. 4 spaces (3 public + Admin HQ), feed-style UI, posts with images, two-level reply threading with depth-enforcement trigger, emoji reactions on posts + replies, admin mod tools (pin/edit/delete), pagination, permalinks. RLS optimized per performance advisor. Ready for Phase 3: Events & Media.
 
 ---
 
@@ -424,6 +426,29 @@ Every async operation in the auth context must have error handling that guarante
 **Goal:** Diagnose and fix infinite loading spinner and broken logout.
 **What was done:** Diagnosed via Chrome DevTools. Fixed: removed StrictMode, raised `lockAcquireTimeout` to 10s, hardened `onAuthStateChange` cleanup. Deployed v0.1.1. Verified working. Established GitHub reference file as single source of truth.
 **Next:** Password reset flow, Workers vs Pages decision, auto-deploy pipeline, mobile testing.
+
+### Session 6 — 2026-04-18 (Claude Code — Phase 2 build)
+**Goal:** Build and deploy Phase 2: Forums (schema, RLS, storage, frontend).
+**What was done:**
+- Applied `phase2_forums_schema` migration: `forum_spaces`, `forum_posts`, `forum_replies`, `forum_reactions`. RLS enabled on all, policies for view/insert/update/delete. Admin-only enforcement via `is_admin()` (reused from Phase 1). Two-level reply depth enforced by `enforce_reply_depth()` trigger.
+- Seeded 4 spaces: General Discussion, Help & Support, Celebrating Wins, Admin HQ (locked).
+- Created private `forum-images` storage bucket with INSERT (own folder), SELECT (all authenticated), DELETE (owner or admin) policies.
+- Added performance indexes on all FK columns and sort keys.
+- After perf advisor flagged `auth_rls_initplan`, reworked all RLS policies to use `(select auth.uid())` via `phase2_forums_rls_initplan_optimization` migration. Advisors clean except pre-existing `auth_leaked_password_protection` and INFO-level unused-index notices (expected on fresh tables).
+- Built frontend: `/forums` (space grid), `/forums/:slug` (feed with composer + paginated post cards), `/forums/:slug/:postId` (permalink with breadcrumbs). Components: `PostComposer`, `PostCard`, `ReplySection`, `ReplyItem`, `ReplyComposer`, `EmojiReactionBar`, `ForumModTools`, `UserAvatar`. Shared `usePrivateImage` hook (cached blob URLs) powers both avatars and forum images.
+- Curated 6-emoji reaction set (🥩 ❤️ 😂 🎉 🔥 💪) defined in `forumHelpers.js` — change without schema updates.
+- Added Forums to navbar; unwired "coming soon" Dashboard link.
+- Lint + production build clean. Bumped to v0.2.0.
+
+**Decisions made:**
+- Private `forum-images` bucket (matches avatars pattern; images only meaningful to members)
+- Emoji set in code, not DB, so it can be tuned without a migration
+- Optimistic-ish reactions via insert/delete + re-fetch (simple, avoids drift)
+- Author profiles fetched separately (client-side join) since FK points to `auth.users`, not `profiles`
+
+**Next Session Handoff:**
+- Begin **Phase 3: Events & Media**. No blockers.
+- Open question still pending from Phase 2 roadmap: Co-Host #3 name (not blocking).
 
 ### Session 5 — 2026-04-18 (Chat + Claude Code)
 **Goal:** Complete remaining Phase 1 items and close out the phase.

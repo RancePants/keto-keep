@@ -9,6 +9,9 @@ import ResetPassword from './pages/ResetPassword.jsx';
 import UpdatePassword from './pages/UpdatePassword.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Profile from './pages/Profile.jsx';
+import ForumHome from './pages/ForumHome.jsx';
+import SpaceView from './pages/SpaceView.jsx';
+import PostDetail from './pages/PostDetail.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -43,6 +46,30 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forums"
+              element={
+                <ProtectedRoute>
+                  <ForumHome />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forums/:slug"
+              element={
+                <ProtectedRoute>
+                  <SpaceView />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forums/:slug/:postId"
+              element={
+                <ProtectedRoute>
+                  <PostDetail />
                 </ProtectedRoute>
               }
             />

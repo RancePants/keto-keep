@@ -30,8 +30,8 @@ export default function Dashboard() {
             <span className="muted">Add a photo and a short bio.</span>
           </li>
           <li>
-            <span className="disabled-link">Forums</span>
-            <span className="muted">Coming soon.</span>
+            <Link to="/forums">Forums</Link>
+            <span className="muted">Posts, replies, and reactions.</span>
           </li>
           <li>
             <span className="disabled-link">Events</span>

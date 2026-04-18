@@ -60,6 +60,9 @@ export default function Navbar() {
               <NavLink to="/dashboard" onClick={close} className="nav-link">
                 Dashboard
               </NavLink>
+              <NavLink to="/forums" onClick={close} className="nav-link">
+                Forums
+              </NavLink>
               <NavLink to="/profile" onClick={close} className="nav-link">
                 Profile
               </NavLink>

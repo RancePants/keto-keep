@@ -12,8 +12,8 @@
 ### Session Start Gate (mandatory — do NOT skip)
 At the beginning of every new chat in this project:
 
-1. **Share this file** with Claude at the start of the conversation.
-2. Claude reads the file and confirms:
+1. Claude reads the canonical reference file from `D:\The Keto Keep\THE_KETO_KEEP_PROJECT_REFERENCE.md` via Filesystem MCP (the project attachment is a stale bootstrap copy — ignore it).
+2. Claude confirms:
    - Current project phase and status
    - Canonical versions of all deployed artifacts (if any exist yet)
    - What was completed in the last session
@@ -80,9 +80,9 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.1.1 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | d19fe12 |
+| Frontend app | v0.1.2 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | 1db8d85 (password reset flow complete) |
 | Supabase schema | v1 (Phase 1 complete) | Supabase project madzamkdedtbfhuesmej (us-east-1) | N/A — applied via MCP |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | updated this session |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 5 finalized |
 
 ---
 
@@ -161,13 +161,14 @@ Requirements:
 
 | Layer | Technology | Cost |
 |---|---|---|
-| **Frontend** | React (via Cloudflare Pages) | Free |
+| **Frontend** | React (via Cloudflare Workers) | Free |
 | **Auth** | Supabase Auth | Free tier |
 | **Database** | Supabase (PostgreSQL) | Free tier |
 | **File Storage** | Supabase Storage | Free tier |
-| **Hosting** | Cloudflare Pages | Free tier |
+| **Hosting** | Cloudflare Workers | Free tier |
 | **DNS/CDN** | Cloudflare | Free tier |
 | **Repo** | GitHub (`RancePants/keto-keep`) | Free |
+| **CI/CD** | Cloudflare Workers Builds (GitHub auto-deploy) | Free |
 
 ### Supabase Free Tier Limits (as of project start)
 - 50,000 monthly active users
@@ -181,7 +182,7 @@ These limits are more than sufficient for an early-stage community. If the commu
 ### Why This Stack
 - **Total monthly cost at small scale: $0**
 - Supabase provides auth, database, storage, and real-time subscriptions out of the box
-- Cloudflare Pages provides fast, global hosting with automatic deployments from GitHub
+- Cloudflare Workers provides fast, global hosting with automatic deployments from GitHub
 - React gives full control over the UI and experience
 - Both Supabase and Cloudflare are connected in Rance's Claude environment for direct MCP interaction
 
@@ -217,16 +218,16 @@ These patterns were learned through trial and error on the MST project. Follow t
 
 ---
 
-## CLOUDFLARE PAGES GOTCHAS (learned from MST/FSH)
+## CLOUDFLARE WORKERS GOTCHAS (learned from MST/FSH/TKK)
 
 ### Deployment
-- GitHub → Cloudflare Pages auto-deploy is the preferred pipeline (set up in Phase 1)
-- For React apps, build command is typically `npm run build`, output directory `dist` or `build`
-- Custom domains can be added later — the free `*.pages.dev` subdomain works fine for development
+- GitHub → Cloudflare Workers auto-deploy via Workers Builds (connected in Phase 1)
+- Build command: `npm run build`, deploy command: `npx wrangler deploy`
+- Production branch: `main`, non-production branch builds also enabled
+- Dedicated API token: `keto-keep build token` (not shared with other projects)
 
 ### Routing
-- **`_redirects` file gotcha:** `200` rewrites targeting files in different paths can cause invisible redirects that break `window.location.pathname`. Use `301` redirects to query params instead if you need path-based routing.
-- For SPAs (React Router), you'll need a `/* /index.html 200` catch-all rule — but be aware of the rewrite behavior above.
+- **`_redirects` file gotcha:** `200` rewrites cause infinite loops under the unified Workers/Pages deploy pipeline. Use `wrangler.toml` with `[assets] not_found_handling = "single-page-application"` instead.
 
 ### Mobile
 - **Never embed the app in iframes** on external sites. iframes fundamentally break native mobile behavior (scrolling, touch events, viewport). This was a hard lesson from the FSH website migration. If The Keto Keep needs to be embedded anywhere, use direct links instead.
@@ -235,7 +236,7 @@ These patterns were learned through trial and error on the MST project. Follow t
 
 ## PHASED ROADMAP
 
-### Phase 1: Foundation 🟡 (IN PROGRESS)
+### Phase 1: Foundation ✅ (COMPLETE)
 - [x] Create GitHub repo (`RancePants/keto-keep`)
 - [x] Scaffold React project (Vite)
 - [x] Supabase project setup (project madzamkdedtbfhuesmej, us-east-1)
@@ -245,15 +246,16 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Database triggers: `on_auth_user_created`, `on_profile_updated`, `on_role_change_attempt`
 - [x] Storage: private avatars bucket
 - [x] Auth flow: email signup, login, logout
+- [x] Password reset flow (request + update-password page)
 - [x] Role system: member, admin (Rance seeded as admin)
 - [x] Public landing page (pre-login)
 - [x] Member dashboard (post-login)
 - [x] Basic member profile page (view + edit)
 - [x] Navigation shell with auth-aware nav
-- [x] Version display (v0.1.1 in footer)
-- [ ] Password reset flow
-- [ ] Deployment pipeline decision (Workers vs Pages) and GitHub auto-deploy
-- [ ] Mobile-responsive layout verification
+- [x] Version display (v0.1.2 in footer)
+- [x] Cloudflare Workers auto-deploy pipeline (GitHub → Workers Builds)
+- [x] Dedicated API token for builds (`keto-keep build token`)
+- [x] Mobile-responsive layout verified on phone
 
 ### Phase 2: Forums 🔲 (NOT STARTED)
 - [ ] Database schema: `forum_spaces`, `forum_posts`, `forum_replies`
@@ -318,6 +320,9 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Removed React StrictMode from production | Causes Supabase auth lock timeouts via double-mounting. |
 | 2026-04-18 | Raised Supabase `lockAcquireTimeout` to 10s | Safety net against orphaned auth locks. |
 | 2026-04-18 | GitHub reference file is single source of truth | Repo copy is canonical. Chat attachment is bootstrap snapshot only. |
+| 2026-04-18 | Stay on Cloudflare Workers with Git auto-deploy | Workers Builds supports GitHub integration natively. No need to migrate to Pages. |
+| 2026-04-18 | Dedicated build API token per project | Avoid cross-project token dependencies. `keto-keep build token` replaces shared FSH token. |
+| 2026-04-18 | Start gate reads reference file via Filesystem MCP | No need to maintain stale project attachment. Disk read is always current. |
 
 ---
 
@@ -337,8 +342,8 @@ If avatar images or uploaded files are in a private bucket, you can't just use a
 ### Supabase security audits — run both types
 Run `security` AND `performance` advisor types separately after schema changes. The performance advisor surfaces findings that the security advisor misses entirely.
 
-### Cloudflare Pages _redirects can silently break routing
-`200` rewrites targeting `.html` files in different paths cause invisible redirects that break `window.location.pathname`. For an SPA, keep it simple: `/* /index.html 200` and let React Router handle everything.
+### Cloudflare _redirects can silently break routing
+`200` rewrites cause infinite loops under unified Workers/Pages deploy. Use `wrangler.toml` with `[assets] not_found_handling = "single-page-application"` instead of `_redirects`.
 
 ### iframes break mobile — never use them for embedding
 The entire FSH website migration was motivated by discovering that iframe-embedded tools fundamentally break native mobile scrolling, touch events, and viewport behavior. If The Keto Keep ever needs to appear on another site, use direct links.
@@ -352,14 +357,23 @@ Don't save "mobile responsiveness pass" for Phase 5. Test on mobile (or at minim
 ### Git is the safety net — commit early and often
 Every meaningful change gets committed. Descriptive commit messages. Push after every session. The git history is your undo button.
 
+### RLS self-referencing policies cause infinite recursion
+If an RLS policy on table X contains a subquery that reads table X, it triggers infinite recursion. Solution: create a `SECURITY DEFINER` function (like `is_admin()`) that bypasses RLS for the internal check.
+
+### Bootstrap the first admin with trigger disable/enable
+The `protect_role_change` trigger prevents non-admins from changing roles — but when there are zero admins, no one can create the first admin. Solution: `ALTER TABLE DISABLE TRIGGER`, update the role, `ALTER TABLE ENABLE TRIGGER`.
+
+### Always use try/catch/finally in AuthContext
+Every async operation in the auth context must have error handling that guarantees loading states are cleared. A single unhandled rejection can leave the app stuck on a spinner forever.
+
 ---
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 1 — Foundation (in progress)
-**Last Updated:** 2026-04-18
-**Frontend Version:** v0.1.1 (deployed to Cloudflare Workers)
-**Status:** Core infrastructure built and deployed. Auth working (signup, login, logout). Profiles table with RLS. Landing page, dashboard, and profile pages live. Auth lock bug fixed (StrictMode removal + lock timeout hardening). Remaining Phase 1 items: password reset flow, decide Workers vs Pages, set up auto-deploy pipeline, mobile responsiveness testing.
+**Current Phase:** Phase 1 — COMPLETE ✅
+**Last Updated:** 2026-04-18 (Session 5)
+**Frontend Version:** v0.1.2 (deployed to Cloudflare Workers via auto-deploy)
+**Status:** Phase 1 is fully complete. Auth (signup, login, logout, password reset), profiles with RLS, landing page, dashboard, profile page, mobile-responsive layout, and CI/CD pipeline all working. Ready for Phase 2: Forums.
 
 ---
 
@@ -392,45 +406,50 @@ Every meaningful change gets committed. Descriptive commit messages. Push after 
 ### Session 2 — 2026-04-18
 **Goal:** Refine project reference file with lessons learned from MST project.
 **What was done:**
-- Rewrote session protocols with version verification and 8-item end gate (matching MST rigor)
-- Added Canonical Versions tracking section
-- Added Supabase Patterns & Gotchas section (RLS-first, storage buckets, SQL escaping, auth patterns)
-- Added Cloudflare Pages Gotchas section (redirects, mobile/iframe, deployment)
-- Added Lessons Learned section with 9 hard-won MST lessons
-- Added interface routing and code handoff format
-- Expanded Phase 1 roadmap (mobile-responsive from start, version endpoint, GitHub repo creation)
-- Added RLS policy tasks to every phase
-- Added pagination to Phase 2 forums
-- Added security/performance audit to Phase 5
-- Updated architecture decisions table with 4 new entries
-- Added GitHub repo to tech stack table
-- Confirmed repo name: `RancePants/keto-keep`
-- Confirmed local directory: `D:\The Keto Keep`
-
-**Decisions made:**
-- RLS-first schema design (never retrofit)
-- Mobile-responsive from Phase 1 (not Phase 5)
-- Separate Supabase project from MST
-- Version tracking from day one
-- Vite recommended over Create React App for Cloudflare Pages compatibility
-- GitHub repo name: `RancePants/keto-keep`
-- Local project directory: `D:\The Keto Keep`
+- Rewrote session protocols with version verification and 9-item end gate
+- Added Canonical Versions tracking, Supabase Patterns, Cloudflare Gotchas, Lessons Learned sections
+- Expanded Phase 1 roadmap with mobile-first, version tracking, RLS tasks
+- Confirmed repo name (`RancePants/keto-keep`) and local directory (`D:\The Keto Keep`)
 
 **Next Session Handoff:**
-- Same as Session 1 — begin Phase 1: Foundation
-- The reference file is now ready to support a clean, informed build
-- No blockers. Ready to build.
+- Begin Phase 1: Foundation. No blockers.
 
 ### Session 3 — 2026-04-18 (Claude Code)
 **Goal:** Build and deploy Phase 1 foundation.
-**What was done:** Scaffolded React + Vite. Built Supabase schema (profiles, RLS, triggers, functions). Created private avatars bucket. Built AuthContext, ProtectedRoute, pages (landing, login, signup, dashboard, profile), Navbar. Deployed to Cloudflare Workers. Seeded Rance as admin. Version v0.1.0.
-**Issues:** Auth token lock timeout bug — React StrictMode double-mounting caused cascading orphaned Supabase auth locks → infinite spinner on protected routes + broken logout.
+**What was done:** Scaffolded React + Vite. Built Supabase schema (profiles, RLS, triggers, functions). Created private avatars bucket. Built AuthContext, ProtectedRoute, pages, Navbar. Deployed to Cloudflare Workers. Seeded Rance as admin. Version v0.1.0.
+**Issues:** Auth token lock timeout bug — React StrictMode double-mounting caused cascading orphaned Supabase auth locks.
 **Next:** Fix auth lock bug.
 
 ### Session 4 — 2026-04-18 (Chat + Claude Code)
 **Goal:** Diagnose and fix infinite loading spinner and broken logout.
-**What was done:** Diagnosed via Chrome DevTools (3x lock timeout warnings). Fixed: removed StrictMode (commit bc27453), raised `lockAcquireTimeout` to 10s, hardened `onAuthStateChange` cleanup. Deployed v0.1.1 (commit d19fe12). Verified: dashboard ✅, profile ✅, logout ✅. Confirmed Supabase schema health. Decided GitHub reference file is canonical source of truth.
-**Next session:** Password reset flow, Workers vs Pages decision, auto-deploy pipeline, mobile testing. Then Phase 2: Forums.
+**What was done:** Diagnosed via Chrome DevTools. Fixed: removed StrictMode, raised `lockAcquireTimeout` to 10s, hardened `onAuthStateChange` cleanup. Deployed v0.1.1. Verified working. Established GitHub reference file as single source of truth.
+**Next:** Password reset flow, Workers vs Pages decision, auto-deploy pipeline, mobile testing.
+
+### Session 5 — 2026-04-18 (Chat + Claude Code)
+**Goal:** Complete remaining Phase 1 items and close out the phase.
+**What was done:**
+- Verified Filesystem MCP access to `D:\The Keto Keep` (required restart)
+- Decided: reference file read from disk via Filesystem MCP (project attachment is stale bootstrap — ignore it)
+- Completed password reset flow: `UpdatePassword.jsx` page, `PASSWORD_RECOVERY` event handler in AuthContext, `redirectTo` updated, Supabase redirect URL added. Deployed v0.1.2 (commit 1db8d85).
+- Tested and verified full password reset flow (request → email → update → auto-login)
+- Connected Cloudflare Workers Builds to GitHub repo (`RancePants/keto-keep`) for auto-deploy
+- Created dedicated `keto-keep build token` API token (replaced shared FSH token)
+- Auto-deploy pipeline verified working on v0.1.2 push
+- Mobile-responsive layout verified on phone (all pages tested)
+- Phase 1 marked COMPLETE
+
+**Decisions made:**
+- Stay on Cloudflare Workers (Workers Builds supports GitHub auto-deploy natively)
+- Dedicated build API token per project (no cross-project dependencies)
+- Reference file read from disk via Filesystem MCP at start gate (not project attachment)
+
+**Next Session Handoff:**
+- Begin **Phase 2: Forums**
+- First task: Design database schema for `forum_spaces`, `forum_posts`, `forum_replies`
+- Second task: Design RLS policies (admin-only Admin HQ space)
+- Third task: Plan the UI (space listing, post list, post detail, create post, reply threading)
+- Decision needed: image support in posts — public or private storage bucket?
+- No blockers. Ready to build.
 
 ---
 
@@ -438,9 +457,9 @@ Every meaningful change gets committed. Descriptive commit messages. Push after 
 
 - Name of Co-Host #3 (for admin seeding; Co-Host #2 confirmed: Justine Roberts)
 - Community branding: logo, color palette, typography (can be decided later, but needed before public launch)
-- Custom domain name (if desired — Cloudflare Pages provides a free `*.pages.dev` subdomain to start)
+- Custom domain name (if desired — Cloudflare provides a free `*.workers.dev` subdomain to start)
 - Messaging approach in Phase 5: in-app DMs vs. email-based communication
-- Stay on Cloudflare Workers or migrate to Pages? Workers works but lacks GitHub auto-deploy.
+- Forum image uploads: public or private storage bucket? (Phase 2 decision)
 
 ---
 
@@ -450,11 +469,11 @@ Every meaningful change gets committed. Descriptive commit messages. Push after 
 - Deployed App: https://keto-keep.rance-8c6.workers.dev/
 - Supabase Dashboard: https://supabase.com/dashboard
 - Supabase Project: https://supabase.com/dashboard/project/madzamkdedtbfhuesmej
-- Cloudflare Pages Dashboard: https://dash.cloudflare.com
+- Cloudflare Dashboard: https://dash.cloudflare.com
 - Mighty Networks (current, to be shut down): The Keto Keep
 - Supabase Docs (auth): https://supabase.com/docs/guides/auth
 - Supabase Docs (RLS): https://supabase.com/docs/guides/auth/row-level-security
-- Cloudflare Pages Docs: https://developers.cloudflare.com/pages
+- Cloudflare Workers Docs: https://developers.cloudflare.com/workers
 
 ---
 

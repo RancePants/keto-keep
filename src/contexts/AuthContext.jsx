@@ -78,7 +78,13 @@ export function AuthProvider({ children }) {
     return () => {
       mounted = false;
       clearTimeout(safetyTimer);
-      subscription.subscription.unsubscribe();
+      // Synchronous unsubscribe so the next mount's subscription doesn't
+      // race this one for the gotrue auth-token lock.
+      try {
+        subscription.subscription.unsubscribe();
+      } catch (e) {
+        console.error('Auth subscription unsubscribe failed:', e);
+      }
     };
   }, [fetchProfile]);
 

@@ -83,12 +83,17 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar }) {
     e.preventDefault();
     setSaving(true);
     setMessage(null);
-    const { error } = await updateProfile({ display_name: displayName, bio });
-    setSaving(false);
-    if (error) {
-      setMessage({ type: 'error', text: error.message || 'Could not save.' });
-    } else {
-      setMessage({ type: 'success', text: 'Saved.' });
+    try {
+      const { error } = await updateProfile({ display_name: displayName, bio });
+      if (error) {
+        setMessage({ type: 'error', text: error.message || 'Could not save.' });
+      } else {
+        setMessage({ type: 'success', text: 'Saved.' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Could not save.' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -108,12 +113,17 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar }) {
     }
     setUploading(true);
     setMessage(null);
-    const { error } = await uploadAvatar(file);
-    setUploading(false);
-    if (error) {
-      setMessage({ type: 'error', text: error.message || 'Upload failed.' });
-    } else {
-      setMessage({ type: 'success', text: 'Avatar updated.' });
+    try {
+      const { error } = await uploadAvatar(file);
+      if (error) {
+        setMessage({ type: 'error', text: error.message || 'Upload failed.' });
+      } else {
+        setMessage({ type: 'success', text: 'Avatar updated.' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Upload failed.' });
+    } finally {
+      setUploading(false);
     }
   };
 

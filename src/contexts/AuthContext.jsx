@@ -16,45 +16,89 @@ export function AuthProvider({ children }) {
       setProfile(null);
       return null;
     }
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    if (error) {
-      console.error('Failed to load profile:', error.message);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      if (error) {
+        console.error('Failed to load profile:', error.message);
+        setProfile(null);
+        return null;
+      }
+      setProfile(data);
+      return data;
+    } catch (e) {
+      console.error('Unexpected error loading profile:', e);
       setProfile(null);
       return null;
     }
-    setProfile(data);
-    return data;
   }, []);
 
   useEffect(() => {
     let mounted = true;
+    let settled = false;
 
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-      setSession(data.session ?? null);
-      if (data.session?.user) {
-        await fetchProfile(data.session.user.id);
-      }
+    const finish = () => {
+      if (!mounted || settled) return;
+      settled = true;
       setLoading(false);
+    };
+
+    // Primary init: getSession is the source of truth for initial state.
+    (async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (error) console.error('getSession failed:', error.message);
+        const current = data?.session ?? null;
+        setSession(current);
+        if (current?.user) {
+          await fetchProfile(current.user.id);
+        } else {
+          setProfile(null);
+        }
+      } catch (e) {
+        console.error('Auth init failed:', e);
+      } finally {
+        finish();
+      }
     })();
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      if (!mounted) return;
-      setSession(newSession);
-      if (newSession?.user) {
-        await fetchProfile(newSession.user.id);
-      } else {
-        setProfile(null);
+    // Safety net: if getSession somehow never resolves (e.g., stalled token
+    // refresh on a bad network), don't leave the app spinning forever.
+    const safetyTimer = setTimeout(() => {
+      if (mounted && !settled) {
+        console.warn('Auth init timed out; proceeding as unauthenticated.');
+        finish();
       }
-    });
+    }, 8000);
+
+    // Keep session/profile in sync with future auth changes. Wrapped so a
+    // throw in this callback can never jam the provider.
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      async (_event, newSession) => {
+        if (!mounted) return;
+        try {
+          setSession(newSession);
+          if (newSession?.user) {
+            await fetchProfile(newSession.user.id);
+          } else {
+            setProfile(null);
+          }
+        } catch (e) {
+          console.error('Auth state change failed:', e);
+        } finally {
+          // Once any auth event arrives we know we're hydrated.
+          finish();
+        }
+      }
+    );
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimer);
       subscription.subscription.unsubscribe();
     };
   }, [fetchProfile]);
@@ -71,57 +115,77 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signUp = useCallback(async ({ email, password, displayName }) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { display_name: displayName },
-        emailRedirectTo: `${window.location.origin}/login`,
-      },
-    });
-    return { data, error };
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { display_name: displayName },
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
+      return { data, error };
+    } catch (e) {
+      return { data: null, error: e };
+    }
   }, []);
 
   const signIn = useCallback(async ({ email, password }) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    return { data, error };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      return { data, error };
+    } catch (e) {
+      return { data: null, error: e };
+    }
   }, []);
 
   const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
-    // Clear avatar cache on sign-out.
-    for (const url of avatarCacheRef.current.values()) {
-      URL.revokeObjectURL(url);
+    try {
+      const { error } = await supabase.auth.signOut();
+      return { error };
+    } catch (e) {
+      return { error: e };
+    } finally {
+      for (const url of avatarCacheRef.current.values()) {
+        URL.revokeObjectURL(url);
+      }
+      avatarCacheRef.current.clear();
     }
-    avatarCacheRef.current.clear();
-    return { error };
   }, []);
 
   const resetPassword = useCallback(async ({ email }) => {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login`,
-    });
-    return { data, error };
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      return { data, error };
+    } catch (e) {
+      return { data: null, error: e };
+    }
   }, []);
 
   const updateProfile = useCallback(
     async (updates) => {
-      if (!session?.user) return { error: new Error('Not authenticated') };
+      if (!session?.user) return { data: null, error: new Error('Not authenticated') };
       const payload = {
         display_name: updates.display_name,
         bio: updates.bio,
       };
-      // Only include fields the caller provided.
       Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(payload)
-        .eq('id', session.user.id)
-        .select()
-        .single();
-      if (!error && data) setProfile(data);
-      return { data, error };
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .update(payload)
+          .eq('id', session.user.id)
+          .select()
+          .single();
+        if (!error && data) setProfile(data);
+        return { data, error };
+      } catch (e) {
+        console.error('updateProfile threw:', e);
+        return { data: null, error: e };
+      }
     },
     [session]
   );
@@ -131,47 +195,56 @@ export function AuthProvider({ children }) {
     const cache = avatarCacheRef.current;
     if (cache.has(path)) return cache.get(path);
 
-    const { data, error } = await supabase.storage.from('avatars').download(path);
-    if (error || !data) {
-      console.error('Avatar download failed:', error?.message);
+    try {
+      const { data, error } = await supabase.storage.from('avatars').download(path);
+      if (error || !data) {
+        console.error('Avatar download failed:', error?.message);
+        return null;
+      }
+      const url = URL.createObjectURL(data);
+      cache.set(path, url);
+      return url;
+    } catch (e) {
+      console.error('getAvatarUrl threw:', e);
       return null;
     }
-    const url = URL.createObjectURL(data);
-    cache.set(path, url);
-    return url;
   }, []);
 
   const uploadAvatar = useCallback(
     async (file) => {
-      if (!session?.user) return { error: new Error('Not authenticated') };
-      if (!file) return { error: new Error('No file provided') };
+      if (!session?.user) return { data: null, error: new Error('Not authenticated') };
+      if (!file) return { data: null, error: new Error('No file provided') };
 
-      const ext = (file.name.split('.').pop() || 'png').toLowerCase();
-      const path = `${session.user.id}/avatar.${ext}`;
+      try {
+        const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+        const path = `${session.user.id}/avatar.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, file, { upsert: true, contentType: file.type || undefined });
-      if (uploadError) return { error: uploadError };
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(path, file, { upsert: true, contentType: file.type || undefined });
+        if (uploadError) return { data: null, error: uploadError, path };
 
-      // Invalidate any cached URL for this path or any prior avatar path for this user.
-      const cache = avatarCacheRef.current;
-      for (const [key, url] of cache.entries()) {
-        if (key.startsWith(`${session.user.id}/`)) {
-          URL.revokeObjectURL(url);
-          cache.delete(key);
+        const cache = avatarCacheRef.current;
+        for (const [key, url] of cache.entries()) {
+          if (key.startsWith(`${session.user.id}/`)) {
+            URL.revokeObjectURL(url);
+            cache.delete(key);
+          }
         }
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({ avatar_url: path })
+          .eq('id', session.user.id)
+          .select()
+          .single();
+
+        if (!error && data) setProfile(data);
+        return { data, error, path };
+      } catch (e) {
+        console.error('uploadAvatar threw:', e);
+        return { data: null, error: e };
       }
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ avatar_url: path })
-        .eq('id', session.user.id)
-        .select()
-        .single();
-
-      if (!error && data) setProfile(data);
-      return { data, error, path };
     },
     [session]
   );

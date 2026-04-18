@@ -8,7 +8,7 @@ import { flattenLessons, formatMinutes } from '../lib/courseHelpers.js';
 export default function LessonView() {
   const { slug, lessonId } = useParams();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, isSuspended } = useAuth();
   const isAdmin = profile?.role === 'admin';
 
   const [course, setCourse] = useState(null);
@@ -209,8 +209,9 @@ export default function LessonView() {
               type="button"
               className={`lesson-complete-btn${isComplete ? ' lesson-complete-btn-done' : ''}${justCompleted ? ' lesson-complete-btn-celebrate' : ''}`}
               onClick={toggleComplete}
-              disabled={savingComplete}
+              disabled={savingComplete || isSuspended}
               aria-pressed={isComplete}
+              title={isSuspended ? 'Progress tracking disabled while suspended' : undefined}
             >
               <span className="lesson-complete-check" aria-hidden="true">
                 {isComplete ? '✓' : ''}
@@ -223,6 +224,11 @@ export default function LessonView() {
                   : 'Mark complete'}
               </span>
             </button>
+            {isSuspended && (
+              <p className="muted">
+                Progress tracking is disabled while your account is suspended.
+              </p>
+            )}
             {justCompleted && (
               <div className="lesson-complete-toast" role="status">
                 Nice work! 🎉

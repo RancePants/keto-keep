@@ -12,10 +12,13 @@ import {
   journeyLabel,
   stateName,
 } from '../lib/profileHelpers.js';
+import { safeTagColor, statusColorClass, statusLabel } from '../lib/memberHelpers.js';
 import DietaryApproachTag from '../components/profile/DietaryApproachTag.jsx';
 import BadgeIcon from '../components/profile/BadgeIcon.jsx';
 import InterestTagChip from '../components/profile/InterestTagChip.jsx';
 import AwardBadgeModal from '../components/profile/AwardBadgeModal.jsx';
+import AssignAdminTagModal from '../components/members/AssignAdminTagModal.jsx';
+import ManageMemberModal from '../components/members/ManageMemberModal.jsx';
 
 // ---------------- Avatar ----------------
 function Avatar({ path, displayName, size = 128 }) {
@@ -104,6 +107,21 @@ async function loadMemberBadges(userId) {
     description: r.badges?.description,
     icon_url: r.badges?.icon_url,
   }));
+}
+
+async function loadMemberAdminTags(userId) {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('member_admin_tags')
+    .select('tag_id, note, admin_tags!inner(id, name, description, color)')
+    .eq('user_id', userId);
+  if (error) {
+    // Non-admins get RLS-denied; treat as empty.
+    return [];
+  }
+  return (data || [])
+    .filter((r) => r.admin_tags)
+    .map((r) => ({ ...r.admin_tags, note: r.note }));
 }
 
 // ---------------- Editor ----------------
@@ -444,19 +462,29 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
 
 // ---------------- Viewer ----------------
 
-function ProfileView({ profile, isOwnProfile, isAdmin, onAwardBadge }) {
+function ProfileView({
+  profile,
+  isOwnProfile,
+  isAdmin,
+  onAwardBadge,
+  onManageAdminTags,
+  onManageMember,
+  adminTagsVersion,
+}) {
   const [badges, setBadges] = useState([]);
   const [memberTags, setMemberTags] = useState([]);
+  const [adminTags, setAdminTags] = useState([]);
   const [loadingMeta, setLoadingMeta] = useState(true);
 
   const load = useCallback(async () => {
     await Promise.resolve();
-    const [b, tagRows] = await Promise.all([
+    const [b, tagRows, aTags] = await Promise.all([
       loadMemberBadges(profile.id),
       supabase
         .from('member_tags')
         .select('tag_id, tags!inner(id, name)')
         .eq('user_id', profile.id),
+      isAdmin ? loadMemberAdminTags(profile.id) : Promise.resolve([]),
     ]);
     setBadges(b);
     if (tagRows.error) {
@@ -465,8 +493,9 @@ function ProfileView({ profile, isOwnProfile, isAdmin, onAwardBadge }) {
     } else {
       setMemberTags((tagRows.data || []).map((r) => r.tags).filter(Boolean));
     }
+    setAdminTags(aTags);
     setLoadingMeta(false);
-  }, [profile.id]);
+  }, [profile.id, isAdmin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -477,9 +506,12 @@ function ProfileView({ profile, isOwnProfile, isAdmin, onAwardBadge }) {
     return () => {
       cancelled = true;
     };
-  }, [load]);
+  }, [load, adminTagsVersion]);
 
   const location = formatLocation({ city: profile.city, state: profile.state });
+  const isTargetAdmin = profile.role === 'admin';
+  const showManageSection =
+    isAdmin && !isOwnProfile && !isTargetAdmin;
 
   return (
     <>
@@ -498,6 +530,11 @@ function ProfileView({ profile, isOwnProfile, isAdmin, onAwardBadge }) {
             <span className={`role-badge role-${profile.role}`}>{profile.role}</span>
             {profile.dietary_approach && (
               <DietaryApproachTag value={profile.dietary_approach} size="md" />
+            )}
+            {isAdmin && profile.status && profile.status !== 'active' && (
+              <span className={`status-pill ${statusColorClass(profile.status)}`}>
+                {statusLabel(profile.status)}
+              </span>
             )}
           </div>
           {profile.journey_duration && (
@@ -581,6 +618,94 @@ function ProfileView({ profile, isOwnProfile, isAdmin, onAwardBadge }) {
           </div>
         )}
       </section>
+
+      {isAdmin && !isOwnProfile && (
+        <section className="profile-block profile-admin-block">
+          <div className="profile-block-title-row">
+            <h3 className="profile-block-title">Internal tags</h3>
+            <button
+              type="button"
+              className="btn btn-ghost btn-small"
+              onClick={onManageAdminTags}
+            >
+              Manage tags
+            </button>
+          </div>
+          {loadingMeta ? (
+            <div className="muted">Loading tags…</div>
+          ) : adminTags.length === 0 ? (
+            <p className="muted">No internal tags assigned.</p>
+          ) : (
+            <ul className="admin-tag-chip-row">
+              {adminTags.map((t) => (
+                <li key={t.id} className="admin-tag-chip-wrap">
+                  <span
+                    className="admin-tag-chip"
+                    style={{ background: safeTagColor(t.color) }}
+                  >
+                    {t.name}
+                  </span>
+                  {t.note && (
+                    <span className="admin-tag-chip-note muted">— {t.note}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {showManageSection && (
+        <section className="profile-block profile-admin-block">
+          <h3 className="profile-block-title">Manage member</h3>
+          <p className="muted profile-block-sub">
+            Admin-only actions. Use with care.
+          </p>
+          <div className="manage-member-actions">
+            {profile.status === 'suspended' ? (
+              <button
+                type="button"
+                className="btn btn-warning"
+                onClick={() => onManageMember('unsuspend')}
+              >
+                Unsuspend
+              </button>
+            ) : profile.status === 'active' ? (
+              <button
+                type="button"
+                className="btn btn-warning"
+                onClick={() => onManageMember('suspend')}
+              >
+                Suspend
+              </button>
+            ) : null}
+            {profile.status === 'banned' ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => onManageMember('unban')}
+              >
+                Unban
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => onManageMember('ban')}
+              >
+                Ban
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={() => onManageMember('delete')}
+            >
+              Delete member
+            </button>
+          </div>
+        </section>
+      )}
     </>
   );
 }
@@ -625,7 +750,7 @@ function useFetchedProfile(id, skip) {
 export default function Profile() {
   const { id } = useParams();
   const location = useLocation();
-  const { user, profile: ownProfile, updateProfile, uploadAvatar, refreshProfile } = useAuth();
+  const { user, profile: ownProfile, updateProfile, uploadAvatar, refreshProfile, isSuspended } = useAuth();
   const isAdmin = ownProfile?.role === 'admin';
   const isEditRoute = location.pathname.replace(/\/+$/, '').endsWith('/profile/edit');
 
@@ -641,6 +766,24 @@ export default function Profile() {
 
   // /profile → own view; /profile/edit → own editor; /profile/:id → view
   if (isEditRoute) {
+    if (isSuspended) {
+      return (
+        <div className="page page-narrow">
+          <header className="page-header">
+            <h1 className="page-title">Edit your profile</h1>
+          </header>
+          <section className="panel">
+            <p className="muted">
+              Profile edits are disabled while your account is suspended.
+              Contact a host if you think this is a mistake.
+            </p>
+            <p>
+              <Link to="/profile" className="btn btn-ghost">Back to profile</Link>
+            </p>
+          </section>
+        </div>
+      );
+    }
     return (
       <div className="page page-narrow">
         <header className="page-header">
@@ -678,6 +821,11 @@ export default function Profile() {
 
 function ProfilePage({ profile, isOwnProfile, isAdmin, refresh }) {
   const [awardOpen, setAwardOpen] = useState(false);
+  const [tagModalOpen, setTagModalOpen] = useState(false);
+  const [manageAction, setManageAction] = useState(null);
+  const [adminTagsVersion, setAdminTagsVersion] = useState(0);
+
+  const bumpAdminTags = () => setAdminTagsVersion((v) => v + 1);
 
   return (
     <div className="page page-narrow">
@@ -690,11 +838,29 @@ function ProfilePage({ profile, isOwnProfile, isAdmin, refresh }) {
           isOwnProfile={isOwnProfile}
           isAdmin={isAdmin}
           onAwardBadge={() => setAwardOpen(true)}
+          onManageAdminTags={() => setTagModalOpen(true)}
+          onManageMember={(action) => setManageAction(action)}
+          adminTagsVersion={adminTagsVersion}
         />
       </section>
       <AwardBadgeModal
         open={awardOpen}
         onClose={() => setAwardOpen(false)}
+        targetUserId={profile.id}
+        targetName={profile.display_name}
+        onChanged={refresh}
+      />
+      <AssignAdminTagModal
+        open={tagModalOpen}
+        onClose={() => setTagModalOpen(false)}
+        targetUserId={profile.id}
+        targetName={profile.display_name}
+        onChanged={bumpAdminTags}
+      />
+      <ManageMemberModal
+        open={!!manageAction}
+        onClose={() => setManageAction(null)}
+        action={manageAction}
         targetUserId={profile.id}
         targetName={profile.display_name}
         onChanged={refresh}
@@ -706,6 +872,11 @@ function ProfilePage({ profile, isOwnProfile, isAdmin, refresh }) {
 function OtherProfile({ id, isAdmin }) {
   const { data: fetched, error, loading, refresh } = useFetchedProfile(id, false);
   const [awardOpen, setAwardOpen] = useState(false);
+  const [tagModalOpen, setTagModalOpen] = useState(false);
+  const [manageAction, setManageAction] = useState(null);
+  const [adminTagsVersion, setAdminTagsVersion] = useState(0);
+
+  const bumpAdminTags = () => setAdminTagsVersion((v) => v + 1);
 
   if (loading) {
     return (
@@ -746,11 +917,29 @@ function OtherProfile({ id, isAdmin }) {
           isOwnProfile={false}
           isAdmin={isAdmin}
           onAwardBadge={() => setAwardOpen(true)}
+          onManageAdminTags={() => setTagModalOpen(true)}
+          onManageMember={(action) => setManageAction(action)}
+          adminTagsVersion={adminTagsVersion}
         />
       </section>
       <AwardBadgeModal
         open={awardOpen}
         onClose={() => setAwardOpen(false)}
+        targetUserId={fetched.id}
+        targetName={fetched.display_name}
+        onChanged={refresh}
+      />
+      <AssignAdminTagModal
+        open={tagModalOpen}
+        onClose={() => setTagModalOpen(false)}
+        targetUserId={fetched.id}
+        targetName={fetched.display_name}
+        onChanged={bumpAdminTags}
+      />
+      <ManageMemberModal
+        open={!!manageAction}
+        onClose={() => setManageAction(null)}
+        action={manageAction}
         targetUserId={fetched.id}
         targetName={fetched.display_name}
         onChanged={refresh}

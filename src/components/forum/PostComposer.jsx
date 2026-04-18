@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
 
 export default function PostComposer({ spaceId, onCreated }) {
-  const { user } = useAuth();
+  const { user, isSuspended } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -105,6 +105,16 @@ export default function PostComposer({ spaceId, onCreated }) {
       setSaving(false);
     }
   };
+
+  if (isSuspended) {
+    return (
+      <div className="post-composer post-composer-disabled">
+        <p className="muted">
+          Posting is disabled while your account is suspended.
+        </p>
+      </div>
+    );
+  }
 
   if (!expanded) {
     return (

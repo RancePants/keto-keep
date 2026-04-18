@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
+import AdminDropdown from './members/AdminDropdown.jsx';
 
 export default function Navbar() {
   const { session, profile, signOut } = useAuth();
@@ -69,14 +70,13 @@ export default function Navbar() {
               <NavLink to="/courses" onClick={close} className="nav-link">
                 Courses
               </NavLink>
+              <NavLink to="/members" onClick={close} className="nav-link">
+                Members
+              </NavLink>
               <NavLink to="/profile" onClick={close} className="nav-link">
                 Profile
               </NavLink>
-              {isAdmin && (
-                <span className="admin-badge" title="Admin">
-                  Admin
-                </span>
-              )}
+              {isAdmin && <AdminDropdown onNavigate={close} />}
               <button type="button" onClick={handleSignOut} className="btn btn-ghost">
                 Log out
               </button>

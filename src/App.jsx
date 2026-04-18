@@ -10,6 +10,9 @@ import UpdatePassword from './pages/UpdatePassword.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Profile from './pages/Profile.jsx';
 import AdminTags from './pages/AdminTags.jsx';
+import AdminAdminTags from './pages/AdminAdminTags.jsx';
+import AdminHub from './pages/AdminHub.jsx';
+import MembersDirectory from './pages/MembersDirectory.jsx';
 import ForumHome from './pages/ForumHome.jsx';
 import SpaceView from './pages/SpaceView.jsx';
 import PostDetail from './pages/PostDetail.jsx';
@@ -68,6 +71,30 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <AdminTags />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminHub />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/admin-tags"
+              element={
+                <ProtectedRoute>
+                  <AdminAdminTags />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/members"
+              element={
+                <ProtectedRoute>
+                  <MembersDirectory />
                 </ProtectedRoute>
               }
             />

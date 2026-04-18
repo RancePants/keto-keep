@@ -61,10 +61,14 @@ export default function Dashboard() {
             <Link to="/courses">Courses</Link>
             <span className="muted">Self-paced lessons and modules.</span>
           </li>
+          <li>
+            <Link to="/members">Members</Link>
+            <span className="muted">Browse the community.</span>
+          </li>
           {isAdmin && (
             <li>
-              <Link to="/admin/tags">Admin · Interest tags</Link>
-              <span className="muted">Curate the tags members can pick.</span>
+              <Link to="/admin">Admin · The Keep</Link>
+              <span className="muted">Hosts-only tools and tags.</span>
             </li>
           )}
         </ul>

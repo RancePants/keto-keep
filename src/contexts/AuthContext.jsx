@@ -6,6 +6,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isSuspended, setIsSuspended] = useState(false);
 
   // Cache object URLs for avatars so we don't re-download on every render.
   // Keyed by storage path; value is an object URL.
@@ -14,6 +15,7 @@ export function AuthProvider({ children }) {
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) {
       setProfile(null);
+      setIsSuspended(false);
       return null;
     }
     try {
@@ -25,13 +27,30 @@ export function AuthProvider({ children }) {
       if (error) {
         console.error('Failed to load profile:', error.message);
         setProfile(null);
+        setIsSuspended(false);
+        return null;
+      }
+      if (data?.status === 'banned') {
+        // Hard block — sign out and send them to login with a banner.
+        setProfile(null);
+        setIsSuspended(false);
+        try {
+          await supabase.auth.signOut();
+        } catch (e) {
+          console.error('Sign-out after ban detection failed:', e);
+        }
+        if (window.location.pathname !== '/login') {
+          window.location.replace('/login?banned=1');
+        }
         return null;
       }
       setProfile(data);
+      setIsSuspended(data?.status === 'suspended');
       return data;
     } catch (e) {
       console.error('Unexpected error loading profile:', e);
       setProfile(null);
+      setIsSuspended(false);
       return null;
     }
   }, []);
@@ -73,6 +92,7 @@ export function AuthProvider({ children }) {
           );
         } else {
           setProfile(null);
+          setIsSuspended(false);
         }
       }
     );
@@ -164,8 +184,8 @@ export function AuthProvider({ children }) {
     async (updates) => {
       if (!session?.user) return { data: null, error: new Error('Not authenticated') };
       // Allow-list of columns a user can self-update. `role`, `email`,
-      // `avatar_url` (handled by uploadAvatar), and timestamps are not
-      // user-editable from here.
+      // `avatar_url` (handled by uploadAvatar), `status`, and timestamps
+      // are not user-editable from here.
       const allowed = [
         'display_name',
         'bio',
@@ -263,6 +283,7 @@ export function AuthProvider({ children }) {
       user: session?.user ?? null,
       profile,
       loading,
+      isSuspended,
       signUp,
       signIn,
       signOut,
@@ -272,7 +293,7 @@ export function AuthProvider({ children }) {
       getAvatarUrl,
       refreshProfile: () => fetchProfile(session?.user?.id),
     }),
-    [session, profile, loading, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, fetchProfile]
+    [session, profile, loading, isSuspended, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, fetchProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

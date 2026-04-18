@@ -3,10 +3,18 @@ import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
 
 export default function ReplyComposer({ postId, parentReplyId = null, placeholder = 'Write a reply…', onSubmitted, onCancel }) {
-  const { user } = useAuth();
+  const { user, isSuspended } = useAuth();
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  if (isSuspended) {
+    return (
+      <div className="reply-composer reply-composer-disabled">
+        <p className="muted">Replies disabled while suspended.</p>
+      </div>
+    );
+  }
 
   const submit = async (e) => {
     e.preventDefault();

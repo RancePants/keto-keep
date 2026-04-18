@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
 
 export default function Login() {
   const { session, signIn, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const banned = searchParams.get('banned') === '1';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,6 +37,12 @@ export default function Login() {
       <div className="auth-card">
         <h1 className="auth-title">Welcome back</h1>
         <p className="auth-sub">Log in to your Keto Keep account.</p>
+
+        {banned && (
+          <div className="form-error banned-notice" role="alert">
+            Your account has been banned. If you believe this is an error, please contact a host.
+          </div>
+        )}
 
         <form onSubmit={onSubmit} className="form" noValidate>
           <label className="field">

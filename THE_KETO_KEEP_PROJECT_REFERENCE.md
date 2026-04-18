@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 9 — Phase 3 frontend complete, v0.3.0 deployed)
+> **Canonical version date:** 2026-04-18 (Session 10 — Phase 4 LMS schema applied)
 
 ---
 
@@ -81,9 +81,10 @@ All three co-hosts need full admin access within the platform.
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
 | Frontend app | v0.3.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 9 — Phase 3 Events & Media |
-| Supabase schema | v3 (Phase 3 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migration: `phase3_events_schema` |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 9 — Phase 3 frontend complete |
+| Supabase schema | v4 (Phase 4 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migration: `phase4_lms_schema` |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 10 — Phase 4 schema applied |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
+| Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 
 ---
 
@@ -291,9 +292,9 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] RLS smoke test via SQL — all 8 policies confirmed: events SELECT=authenticated, INSERT/UPDATE/DELETE=is_admin; event_rsvps SELECT=authenticated, INSERT/UPDATE require own user_id, DELETE self-or-admin. All `auth.uid()` wrapped.
 - [x] Bumped to v0.3.0, committed, pushed, verified Cloudflare deploy.
 
-### Phase 4: Lifestyle Course / LMS 🔲 (NOT STARTED)
-- [ ] Database schema: `courses`, `modules`, `lessons`, `lesson_progress`
-- [ ] RLS policies for course tables
+### Phase 4: Lifestyle Course / LMS 🚧 (IN PROGRESS — schema applied)
+- [x] Database schema: `courses`, `modules`, `lessons`, `lesson_progress` (session 10, migration `phase4_lms_schema`)
+- [x] RLS policies for course tables (14 policies; all `auth.uid()` wrapped; zero `auth_rls_initplan` findings)
 - [ ] Course overview page
 - [ ] Module and lesson display
 - [ ] Lesson content rendering (text, embedded video)
@@ -352,6 +353,11 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Phase 3: admin event CRUD uses a modal (new primitive) — not inline composer like forums | Forms for events have more fields (title, description, type, status, 2 datetimes, zoom, youtube) than forum posts. Modal keeps the `/events` page clean and reuses for both create and edit. First time we've introduced a modal primitive — `Modal.jsx` under `components/events/` for now; promote to shared if another feature needs it. |
 | 2026-04-18 | Phase 3: YouTube embed is IntersectionObserver-gated (200px rootMargin) | Past sessions grid can render many iframes. Lazy-loading avoids hammering the browser on scroll and respects data. Fallback path (`IntersectionObserver` undefined) also passes the `react-hooks/set-state-in-effect` lint rule by deferring via `setTimeout(0)`. |
 | 2026-04-18 | Phase 3: data-loading effects defer with `await Promise.resolve()` before any setState | Matches SpaceView / ForumHome pattern. Satisfies `react-hooks/set-state-in-effect` (no synchronous setState inside an effect body) and `react-hooks/preserve-manual-memoization` when `useCallback` deps use full objects (`user`) rather than narrower properties (`user?.id`) the compiler inferred. |
+| 2026-04-18 | Phase 4: lesson content stored as pre-authored HTML in `lessons.content_html` | No rich-text editor in Phase 4 UI. Content pushed via seed data / SQL by admins. Embedded video = `<iframe>` inside content_html. Keeps surface area small; a proper editor can land in Phase 5+ with no schema change. |
+| 2026-04-18 | Phase 4: binary per-lesson progress, aggregates computed at query time | No percent-watched, no time-on-page, no materialized course/module progress columns. Avoids write amplification and stale-state bugs when lessons are added/removed. Count(completed) / count(*) at read time. |
+| 2026-04-18 | Phase 4: visibility gated at course level only — no `published` on modules/lessons | Courses are pushed complete. Modules and lessons inherit parent-course visibility via RLS `EXISTS` subquery. Simpler policies; admins push "the whole thing" per cadence. |
+| 2026-04-18 | Phase 4: `course_access_level` enum (`free`, `premium`) stored but not enforced in RLS | Structural groundwork for future paid/coaching tiers. Premium gating deferred to Phase 5+ when a payments/entitlement model exists. Phase 4 treats all published courses as viewable by any authenticated member. |
+| 2026-04-18 | Phase 4: `lesson_progress` has no DELETE policy | Progress rows are not user-deletable. ON DELETE CASCADE on both FKs (user_id, lesson_id) handles cleanup when a user or lesson is removed. Keeps progress history immutable-by-default. |
 
 ---
 
@@ -402,15 +408,46 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 3 — COMPLETE (Events & Media frontend shipped as v0.3.0)
-**Last Updated:** 2026-04-18 (Session 9)
-**Frontend Version:** v0.3.0 (deployed via Cloudflare Workers auto-deploy from main)
-**Supabase Schema:** v3 — unchanged this session. Tables `events`, `event_rsvps` live with RLS.
-**Status:** `/events` list + `/events/:id` detail + admin CRUD modal + dashboard `UpcomingEventsCard` + navbar entry all live. Lint clean, build clean, RLS policies verified by inspection. Ready for Phase 4 (Lifestyle Course / LMS).
+**Current Phase:** Phase 4 — IN PROGRESS (LMS schema applied, frontend not started)
+**Last Updated:** 2026-04-18 (Session 10)
+**Frontend Version:** v0.3.0 (unchanged — no frontend work this session)
+**Supabase Schema:** v4 — migration `phase4_lms_schema` applied. Tables `courses`, `modules`, `lessons`, `lesson_progress` live with RLS (14 policies total).
+**Status:** Schema draft approved and applied. Advisors clean: zero `auth_rls_initplan` findings, only pre-existing `auth_leaked_password_protection` WARN (dashboard toggle, deferred to Phase 5) and expected INFO `unused_index` findings on fresh Phase 4 indexes. Ready for Phase 4 frontend planning.
 
 ---
 
 ## SESSION LOG
+
+### Session 10 — 2026-04-18 (Claude Code — Phase 4 schema applied)
+**Goal:** Apply approved Phase 4 LMS schema draft as migration, run both advisors, update reference file.
+
+**What was done:**
+- Applied migration `phase4_lms_schema` via Supabase MCP. Created `course_access_level` enum; tables `public.courses`, `public.modules`, `public.lessons`, `public.lesson_progress`; six indexes; four `handle_updated_at` triggers; fourteen RLS policies.
+- Verified RLS is enabled on all 4 tables and all policies registered as designed (lesson_progress intentionally has no DELETE policy — FK cascades handle cleanup).
+- Ran security advisor: only pre-existing `auth_leaked_password_protection` WARN (dashboard toggle, deferred). No schema-level findings.
+- Ran performance advisor: zero `auth_rls_initplan` findings (confirms `(select auth.uid())` wrapping is clean). Seventeen INFO `unused_index` findings — all expected on fresh tables with no query history; includes legacy forum/events indexes carried from prior sessions. No action.
+- No remediation required.
+- Updated reference file: canonical version date (session 10), canonical versions table (schema v4 + Phase 4 draft row), Phase 4 roadmap (schema + RLS checked), five new Phase 4 entries in Architecture & Design Decisions, Current Status block.
+
+**Decisions made:**
+- Continue deferring leaked-password protection to Phase 5 (no code impact).
+- No per-lesson rich-text editor in Phase 4 — admins push pre-authored HTML via seed data / SQL. Embedded video = `<iframe>` inside `content_html`.
+- Progress aggregation stays at query time; no materialized progress columns on courses/modules.
+- `course_access_level` is structural-only in Phase 4; premium enforcement lands with payments in Phase 5+.
+
+**Next Session Handoff:**
+- Begin Phase 4 **frontend** planning in Chat before the next Code session.
+- Expected scope for the first Phase 4 frontend session (subject to Chat refinement):
+  1. `/courses` catalog page (published courses only for members, all for admins).
+  2. `/courses/:slug` course detail — module list, lesson list with completion state + progress bar.
+  3. `/courses/:slug/:lessonId` lesson viewer — rendered `content_html` + "Mark complete" control writing to `lesson_progress`.
+  4. Admin course/module/lesson CRUD (reuse Modal primitive from Phase 3 events).
+  5. Navbar Courses link, Dashboard quick-link + resume-course card (optional stretch).
+  6. Mobile verification + RLS smoke test (member vs admin; published vs draft course).
+  7. Bump to v0.4.0 on deploy.
+- Reuse patterns: `UserAvatar`, `usePrivateImage` (if cover images go to a private bucket), `Modal` primitive, `(select auth.uid())` pattern for any helper queries, effect deferral via `await Promise.resolve()`.
+- Open question still open (non-blocking): Co-Host #3 name.
+- No blockers.
 
 ### Session 1 — 2026-04-13
 **Goal:** Define project scope, choose tech stack, create project reference file.

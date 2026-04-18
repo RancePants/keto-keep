@@ -52,6 +52,17 @@ export function AuthProvider({ children }) {
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
         if (!mounted) return;
+
+        // If the user clicked a password-reset email link, the recovery token
+        // lands here as PASSWORD_RECOVERY. Redirect to the update-password page
+        // regardless of where the link opened — before any other state is set.
+        if (_event === 'PASSWORD_RECOVERY') {
+          if (window.location.pathname !== '/update-password') {
+            window.location.replace('/update-password');
+          }
+          // Let the session be set so updateUser() works on that page.
+        }
+
         setSession(newSession);
         // Mark hydrated as soon as we know the session. Profile fetch runs
         // independently and must never block the loading flag.
@@ -141,7 +152,7 @@ export function AuthProvider({ children }) {
   const resetPassword = useCallback(async ({ email }) => {
     try {
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login`,
+        redirectTo: `${window.location.origin}/update-password`,
       });
       return { data, error };
     } catch (e) {

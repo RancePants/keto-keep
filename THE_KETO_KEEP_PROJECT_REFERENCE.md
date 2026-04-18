@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 10 — Phase 4 LMS schema applied)
+> **Canonical version date:** 2026-04-18 (Session 11 — Phase 4 LMS frontend shipped as v0.4.0)
 
 ---
 
@@ -80,9 +80,9 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.3.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 9 — Phase 3 Events & Media |
+| Frontend app | v0.4.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 11 — Phase 4 LMS frontend (commit d9628f3) |
 | Supabase schema | v4 (Phase 4 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migration: `phase4_lms_schema` |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 10 — Phase 4 schema applied |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 11 — Phase 4 LMS shipped |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 
@@ -292,15 +292,20 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] RLS smoke test via SQL — all 8 policies confirmed: events SELECT=authenticated, INSERT/UPDATE/DELETE=is_admin; event_rsvps SELECT=authenticated, INSERT/UPDATE require own user_id, DELETE self-or-admin. All `auth.uid()` wrapped.
 - [x] Bumped to v0.3.0, committed, pushed, verified Cloudflare deploy.
 
-### Phase 4: Lifestyle Course / LMS 🚧 (IN PROGRESS — schema applied)
+### Phase 4: Lifestyle Course / LMS ✅ (COMPLETE — v0.4.0 deployed)
 - [x] Database schema: `courses`, `modules`, `lessons`, `lesson_progress` (session 10, migration `phase4_lms_schema`)
-- [x] RLS policies for course tables (14 policies; all `auth.uid()` wrapped; zero `auth_rls_initplan` findings)
-- [ ] Course overview page
-- [ ] Module and lesson display
-- [ ] Lesson content rendering (text, embedded video)
-- [ ] Progress tracking per member
-- [ ] Admin course content management (CRUD for modules/lessons)
-- [ ] Course navigation (next/previous lesson, module overview)
+- [x] RLS policies for course tables (15 policies; all `auth.uid()` wrapped; zero `auth_rls_initplan` findings)
+- [x] `/courses` catalog page with cover/title/description/progress cards (admin sees unpublished with badge)
+- [x] `/courses/:slug` course overview — accordion module list, per-module progress, "Continue / Start / Review" CTA resolving to first incomplete lesson
+- [x] `/courses/:slug/:lessonId` lesson viewer — DOMPurify-sanitized `content_html` (iframes/images allowed), Mark Complete, prev/next across module boundaries, sticky module sidebar
+- [x] Progress tracking per member via `lesson_progress` upsert; aggregates computed at read time (no materialized columns)
+- [x] Admin CRUD via Modal primitive: Course (title/desc/slug/cover/access_level/published), Module (title/desc), Lesson metadata (title/estimated_minutes). Lesson content remains SQL-authored.
+- [x] Reorder via up/down arrows (`OrderControls`) — no drag-and-drop
+- [x] Dashboard `MyLearningCard` (most-recent-active or first-published) + Navbar Courses link + dashboard quick-link
+- [x] CSS: `content_html` typography, 16:9 responsive YouTube iframe, celebrate animation on complete, responsive 960/640 breakpoints
+- [x] Seeded test course "Foundations of Ancestral Living" with lesson exercising h2/h3, strong/em, list, image, YouTube iframe, blockquote
+- [x] RLS smoke test passed: non-admin sees only published, non-admin cannot INSERT courses, non-admin cannot INSERT progress for another user; admin sees drafts
+- [x] Bumped to v0.4.0, committed (d9628f3), pushed, Cloudflare deploy verified
 
 ### Phase 5: Messaging, Badges & Polish 🔲 (NOT STARTED)
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email)
@@ -358,6 +363,12 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Phase 4: visibility gated at course level only — no `published` on modules/lessons | Courses are pushed complete. Modules and lessons inherit parent-course visibility via RLS `EXISTS` subquery. Simpler policies; admins push "the whole thing" per cadence. |
 | 2026-04-18 | Phase 4: `course_access_level` enum (`free`, `premium`) stored but not enforced in RLS | Structural groundwork for future paid/coaching tiers. Premium gating deferred to Phase 5+ when a payments/entitlement model exists. Phase 4 treats all published courses as viewable by any authenticated member. |
 | 2026-04-18 | Phase 4: `lesson_progress` has no DELETE policy | Progress rows are not user-deletable. ON DELETE CASCADE on both FKs (user_id, lesson_id) handles cleanup when a user or lesson is removed. Keeps progress history immutable-by-default. |
+| 2026-04-18 | Phase 4 frontend: lesson `content_html` sanitized with DOMPurify (iframes allowed) | Admin-authored HTML needs to support YouTube embeds + images. DOMPurify defaults strip `<iframe>`; `ADD_TAGS: ['iframe']` + `ADD_ATTR` for `allow`/`allowfullscreen`/`frameborder`/`scrolling`/`referrerpolicy` keeps embeds functional. Sanitization is a defense-in-depth habit even though content is admin-only. |
+| 2026-04-18 | Phase 4 frontend: no rich-text lesson editor — metadata-only modal | Phase 4 ships faster without a WYSIWYG. Admins push `content_html` directly via SQL. Metadata modal (title + estimated_minutes + display_order) covers the ergonomic 90% case. A WYSIWYG can land later without schema changes. |
+| 2026-04-18 | Phase 4 frontend: up/down arrow reordering, not drag-and-drop | `OrderControls` component swaps `display_order` between adjacent rows via parallel UPDATE. No DnD library dependency; same keyboard/tap story on mobile as on desktop. Acceptable for the expected module/lesson counts (tens, not hundreds). |
+| 2026-04-18 | Phase 4 frontend: "Continue where I left off" resolves at read time | Scan modules → lessons ordered by `display_order`, find first row not present in `lesson_progress` for the user. If all complete → "Review Course" + link to first lesson. If none started → "Start Course" + link to first lesson. No resume-cursor column; the progress set is the source of truth. |
+| 2026-04-18 | Phase 4 frontend: accordion module list with one-time auto-expand of first incomplete module | Book-style table of contents feel. Auto-expand is gated by a single `expandedInitialized` flag inside `load()` so re-fetches after admin edits don't clobber the user's manual toggles (also satisfies `react-hooks/set-state-in-effect`). |
+| 2026-04-18 | Phase 4 frontend: lesson viewer uses a 720px reading column + sticky module sidebar | Optimizes for long-form reading comfort (line length ≈ 65 characters). Sidebar stacks below main at 960px, hides entirely at 640px. Breadcrumbs sit above title so the learner always knows where they are in the course. |
 
 ---
 
@@ -408,21 +419,60 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 4 — IN PROGRESS (LMS schema applied, frontend not started)
-**Last Updated:** 2026-04-18 (Session 10)
-**Frontend Version:** v0.3.0 (unchanged — no frontend work this session)
-**Supabase Schema:** v4 — migration `phase4_lms_schema` applied. Tables `courses`, `modules`, `lessons`, `lesson_progress` live with RLS (14 policies total).
-**Status:** Schema draft approved and applied. Advisors clean: zero `auth_rls_initplan` findings, only pre-existing `auth_leaked_password_protection` WARN (dashboard toggle, deferred to Phase 5) and expected INFO `unused_index` findings on fresh Phase 4 indexes. Ready for Phase 4 frontend planning.
+**Current Phase:** Phase 4 — COMPLETE (LMS frontend shipped as v0.4.0)
+**Last Updated:** 2026-04-18 (Session 11)
+**Frontend Version:** v0.4.0 — live on Cloudflare Workers (bundle `index-En1TdZJP.js` / `index-CJIVLMm9.css`, commit d9628f3).
+**Supabase Schema:** v4 — migration `phase4_lms_schema` applied. Tables `courses`, `modules`, `lessons`, `lesson_progress` live with RLS (15 policies total: 4×courses, 4×modules, 4×lessons, 3×lesson_progress — no DELETE on progress).
+**Status:** Phase 4 complete end-to-end. Catalog, course detail, lesson viewer, admin CRUD, dashboard My Learning card, navbar link all live. Seed course "Foundations of Ancestral Living" populated via SQL with a mixed-content lesson (h2/h3, strong/em, list, image, YouTube iframe, blockquote). RLS smoke test passed (non-admin sees only published; INSERT/UPDATE for lesson_progress own-user-only; admin full CRUD). Advisors clean: no new findings, only pre-existing `auth_leaked_password_protection` WARN and INFO `unused_index` on fresh Phase 4 indexes. Ready for Phase 5 kickoff.
 
 ---
 
 ## SESSION LOG
 
+### Session 11 — 2026-04-18 (Claude Code — Phase 4 LMS frontend build + deploy v0.4.0)
+**Goal:** Build `/courses`, `/courses/:slug`, `/courses/:slug/:lessonId`, admin course/module/lesson CRUD, dashboard My Learning card, navbar Courses link, mobile + RLS test, ship v0.4.0.
+
+**What was done:**
+- Installed `dompurify` (3.4.x) for `content_html` sanitization in the lesson viewer.
+- Created `src/lib/courseHelpers.js` — access-level labels, `slugify`, `flattenLessons`, `computeCourseProgress`, `computeModuleProgress`, `firstIncomplete`, `formatMinutes`, `sumEstimatedMinutes`.
+- Built primitives under `src/components/courses/`:
+  - `ProgressBar.jsx` — sm/md/lg sizes; gradient swaps to "complete" green when at 100%.
+  - `LessonContent.jsx` — `useMemo`-sanitized HTML with iframe/image allow-list, rendered via `dangerouslySetInnerHTML`.
+  - `CourseCard.jsx` — cover or emoji placeholder, Unpublished + Premium badges, progress bar or Start CTA.
+  - `CourseFormModal.jsx` — full CRUD (title/description/slug/cover/access_level/published); slug auto-derives from title until touched; delete confirmation.
+  - `ModuleFormModal.jsx` — title + description scoped to `courseId`, `nextDisplayOrder` prop for new rows.
+  - `LessonFormModal.jsx` — metadata only (title + estimated_minutes); creates with empty `content_html`; explicit note that content is SQL-authored.
+  - `OrderControls.jsx` — up/down arrow buttons with `isFirst`/`isLast`/`disabled` props.
+  - `MyLearningCard.jsx` — most-recent-active course or fallback to first published; thumbnail + progress + Continue/Start/Review CTA.
+- Built pages:
+  - `src/pages/CoursesHome.jsx` — parallel queries for courses + nested modules/lessons (id only for totals) + user's progress; admin "+ New course" button + CourseFormModal.
+  - `src/pages/CourseDetail.jsx` — slug fetch, modules + lessons, accordion expansion per module with one-time auto-expand of first incomplete module via `expandedInitialized` flag (avoids clobbering manual toggles across admin edit re-fetches). Admin: edit course + create/edit module + create/edit lesson + reorder. "Continue / Start / Review" CTA resolves to `firstIncomplete` lesson.
+  - `src/pages/LessonView.jsx` — breadcrumbs, lesson title + estimated time, `LessonContent`, Mark Complete upsert on `lesson_progress` (onConflict `user_id,lesson_id`) with celebrate animation, prev/next across module boundaries, sticky module sidebar (collapses <640px), scroll-to-top on lesson change.
+- Wired 3 routes in `App.jsx` (all `ProtectedRoute`), added Navbar Courses link, replaced Dashboard's placeholder Courses link with real route and inserted `<MyLearningCard />`.
+- Authored `src/styles/courses.css` (~900 lines): progress-bar, course card/grid, accordion module/lesson rows, lesson-view 1fr+260px layout, 720px reading column, typographic styles for `.lesson-content` (h1–h4, p, strong/em/u, a, ul/ol, blockquote, img max-width, 16:9 iframe wrapper), celebrate keyframe on Mark Complete, toggle switch, My Learning card, mobile breakpoints at 960px (sidebar stacks) and 640px (sidebar hidden, stacked layouts). Imported from `index.css`.
+- Lint fixes: removed stale `react/no-danger` eslint-disable (rule not in config); moved auto-expand out of a dedicated `useEffect` into `load()` with `expandedInitialized` gate to satisfy `react-hooks/set-state-in-effect`.
+- `npm run build` → 545 KB JS / 55 KB CSS, clean. Lint clean.
+- Seeded via `execute_sql` (idempotent `on conflict do update`): course `00000000-0000-4000-8000-000000000001` "Foundations of Ancestral Living" (slug `foundations`, published), module "Welcome to The Keep", lesson "Why ancestral living matters" (8 min, 1539-char `content_html` with h2, p+strong+em, bulleted list, h3, image (Unsplash), responsive YouTube iframe, blockquote).
+- RLS smoke test via `execute_sql`: confirmed 15 policies. Inserted a transient draft course as service role, simulated as non-admin via `set_config('role','authenticated')` + `request.jwt.claims` → non-admin saw only the published course; `is_admin()` returned false for fake UUID; non-admin INSERT on courses and cross-user INSERT on lesson_progress both denied. Cleaned up the draft after verification.
+- Bumped `package.json` to `0.4.0`, committed (d9628f3), pushed to `main`. Polled Cloudflare Workers until the new bundle hashes (`index-En1TdZJP.js` / `index-CJIVLMm9.css`) went live at keto-keep.rance-8c6.workers.dev.
+
+**Decisions made:**
+- Added six Phase 4 frontend entries to Architecture & Design Decisions (DOMPurify with iframe allow-list; no WYSIWYG; up/down reorder; read-time "continue" resolution; one-time accordion auto-expand; 720px reading column + sticky sidebar).
+- Corrected policy count: 15 policies total (previous entries said 14) — 4 each on courses/modules/lessons + 3 on lesson_progress (no DELETE).
+
+**Next Session Handoff:**
+- Begin **Phase 5: Messaging, Badges & Polish**.
+- First design pass in Chat: pick an approach for member-to-member messaging (in-app DMs vs. email handoff) and draft the schema for badges/awards + internal tags.
+- Also scope in Phase 5: leaked-password protection enable in Supabase dashboard, member directory/search, notification system, final RLS audit across all tables.
+- Stretch items deferred from earlier phases: recurring-event RRULE editor (Phase 3), lesson WYSIWYG editor (Phase 4). Land if a concrete need surfaces; otherwise skip.
+- Open question still open (non-blocking): Co-Host #3 name.
+- No blockers.
+
 ### Session 10 — 2026-04-18 (Claude Code — Phase 4 schema applied)
 **Goal:** Apply approved Phase 4 LMS schema draft as migration, run both advisors, update reference file.
 
 **What was done:**
-- Applied migration `phase4_lms_schema` via Supabase MCP. Created `course_access_level` enum; tables `public.courses`, `public.modules`, `public.lessons`, `public.lesson_progress`; six indexes; four `handle_updated_at` triggers; fourteen RLS policies.
+- Applied migration `phase4_lms_schema` via Supabase MCP. Created `course_access_level` enum; tables `public.courses`, `public.modules`, `public.lessons`, `public.lesson_progress`; six indexes; four `handle_updated_at` triggers; fifteen RLS policies (4×courses, 4×modules, 4×lessons, 3×lesson_progress — Session 10 entry originally said fourteen; corrected after policy-count audit in Session 11).
 - Verified RLS is enabled on all 4 tables and all policies registered as designed (lesson_progress intentionally has no DELETE policy — FK cascades handle cleanup).
 - Ran security advisor: only pre-existing `auth_leaked_password_protection` WARN (dashboard toggle, deferred). No schema-level findings.
 - Ran performance advisor: zero `auth_rls_initplan` findings (confirms `(select auth.uid())` wrapping is clean). Seventeen INFO `unused_index` findings — all expected on fresh tables with no query history; includes legacy forum/events indexes carried from prior sessions. No action.

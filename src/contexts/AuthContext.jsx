@@ -46,55 +46,34 @@ export function AuthProvider({ children }) {
       setLoading(false);
     };
 
-    // Primary init: getSession is the source of truth for initial state.
-    (async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
+    // onAuthStateChange fires INITIAL_SESSION immediately on subscribe with
+    // the persisted session (or null). That's our single source of truth —
+    // no parallel getSession() IIFE, so no race.
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => {
         if (!mounted) return;
-        if (error) console.error('getSession failed:', error.message);
-        const current = data?.session ?? null;
-        setSession(current);
-        if (current?.user) {
-          await fetchProfile(current.user.id);
+        setSession(newSession);
+        // Mark hydrated as soon as we know the session. Profile fetch runs
+        // independently and must never block the loading flag.
+        finish();
+        if (newSession?.user) {
+          fetchProfile(newSession.user.id).catch((e) =>
+            console.error('Profile fetch failed:', e)
+          );
         } else {
           setProfile(null);
         }
-      } catch (e) {
-        console.error('Auth init failed:', e);
-      } finally {
-        finish();
       }
-    })();
+    );
 
-    // Safety net: if getSession somehow never resolves (e.g., stalled token
-    // refresh on a bad network), don't leave the app spinning forever.
+    // Safety net: if the subscription somehow never delivers INITIAL_SESSION
+    // (stalled token refresh, network wedge), don't spin forever.
     const safetyTimer = setTimeout(() => {
       if (mounted && !settled) {
         console.warn('Auth init timed out; proceeding as unauthenticated.');
         finish();
       }
-    }, 8000);
-
-    // Keep session/profile in sync with future auth changes. Wrapped so a
-    // throw in this callback can never jam the provider.
-    const { data: subscription } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        if (!mounted) return;
-        try {
-          setSession(newSession);
-          if (newSession?.user) {
-            await fetchProfile(newSession.user.id);
-          } else {
-            setProfile(null);
-          }
-        } catch (e) {
-          console.error('Auth state change failed:', e);
-        } finally {
-          // Once any auth event arrives we know we're hydrated.
-          finish();
-        }
-      }
-    );
+    }, 5000);
 
     return () => {
       mounted = false;

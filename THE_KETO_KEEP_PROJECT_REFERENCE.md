@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 11 — Phase 4 LMS frontend shipped as v0.4.0)
+> **Canonical version date:** 2026-04-18 (Session 13 — Phase 5A schema applied)
 
 ---
 
@@ -81,10 +81,11 @@ All three co-hosts need full admin access within the platform.
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
 | Frontend app | v0.4.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 11 — Phase 4 LMS frontend (commit d9628f3) |
-| Supabase schema | v4 (Phase 4 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migration: `phase4_lms_schema` |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 11 — Phase 4 LMS shipped |
+| Supabase schema | v5A (Phase 5A applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migrations: `phase5a_profiles_badges_tags` + `phase5a_cover_fk_indexes` |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 13 — Phase 5A schema applied |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
+| Phase 5A schema draft | APPLIED (reference copy) | `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` | session 13 — matches applied migration (incl. FK cover indexes) |
 
 ---
 
@@ -307,16 +308,28 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] RLS smoke test passed: non-admin sees only published, non-admin cannot INSERT courses, non-admin cannot INSERT progress for another user; admin sees drafts
 - [x] Bumped to v0.4.0, committed (d9628f3), pushed, Cloudflare deploy verified
 
-### Phase 5: Messaging, Badges & Polish 🔲 (NOT STARTED)
+### Phase 5: Messaging, Badges & Polish 🟡 (IN PROGRESS — 5A schema drafted)
+
+**Phase 5A — Enhanced Profiles + Badges + Interest Tags** (schema drafted session 12)
+- [x] Draft schema: `profiles` +6 cols (`dietary_approach`, `journey_duration`, `state`, `city`, `about_me`, `my_why`), `badges`, `member_badges`, `tags`, `member_tags` → `Project Reference/PHASE5A_SCHEMA_DRAFT.sql`
+- [x] New enums: `dietary_approach_type` (6 values), `journey_duration_type` (5 values), `badge_type` (5 values)
+- [x] Draft RLS: catalog tables (badges/tags) admin-write + authenticated-read; `member_badges` admin-only award (no member self-service); `member_tags` member-self + admin; no UPDATE/DELETE policy on `member_badges` beyond admin delete (history immutable)
+- [x] Seed 5 badge catalog rows + 8 starter interest tags (idempotent)
+- [x] Rance reviews draft → approved as-is
+- [x] Applied migration `phase5a_profiles_badges_tags` (session 13, 2026-04-18)
+- [x] Ran security + performance advisors. Security: only pre-existing `auth_leaked_password_protection` WARN. Performance: two new `unindexed_foreign_keys` INFOs on `member_badges.awarded_by` and `tags.created_by` → remediated with follow-on migration `phase5a_cover_fk_indexes`. Zero `auth_rls_initplan` findings (confirms `(select auth.uid())` wrapping). Remaining `unused_index` INFOs all expected on fresh indexes.
+- [ ] Frontend: profile edit form new fields, public profile display (location, about, why, badges, interest tags), self-select tag UI, admin badge-award UI
+
+**Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email)
-- [ ] Badge/award system — schema, RLS, admin assignment, profile display
-- [ ] Internal tag system — schema, RLS, admin-only views
-- [ ] Member directory / search
+- [ ] Internal admin-only tag system (separate from public interest tags — §7 of feature requirements)
+- [ ] Member directory / search (leverages new profile fields + tags)
 - [ ] Notification system (at minimum: in-app indicators)
 - [ ] Performance and UX polish
 - [ ] Accessibility review
 - [ ] Supabase security + performance advisor audit (both types, run separately)
 - [ ] Final RLS policy review across all tables
+- [ ] Enable Supabase leaked-password protection (deferred from Phase 3)
 
 ---
 
@@ -369,6 +382,14 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Phase 4 frontend: "Continue where I left off" resolves at read time | Scan modules → lessons ordered by `display_order`, find first row not present in `lesson_progress` for the user. If all complete → "Review Course" + link to first lesson. If none started → "Start Course" + link to first lesson. No resume-cursor column; the progress set is the source of truth. |
 | 2026-04-18 | Phase 4 frontend: accordion module list with one-time auto-expand of first incomplete module | Book-style table of contents feel. Auto-expand is gated by a single `expandedInitialized` flag inside `load()` so re-fetches after admin edits don't clobber the user's manual toggles (also satisfies `react-hooks/set-state-in-effect`). |
 | 2026-04-18 | Phase 4 frontend: lesson viewer uses a 720px reading column + sticky module sidebar | Optimizes for long-form reading comfort (line length ≈ 65 characters). Sidebar stacks below main at 960px, hides entirely at 640px. Breadcrumbs sit above title so the learner always knows where they are in the course. |
+| 2026-04-18 | Phase 5A: split Phase 5 into waves; 5A = enhanced profiles + badges + interest tags | Phase 5 carries many loosely-related items (messaging, badges, tags, directory, notifications, polish). Shipping them as one wave would balloon scope. 5A is a cohesive "who is this person?" wave that unlocks profile display and later directory/search. Messaging and internal admin tags come in later 5B+ waves. |
+| 2026-04-18 | Phase 5A: new profile fields stay on `profiles` table (no side table) | The six new fields (dietary_approach, journey_duration, state, city, about_me, my_why) are 1:1 with a member and always read alongside display_name/avatar/bio. Keeping them on `profiles` avoids an extra join on every profile render and reuses existing RLS policies unchanged. |
+| 2026-04-18 | Phase 5A: dietary_approach and journey_duration as enums, not free text | Enables consistent directory filters later ("show me 'just starting' members"), keeps analytics sane, and prevents slug-like drift ("Keto" vs "keto" vs "ketogenic"). Nullable because disclosure is optional. Extensible via ALTER TYPE ADD VALUE. |
+| 2026-04-18 | Phase 5A: state stored as 2-letter abbreviation, city as free text | State set is small and stable — dropdown on frontend, compact on-disk, trivially filterable. Cities are an effectively unbounded set — a catalog would be busywork with no payoff at this scale. |
+| 2026-04-18 | Phase 5A: badges catalog keyed by `badge_type` enum + one-row-per-type | Enables future auto-award logic to branch on enum (e.g. tenure triggers) without string matching. Display metadata (name/description/icon) lives in the `badges` row so co-hosts can edit copy without a migration. `unique (badge_type)` enforces one-row-per-type. |
+| 2026-04-18 | Phase 5A: `member_badges.awarded_by` nullable — null means auto-awarded | Supports future tenure-milestone triggers that have no human "awarder." When an admin awards manually, the column is populated so profile display can show "Awarded by Rance" if desired. FK `on delete set null` preserves award history if the awarder leaves. |
+| 2026-04-18 | Phase 5A: no UPDATE policy on `member_badges` — revoke = delete, re-award = insert | Badges are conceptually held or not held. `awarded_at`/`awarded_by` are historical, not mutable. Simpler RLS surface; cleaner audit story. |
+| 2026-04-18 | Phase 5A: interest tags are admin-curated, member-self-selected | Keeps the tag set clean (no "Keto!!!" / "keto" / "KETO" fragmentation) while letting members express their own secondary interests. Distinct from the future internal admin-only tag system, which will be a separate table with admin-only SELECT. |
 
 ---
 
@@ -419,15 +440,81 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 4 — COMPLETE (LMS frontend shipped as v0.4.0)
-**Last Updated:** 2026-04-18 (Session 11)
-**Frontend Version:** v0.4.0 — live on Cloudflare Workers (bundle `index-En1TdZJP.js` / `index-CJIVLMm9.css`, commit d9628f3).
-**Supabase Schema:** v4 — migration `phase4_lms_schema` applied. Tables `courses`, `modules`, `lessons`, `lesson_progress` live with RLS (15 policies total: 4×courses, 4×modules, 4×lessons, 3×lesson_progress — no DELETE on progress).
-**Status:** Phase 4 complete end-to-end. Catalog, course detail, lesson viewer, admin CRUD, dashboard My Learning card, navbar link all live. Seed course "Foundations of Ancestral Living" populated via SQL with a mixed-content lesson (h2/h3, strong/em, list, image, YouTube iframe, blockquote). RLS smoke test passed (non-admin sees only published; INSERT/UPDATE for lesson_progress own-user-only; admin full CRUD). Advisors clean: no new findings, only pre-existing `auth_leaked_password_protection` WARN and INFO `unused_index` on fresh Phase 4 indexes. Ready for Phase 5 kickoff.
+**Current Phase:** Phase 5A — schema APPLIED (frontend not started)
+**Last Updated:** 2026-04-18 (Session 13)
+**Frontend Version:** v0.4.0 — live on Cloudflare Workers (bundle `index-En1TdZJP.js` / `index-CJIVLMm9.css`, commit d9628f3). No frontend changes this session.
+**Supabase Schema:** v5A — migrations `phase5a_profiles_badges_tags` + `phase5a_cover_fk_indexes` applied. `profiles` now has 6 new nullable columns; tables `badges` / `member_badges` / `tags` / `member_tags` live with RLS (14 policies total: 4×badges, 3×member_badges, 4×tags, 3×member_tags). Five indexes on Phase 5A objects (`member_badges_badge_id_idx`, `member_badges_awarded_by_idx`, `member_tags_tag_id_idx`, `tags_created_by_idx`, `profiles_state_idx`). Three new enums (`dietary_approach_type`, `journey_duration_type`, `badge_type`). Seeds: 5 badge catalog rows + 8 starter interest tags.
+**Status:** Phase 5A schema end-to-end complete on the database side. Advisors clean: no security findings beyond pre-existing `auth_leaked_password_protection` WARN; zero `auth_rls_initplan` findings (confirms `(select auth.uid())` wrapping); two unindexed-FK findings remediated with covering indexes; remaining `unused_index` INFOs expected on fresh indexes. Ready for Phase 5A frontend planning in Chat.
 
 ---
 
 ## SESSION LOG
+
+### Session 13 — 2026-04-18 (Claude Code — Phase 5A schema applied)
+**Goal:** Apply the approved Phase 5A schema draft, run both advisors, remediate any new findings, update reference file, commit + push.
+
+**What was done:**
+- Applied migration `phase5a_profiles_badges_tags` via Supabase MCP. Created enums `dietary_approach_type`, `journey_duration_type`, `badge_type`; added 6 nullable columns to `public.profiles`; created tables `public.badges`, `public.member_badges`, `public.tags`, `public.member_tags`; three indexes (`member_badges_badge_id_idx`, `member_tags_tag_id_idx`, `profiles_state_idx`); one `handle_updated_at` trigger on `badges`; 14 RLS policies (4×badges, 3×member_badges, 4×tags, 3×member_tags). Seeded 5 badge catalog rows + 8 starter interest tags (idempotent via `on conflict`).
+- Verified post-apply state via `execute_sql`: all 6 profile columns present, all 4 tables created with RLS enabled, 3 enums present, 14 policies registered, 5 badges + 8 tags seeded.
+- Ran security advisor: only the pre-existing `auth_leaked_password_protection` WARN (dashboard toggle, still deferred). No schema-level findings.
+- Ran performance advisor: **zero** `auth_rls_initplan` findings — confirms the `(select auth.uid())` wrapping is clean across all Phase 5A policies. Two new INFO `unindexed_foreign_keys` findings on `member_badges.awarded_by` and `tags.created_by`.
+- Remediated with follow-on migration `phase5a_cover_fk_indexes`: `create index if not exists member_badges_awarded_by_idx` + `tags_created_by_idx`. Re-ran performance advisor — both findings gone. Remaining findings are all `unused_index` INFOs (expected on fresh indexes and also present on legacy forum/events/courses tables — they turn green once real queries hit the indexes).
+- Updated reference file: canonical version date (session 13), canonical versions table (schema v5A), Phase 5A checklist advanced, Current Status block.
+- Appended the two FK covering indexes into `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` with a note so the reference copy matches applied reality.
+
+**Decisions made:**
+- Add covering indexes for FKs to `auth.users` on Phase 5A tables (`member_badges.awarded_by`, `tags.created_by`) even though the findings are INFO-level. Consistent with the project's standard of silencing real advisor findings at the source, and helpful for cascade/set-null performance when a user is deleted.
+- Continue deferring leaked-password protection to later Phase 5 waves (no code impact, just a dashboard toggle).
+- Keep the `unused_index` INFOs as-is — they turn green once the Phase 5A frontend lands and real queries hit the indexes.
+
+**Next Session Handoff:**
+- Begin **Phase 5A frontend** design in Chat before the next Code session.
+- Expected frontend scope for Phase 5A:
+  1. Profile edit form — new fields for dietary_approach (enum dropdown), journey_duration (enum dropdown), state (US-state dropdown, 2-letter), city (free text), about_me (textarea), my_why (textarea). All optional.
+  2. Public profile display — location (city, state), about_me, my_why, awarded badges (with icon/name/description tooltip), self-selected interest tags.
+  3. Member self-select tag UI — list available tags from catalog, toggle via `member_tags` insert/delete.
+  4. Admin badge-award UI — select member, select badge from catalog, insert `member_badges` row with `awarded_by = auth.uid()`. Revoke = delete.
+  5. Mobile verification + RLS smoke test (member sees badges on others' profiles, admin can award/revoke, member can self-select tags but not award badges).
+  6. Version bump to v0.5.0 on deploy.
+- Open question still open (non-blocking): Co-Host #3 name.
+- No blockers.
+
+### Session 12 — 2026-04-18 (Claude Code — Phase 5A schema design)
+**Goal:** Draft Phase 5A schema — enhanced profile fields, badges system, interest tags. Design only; do not apply migration.
+
+**What was done:**
+- Verified existing `public.profiles` columns (id, email, display_name, bio, avatar_url, role, created_at, updated_at) to confirm the six new columns don't collide.
+- Authored `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` (~300 lines):
+  - Enums: `dietary_approach_type` (keto, carnivore, paleo, low_carb, ancestral_whole_food, exploring), `journey_duration_type` (just_starting, less_than_6_months, six_months_to_1_year, one_to_3_years, three_plus_years), `badge_type` (course_complete, tenure_1_month, tenure_6_months, tenure_1_year, coach_spotlight).
+  - `profiles` ALTER TABLE adds 6 nullable columns: dietary_approach, journey_duration, state (2-letter text), city (text), about_me (text), my_why (text). No RLS changes — existing profiles policies cover.
+  - `badges` catalog: id, badge_type (unique), name, description, icon_url, timestamps, `handle_updated_at` trigger.
+  - `member_badges`: composite PK (user_id, badge_id), awarded_at, awarded_by (nullable FK → auth.users on delete set null — NULL = auto-awarded).
+  - `tags` catalog: id, name (unique), created_by (nullable FK → auth.users), created_at.
+  - `member_tags`: composite PK (user_id, tag_id), created_at.
+  - Indexes: `member_badges(badge_id)`, `member_tags(tag_id)`, `profiles(state)`.
+  - RLS (all new tables, all `auth.uid()` wrapped):
+    - `badges`: authenticated SELECT, admin INSERT/UPDATE/DELETE.
+    - `member_badges`: authenticated SELECT, admin-only INSERT + DELETE (no UPDATE — revoke=delete).
+    - `tags`: authenticated SELECT, admin INSERT/UPDATE/DELETE.
+    - `member_tags`: authenticated SELECT, member-or-admin INSERT + DELETE (no UPDATE — pure join).
+  - Seeds (idempotent via `on conflict`): 5 badge catalog rows (one per badge_type), 8 starter interest tags (Meal Prep, Fasting, Fitness, Mental Health, Gut Health, Family Meals, Weight Loss, Athletic Performance).
+- Updated reference file: canonical version date (session 12), canonical versions table (+ Phase 5A draft row), Phase 5 roadmap split into 5A (this wave) + 5B (later), eight new entries in Architecture & Design Decisions table, Current Status block.
+
+**Decisions made:**
+- Phase 5 split into waves. 5A is a cohesive "who is this person?" wave (profile enhancements + badges + interest tags). Messaging, internal admin tags, directory/search, notifications, and polish land in 5B+ waves.
+- New profile fields live on `profiles`, not a side table — 1:1 with a member, always read alongside existing profile fields, existing RLS covers them.
+- `dietary_approach` and `journey_duration` as enums (consistent filter values for future directory), not free text.
+- `state` as 2-letter abbreviation (dropdown on frontend, small stable set); `city` as free text (unbounded set — no catalog worth building).
+- `badges` keyed by `badge_type` enum, one row per type. Display metadata editable without migration. `member_badges.awarded_by` nullable for future auto-award triggers.
+- No UPDATE policy on `member_badges` — revoke = delete + re-insert.
+- Interest tags = admin-curated catalog + member self-selection. Distinct from a future internal admin-only tag table (also in Phase 5B scope per §7 of feature requirements).
+
+**Next Session Handoff:**
+- Rance reviews `Project Reference/PHASE5A_SCHEMA_DRAFT.sql`. Push back on any design point (enum values, nullable vs. required, RLS boundaries, seed set).
+- On approval: apply as migration `phase5a_profiles_badges_tags` via Supabase MCP. Run `security` + `performance` advisors. Expected: zero new `auth_rls_initplan` findings (all already wrapped); some `unused_index` INFO on fresh indexes (expected). Pre-existing `auth_leaked_password_protection` WARN still deferred.
+- Then Phase 5A frontend: profile edit form with new fields (enum dropdowns, US-state dropdown, free-text fields), public profile display (location, about/why, badges, interest tags), member self-select tag UI, admin badge-award UI.
+- Open question still open (non-blocking): Co-Host #3 name.
+- No blockers.
 
 ### Session 11 — 2026-04-18 (Claude Code — Phase 4 LMS frontend build + deploy v0.4.0)
 **Goal:** Build `/courses`, `/courses/:slug`, `/courses/:slug/:lessonId`, admin course/module/lesson CRUD, dashboard My Learning card, navbar Courses link, mobile + RLS test, ship v0.4.0.

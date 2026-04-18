@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18
+> **Canonical version date:** 2026-04-18 (Session 3)
 
 ---
 
@@ -23,7 +23,7 @@ At the beginning of every new chat in this project:
 4. **Agree on the session goal** before writing any code or making any changes.
 5. Do NOT begin work until the start gate is complete.
 
-### Session End Gate (mandatory — 8 items)
+### Session End Gate (mandatory — 9 items)
 Before closing any chat session in this project:
 
 1. **Files saved** — all work products saved to appropriate locations
@@ -37,6 +37,7 @@ Before closing any chat session in this project:
 6. **Architecture & Design Decisions updated** — log any new decisions with rationale
 7. **Canonical versions updated** — if any artifact versions changed, update the versions section in this file
 8. **Export the updated file** — so Rance has the latest version to bring into the next session
+9. **Save to local archive** — dated copy to `D:\The Keto Keep\Project Reference\` using naming: `THE_KETO_KEEP_PROJECT_REFERENCE_{date}_S{session#}.md`
 
 ### Interface Routing
 - **Chat (this project)** = planning, decisions, writing, reference file updates
@@ -65,10 +66,10 @@ Separate design discussions from build sessions.
 
 ### Team / Admin Roles
 - **Rance Edwards** — Owner, NBC-HWC
-- **Co-Host #2** — NBC-HWC (name TBD)
-- **Co-Host #3** — NBC-HWC (name TBD)
+- **Justine Roberts** — Co-Host, NBC-HWC (community admin, not involved in dev)
+- **Co-Host #3** — NBC-HWC (actively recruiting)
 
-All three co-hosts need full admin access within the platform.
+All co-hosts need full admin access within the platform.
 
 ---
 
@@ -79,10 +80,13 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location |
 |----------|---------|----------|
-| Frontend app | *not yet created* | Cloudflare Pages |
-| Supabase schema | *not yet created* | Supabase project TBD |
+| Frontend app | v0.1.0 (pending — Code handoff written, not yet built) | Cloudflare Pages (not yet deployed) |
+| Supabase schema | Migration 3 (profiles + avatars + optimized RLS) | Supabase project `madzamkdedtbfhuesmej` (us-east-1) |
 
-*(This table will grow as artifacts are created. Every deployable artifact gets a row.)*
+**Supabase project details:**
+- **Project ID:** `madzamkdedtbfhuesmej`
+- **URL:** `https://madzamkdedtbfhuesmej.supabase.co`
+- **Org:** Full Spectrum Human LLC (`gnemgpobcnfpwnqxdaqc`)
 
 ---
 
@@ -235,21 +239,24 @@ These patterns were learned through trial and error on the MST project. Follow t
 
 ## PHASED ROADMAP
 
-### Phase 1: Foundation 🔲 (NOT STARTED)
-- [ ] Create GitHub repo (`RancePants/keto-keep`)
-- [ ] Scaffold React project (Vite recommended for Cloudflare Pages compatibility)
-- [ ] Supabase project setup (new project, separate from MST)
-- [ ] Database schema design: `profiles` table (extends `auth.users`), `roles` enum
-- [ ] RLS policies for profiles table
-- [ ] Auth flow: email signup, login, logout, password reset
-- [ ] Role system: member, admin (seeded for all 3 co-hosts)
-- [ ] Public landing page (pre-login)
-- [ ] Member dashboard / landing page (post-login)
-- [ ] Basic member profile page (view + edit own)
-- [ ] Cloudflare Pages deployment pipeline (GitHub auto-deploy)
-- [ ] Navigation shell and routing (React Router)
-- [ ] Mobile-responsive layout from the start (not a Phase 5 afterthought)
-- [ ] Add version endpoint or version display (for deploy verification)
+### Phase 1: Foundation 🟡 (IN PROGRESS — backend done, frontend handoff written)
+- [x] Create GitHub repo (`RancePants/keto-keep`)
+- [x] Scaffold React project (Vite + React 19 + React Router 7)
+- [x] Supabase project setup (project `madzamkdedtbfhuesmej`, us-east-1)
+- [x] Database schema design: `profiles` table (extends `auth.users`), `app_role` enum
+- [x] RLS policies for profiles table (optimized with select subqueries, consolidated UPDATE)
+- [x] Private `avatars` storage bucket with per-user RLS policies
+- [x] Triggers: auto-create profile, auto-update timestamps, role change protection
+- [x] Security + performance advisors: both clean
+- [ ] Auth flow: email signup, login, logout, password reset *(in Code handoff)*
+- [ ] Role system: member, admin (seed Rance + Justine after signup) *(in Code handoff)*
+- [ ] Public landing page (pre-login) *(in Code handoff)*
+- [ ] Member dashboard / landing page (post-login) *(in Code handoff)*
+- [ ] Basic member profile page (view + edit own) *(in Code handoff)*
+- [ ] Cloudflare Pages deployment pipeline (GitHub auto-deploy) *(in Code handoff)*
+- [ ] Navigation shell and routing (React Router) *(in Code handoff)*
+- [ ] Mobile-responsive layout from the start *(in Code handoff)*
+- [ ] Add version display in footer (for deploy verification) *(in Code handoff)*
 
 ### Phase 2: Forums 🔲 (NOT STARTED)
 - [ ] Database schema: `forum_spaces`, `forum_posts`, `forum_replies`
@@ -308,6 +315,11 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Version tracking from day one | Learned from MST: version mismatches between local/deployed/memory caused significant wasted work. |
 | 2026-04-18 | GitHub repo: `RancePants/keto-keep` | Confirmed by Rance. Clean, descriptive name. |
 | 2026-04-18 | Local project directory: `D:\The Keto Keep` | Separate drive from MST project (C:). Claude Code handoffs use this path. |
+| 2026-04-18 | Private avatars storage bucket | Long-term security for a health community. Members' photos shouldn't be on public URLs. Worth the extra fetch pattern complexity. |
+| 2026-04-18 | Consolidated RLS UPDATE policy with OR logic | Performance advisor flagged multiple permissive policies. Single policy with self-or-admin check is cleaner and faster. |
+| 2026-04-18 | `(select auth.uid())` subquery pattern in RLS | Performance advisor caught per-row re-evaluation. Wrapping in select evaluates once per query. Applied to all policies. |
+| 2026-04-18 | `SET search_path = ''` on all SECURITY DEFINER functions | Security advisor caught mutable search paths. Prevents search path injection attacks. |
+| 2026-04-18 | Plain CSS over Tailwind/CSS-in-JS | Simplicity, maintainability, no build complexity. CSS custom properties for theming. |
 | | | |
 
 ---
@@ -347,9 +359,9 @@ Every meaningful change gets committed. Descriptive commit messages. Push after 
 
 ## CURRENT STATUS
 
-**Current Phase:** Pre-Phase 1
-**Last Updated:** 2026-04-18
-**Status:** Project reference file created and refined with MST lessons. No code written yet. Ready to begin Phase 1.
+**Current Phase:** Phase 1 — IN PROGRESS (backend complete, frontend handoff ready)
+**Last Updated:** 2026-04-18 (Session 3)
+**Status:** Supabase project created with profiles schema, RLS policies, private avatars bucket, and triggers — all advisor-clean. Claude Code handoff written for full frontend build + Cloudflare Pages deployment. Ready to execute the handoff.
 
 ---
 
@@ -411,22 +423,57 @@ Every meaningful change gets committed. Descriptive commit messages. Push after 
 - The reference file is now ready to support a clean, informed build
 - No blockers. Ready to build.
 
+### Session 3 — 2026-04-18
+**Goal:** Begin Phase 1 — set up Supabase backend, design frontend architecture, write Claude Code handoff.
+**What was done:**
+- Checked GitHub repo — found existing Vite scaffold (1 commit, bare template with deps installed)
+- Created Supabase project "The Keto Keep" (madzamkdedtbfhuesmej, us-east-1, $0/mo)
+- Created `app_role` enum (member, admin)
+- Created `profiles` table with FK to auth.users, RLS enabled
+- Created 3 triggers: auto-create profile on signup, auto-update timestamps, role change protection
+- Created private `avatars` storage bucket with per-user folder RLS
+- Ran security advisor → found mutable search paths → fixed → clean
+- Ran performance advisor → found auth function re-evaluation + multiple permissive policies → fixed → clean
+- Re-ran both advisors → all clean
+- Confirmed co-host: Justine Roberts (NBC-HWC, community admin)
+- Decided: private avatar bucket for long-term security
+- Designed full frontend architecture (routes, components, file structure)
+- Wrote comprehensive Claude Code handoff (PHASE1_CLAUDE_CODE_HANDOFF.md)
+- Updated project reference file with all changes
+
+**Decisions made:**
+- Private avatars bucket (long-term security over simplicity)
+- Consolidated UPDATE RLS policy with OR logic (performance optimization)
+- `(select auth.uid())` subquery pattern in all RLS policies (performance)
+- `SET search_path = ''` on all SECURITY DEFINER functions (security)
+- Plain CSS for styling (simplicity, no build complexity)
+- Warm/earthy design direction (health & wellness community, not tech product)
+
+**Next Session Handoff:**
+- **Execute the Claude Code handoff** (`PHASE1_CLAUDE_CODE_HANDOFF.md`)
+- Open Claude Code, run: `cd "D:\The Keto Keep"`, then follow the handoff
+- Model: Opus 4.7 | Effort: Max
+- The handoff covers: all frontend components, auth flow, profile with avatar upload, styling, Cloudflare Pages deploy, git commit + push
+- After the Code session: seed Rance + Justine as admins via SQL (once they've signed up)
+- **Prerequisite:** The handoff file needs to be accessible to Claude Code — either paste it in or have it in the project directory
+- No blockers. Ready to build.
+
 ---
 
 ## OPEN QUESTIONS & DECISIONS NEEDED
 
-- Names of Co-Host #2 and Co-Host #3 (for admin seeding)
-- Community branding: logo, color palette, typography (can be decided later, but needed before public launch)
+- ~~Names of Co-Host #2 and Co-Host #3~~ → Co-Host #2: Justine Roberts (NBC-HWC). Co-Host #3: actively recruiting.
+- Community branding: logo, color palette, typography (design direction chosen: warm/earthy tones, but specific brand assets not yet created)
 - Custom domain name (if desired — Cloudflare Pages provides a free `*.pages.dev` subdomain to start)
 - Messaging approach in Phase 5: in-app DMs vs. email-based communication
-- Avatar storage: public or private Supabase bucket? (public is simpler; private is more secure)
+- ~~Avatar storage: public or private?~~ → **Private** (decided Session 3)
 
 ---
 
 ## REFERENCE LINKS
 
 - GitHub Repo: https://github.com/RancePants/keto-keep
-- Supabase Dashboard: https://supabase.com/dashboard
+- Supabase Dashboard: https://supabase.com/dashboard/project/madzamkdedtbfhuesmej
 - Cloudflare Pages Dashboard: https://dash.cloudflare.com
 - Mighty Networks (current, to be shut down): The Keto Keep
 - Supabase Docs (auth): https://supabase.com/docs/guides/auth

@@ -1,16 +1,53 @@
-# React + Vite
+# The Keto Keep
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A free community platform for ancestral and metabolic health — paleo, keto, and carnivore.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19 + Vite 8
+- React Router 7
+- Supabase (Auth, Database, Storage)
+- Cloudflare Pages
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+## Environment Variables
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Copy `.env.example` to `.env` and fill in your Supabase credentials:
+
+```
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+## Build
+
+```bash
+npm run build
+```
+
+Output is written to `dist/`.
+
+## Deployment
+
+Auto-deploys via Cloudflare Pages on push to `main`.
+
+- Build command: `npm run build`
+- Build output: `dist`
+- Environment variables: set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the Cloudflare Pages project settings.
+
+## Project Structure
+
+```
+src/
+  lib/             Supabase client
+  contexts/        React contexts (Auth)
+  components/      Shared UI (Layout, Navbar, ProtectedRoute)
+  pages/           Route-level components
+  styles/          Plain CSS, organized by concern
+```

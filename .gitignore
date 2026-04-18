@@ -17,6 +17,9 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Local project reference archive (not committed)
+Project Reference/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

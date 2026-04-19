@@ -12,8 +12,10 @@ import {
   formatEventRange,
   formatEventTime,
 } from '../lib/eventHelpers.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function EventDetail() {
+  usePageTitle('Event');
   const { id } = useParams();
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === 'admin';

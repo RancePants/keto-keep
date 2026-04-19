@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
 import AdminDropdown from './members/AdminDropdown.jsx';
 import NotificationBell from './notifications/NotificationBell.jsx';
+import ThemeToggle from './ui/ThemeToggle.jsx';
 
 export default function Navbar() {
   const { session, profile, signOut } = useAuth();
@@ -78,6 +79,7 @@ export default function Navbar() {
                 Profile
               </NavLink>
               <NotificationBell />
+              <ThemeToggle />
               {isAdmin && <AdminDropdown onNavigate={close} />}
               <button type="button" onClick={handleSignOut} className="btn btn-ghost">
                 Log out
@@ -88,6 +90,7 @@ export default function Navbar() {
               <NavLink to="/login" onClick={close} className="nav-link">
                 Log in
               </NavLink>
+              <ThemeToggle />
               <Link to="/signup" onClick={close} className="btn btn-primary">
                 Join free
               </Link>

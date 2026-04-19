@@ -4,10 +4,12 @@ import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../contexts/useAuth.js';
 import PostComposer from '../components/forum/PostComposer.jsx';
 import PostCard from '../components/forum/PostCard.jsx';
+import usePageTitle from '../lib/usePageTitle.js';
 
 const PAGE_SIZE = 20;
 
 export default function SpaceView() {
+  usePageTitle('Forums');
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const { slug } = useParams();

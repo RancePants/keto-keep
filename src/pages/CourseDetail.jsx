@@ -14,8 +14,10 @@ import {
   formatMinutes,
   sumEstimatedMinutes,
 } from '../lib/courseHelpers.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function CourseDetail() {
+  usePageTitle('Course');
   const { slug } = useParams();
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === 'admin';

@@ -2,6 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { AuthContext } from './authContextValue.js';
 
+// Apply a theme to the <html> element and persist to localStorage as a
+// fast cache for the next page load (the inline script in index.html
+// reads this to prevent a theme flash before React boots).
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'light' || theme === 'dark') {
+    root.setAttribute('data-theme', theme);
+  } else {
+    root.removeAttribute('data-theme');
+  }
+  try {
+    if (theme === 'system') {
+      localStorage.removeItem('kk-theme');
+    } else if (theme === 'light' || theme === 'dark') {
+      localStorage.setItem('kk-theme', theme);
+    }
+  } catch {
+    // localStorage may be blocked — theme still applies in-memory.
+  }
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -46,6 +67,9 @@ export function AuthProvider({ children }) {
       }
       setProfile(data);
       setIsSuspended(data?.status === 'suspended');
+      if (data?.theme_preference) {
+        applyTheme(data.theme_preference);
+      }
       return data;
     } catch (e) {
       console.error('Unexpected error loading profile:', e);
@@ -195,6 +219,7 @@ export function AuthProvider({ children }) {
         'city',
         'about_me',
         'my_why',
+        'theme_preference',
       ];
       const payload = {};
       for (const k of allowed) {
@@ -212,6 +237,31 @@ export function AuthProvider({ children }) {
         return { data, error };
       } catch (e) {
         console.error('updateProfile threw:', e);
+        return { data: null, error: e };
+      }
+    },
+    [session]
+  );
+
+  const setTheme = useCallback(
+    async (theme) => {
+      if (!['light', 'dark', 'system'].includes(theme)) return { error: new Error('Invalid theme') };
+      applyTheme(theme);
+      if (!session?.user) {
+        // Unauthenticated: localStorage + DOM is enough.
+        return { error: null };
+      }
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({ theme_preference: theme })
+          .eq('id', session.user.id)
+          .select()
+          .single();
+        if (!error && data) setProfile(data);
+        return { data, error };
+      } catch (e) {
+        console.error('setTheme threw:', e);
         return { data: null, error: e };
       }
     },
@@ -291,9 +341,10 @@ export function AuthProvider({ children }) {
       updateProfile,
       uploadAvatar,
       getAvatarUrl,
+      setTheme,
       refreshProfile: () => fetchProfile(session?.user?.id),
     }),
-    [session, profile, loading, isSuspended, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, fetchProfile]
+    [session, profile, loading, isSuspended, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, setTheme, fetchProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -12,13 +12,46 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-cream);
+  background-color: var(--bg-page);
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: var(--fs-base);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* iOS perf fix — fixed attachment causes jank on mobile */
+@media (max-width: 768px) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
+/* Skip-to-content link — visually hidden until focused */
+.skip-link {
+  position: absolute;
+  top: -48px;
+  left: var(--space-3);
+  z-index: 1000;
+  background: var(--color-green);
+  color: var(--color-cream);
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: top var(--t-fast);
+}
+
+.skip-link:focus {
+  top: 8px;
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
 }
 
 h1,

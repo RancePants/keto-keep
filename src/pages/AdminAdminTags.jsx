@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../contexts/useAuth.js';
 import { ADMIN_TAG_COLORS, safeTagColor } from '../lib/memberHelpers.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 const BLANK_FORM = {
   name: '',
@@ -11,6 +12,7 @@ const BLANK_FORM = {
 };
 
 export default function AdminAdminTags() {
+  usePageTitle('Admin tags · Admin');
   const { user, profile, loading: authLoading } = useAuth();
   const isAdmin = profile?.role === 'admin';
 

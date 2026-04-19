@@ -4,8 +4,10 @@ import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../contexts/useAuth.js';
 import LessonContent from '../components/courses/LessonContent.jsx';
 import { flattenLessons, formatMinutes } from '../lib/courseHelpers.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function LessonView() {
+  usePageTitle('Lesson');
   const { slug, lessonId } = useParams();
   const navigate = useNavigate();
   const { user, profile, isSuspended } = useAuth();

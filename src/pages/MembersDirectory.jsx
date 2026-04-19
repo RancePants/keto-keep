@@ -6,6 +6,7 @@ import MemberCard from '../components/members/MemberCard.jsx';
 import MemberFilters from '../components/members/MemberFilters.jsx';
 import AssignAdminTagModal from '../components/members/AssignAdminTagModal.jsx';
 import ManageMemberModal from '../components/members/ManageMemberModal.jsx';
+import usePageTitle from '../lib/usePageTitle.js';
 
 const PAGE_SIZE = 20;
 
@@ -20,6 +21,7 @@ const DEFAULT_FILTERS = {
 };
 
 export default function MembersDirectory() {
+  usePageTitle('Members');
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
 

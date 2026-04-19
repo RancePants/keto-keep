@@ -19,6 +19,7 @@ import InterestTagChip from '../components/profile/InterestTagChip.jsx';
 import AwardBadgeModal from '../components/profile/AwardBadgeModal.jsx';
 import AssignAdminTagModal from '../components/members/AssignAdminTagModal.jsx';
 import ManageMemberModal from '../components/members/ManageMemberModal.jsx';
+import usePageTitle from '../lib/usePageTitle.js';
 
 // ---------------- Avatar ----------------
 function Avatar({ path, displayName, size = 128 }) {
@@ -748,6 +749,7 @@ function useFetchedProfile(id, skip) {
 }
 
 export default function Profile() {
+  usePageTitle('Profile');
   const { id } = useParams();
   const location = useLocation();
   const { user, profile: ownProfile, updateProfile, uploadAvatar, refreshProfile, isSuspended } = useAuth();

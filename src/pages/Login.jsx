@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function Login() {
+  usePageTitle('Log in');
   const { session, signIn, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

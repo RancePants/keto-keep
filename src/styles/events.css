@@ -54,7 +54,7 @@
 
 .event-card-live {
   border-color: var(--color-amber);
-  background: linear-gradient(180deg, #fff8ec 0%, var(--color-surface) 40%);
+  background: linear-gradient(180deg, var(--color-live-tint) 0%, var(--color-surface) 40%);
 }
 
 .event-card-cancelled {
@@ -179,27 +179,27 @@
 }
 
 .event-type-live_call {
-  background: #efe4c9;
-  color: var(--color-amber-dark);
-  border-color: var(--color-amber-soft);
+  background: var(--tint-live-call-bg);
+  color: var(--tint-live-call-text);
+  border-color: var(--tint-live-call-border);
 }
 
 .event-type-workshop {
-  background: #e1eae1;
-  color: var(--color-green-dark);
-  border-color: #b7cbb9;
+  background: var(--tint-workshop-bg);
+  color: var(--tint-workshop-text);
+  border-color: var(--tint-workshop-border);
 }
 
 .event-type-coaching_circle {
-  background: #f2dfd1;
-  color: #8a4a2f;
-  border-color: #e6c4ac;
+  background: var(--tint-coaching-bg);
+  color: var(--tint-coaching-text);
+  border-color: var(--tint-coaching-border);
 }
 
 .event-type-q_and_a {
-  background: #e7ddee;
-  color: #5c3e6e;
-  border-color: #cfbdda;
+  background: var(--tint-qa-bg);
+  color: var(--tint-qa-text);
+  border-color: var(--tint-qa-border);
 }
 
 .event-type-other {
@@ -307,9 +307,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-cream);
+  color: #e8e6e0;
   font-size: var(--fs-sm);
-  background: linear-gradient(135deg, #2a241c, #4c4338);
+  background: var(--video-placeholder);
 }
 
 .youtube-embed-iframe {
@@ -640,7 +640,7 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(42, 36, 28, 0.55);
+  background: var(--color-modal-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -741,7 +741,7 @@
 }
 
 .event-form-delete:hover:not(:disabled) {
-  background: rgba(161, 53, 42, 0.08);
+  background: var(--color-error-soft-bg);
 }
 
 /* ------- Mobile adjustments ------- */

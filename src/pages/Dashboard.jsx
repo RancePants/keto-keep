@@ -5,8 +5,10 @@ import MyLearningCard from '../components/courses/MyLearningCard.jsx';
 import DietaryApproachTag from '../components/profile/DietaryApproachTag.jsx';
 import BadgesInline from '../components/profile/BadgesInline.jsx';
 import { useMemberBadges } from '../components/profile/useMemberBadges.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function Dashboard() {
+  usePageTitle('Dashboard');
   const { user, profile } = useAuth();
   const name = profile?.display_name || 'friend';
   const isAdmin = profile?.role === 'admin';

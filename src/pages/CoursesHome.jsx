@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../contexts/useAuth.js';
 import CourseCard from '../components/courses/CourseCard.jsx';
 import CourseFormModal from '../components/courses/CourseFormModal.jsx';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function CoursesHome() {
+  usePageTitle('Courses');
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
 

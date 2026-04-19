@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../contexts/useAuth.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function AdminTags() {
+  usePageTitle('Interest tags · Admin');
   const { user, profile, loading: authLoading } = useAuth();
   const isAdmin = profile?.role === 'admin';
 

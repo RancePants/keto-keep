@@ -7,8 +7,10 @@ import EventFormModal from '../components/events/EventFormModal.jsx';
 import YoutubeEmbed from '../components/events/YoutubeEmbed.jsx';
 import EventTypeBadge from '../components/events/EventTypeBadge.jsx';
 import { formatEventDate } from '../lib/eventHelpers.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function EventsHome() {
+  usePageTitle('Events');
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
 

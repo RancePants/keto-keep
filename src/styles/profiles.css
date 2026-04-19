@@ -22,34 +22,34 @@
 /* Muted earth-tone palette — each approach has a distinct hue but
    stays within the warm, grounded aesthetic. */
 .dietary-tag-keto {
-  background: #e8f0e4;
-  color: #2b4233;
-  border-color: #c4d6bc;
+  background: var(--diet-keto-bg);
+  color: var(--diet-keto-text);
+  border-color: var(--diet-keto-border);
 }
 .dietary-tag-carnivore {
-  background: #f1dcd4;
-  color: #7a2c1a;
-  border-color: #debaad;
+  background: var(--diet-carnivore-bg);
+  color: var(--diet-carnivore-text);
+  border-color: var(--diet-carnivore-border);
 }
 .dietary-tag-paleo {
-  background: #e9dfcb;
-  color: #715230;
-  border-color: #d0bd99;
+  background: var(--diet-paleo-bg);
+  color: var(--diet-paleo-text);
+  border-color: var(--diet-paleo-border);
 }
 .dietary-tag-low-carb {
-  background: #eae3d2;
-  color: #5f4d2c;
-  border-color: #cdbf9e;
+  background: var(--diet-low-carb-bg);
+  color: var(--diet-low-carb-text);
+  border-color: var(--diet-low-carb-border);
 }
 .dietary-tag-ancestral-whole-food {
-  background: #e0d9c1;
-  color: #4c4338;
-  border-color: #c4b891;
+  background: var(--diet-ancestral-bg);
+  color: var(--diet-ancestral-text);
+  border-color: var(--diet-ancestral-border);
 }
 .dietary-tag-exploring {
-  background: #e5dfcf;
-  color: #6e6454;
-  border-color: #ccc0a1;
+  background: var(--diet-exploring-bg);
+  color: var(--diet-exploring-text);
+  border-color: var(--diet-exploring-border);
 }
 
 /* ---------- Badge icons ---------- */
@@ -198,8 +198,8 @@
 .my-why-section {
   background: linear-gradient(
     180deg,
-    rgba(246, 239, 223, 0.35),
-    rgba(236, 227, 205, 0.15)
+    color-mix(in srgb, var(--color-parchment) 60%, transparent),
+    color-mix(in srgb, var(--color-sand) 40%, transparent)
   );
   padding: var(--space-5);
   border-radius: var(--radius-md);
@@ -335,7 +335,7 @@
 .avatar-editable .avatar-overlay {
   position: absolute;
   inset: auto 0 0 0;
-  background: rgba(42, 36, 28, 0.72);
+  background: var(--avatar-overlay-strong);
   color: var(--color-cream);
   border: 0;
   padding: 6px 0;
@@ -345,7 +345,7 @@
   border-bottom-left-radius: var(--radius-md);
   border-bottom-right-radius: var(--radius-md);
 }
-.avatar-editable .avatar-overlay:hover { background: rgba(42, 36, 28, 0.88); }
+.avatar-editable .avatar-overlay:hover { background: var(--avatar-overlay-stronger); }
 .avatar-img,
 .avatar-fallback {
   border-radius: var(--radius-md);

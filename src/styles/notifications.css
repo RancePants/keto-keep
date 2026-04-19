@@ -34,13 +34,13 @@
   height: 18px;
   padding: 0 5px;
   border-radius: 9px;
-  background: #c0392b;
-  color: #fff;
+  background: var(--color-error);
+  color: var(--color-cream);
   font-size: 11px;
   font-weight: 700;
   line-height: 18px;
   text-align: center;
-  box-shadow: 0 0 0 2px var(--color-cream, #fff);
+  box-shadow: 0 0 0 2px var(--color-surface);
 }
 
 .notif-dropdown {
@@ -86,11 +86,11 @@
 }
 
 .notif-mark-all:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--ghost-hover-bg-soft);
 }
 
 .notif-mark-all:disabled {
-  color: var(--color-ink-faint, #999);
+  color: var(--color-ink-faint);
   cursor: default;
 }
 
@@ -104,7 +104,7 @@
 .notif-empty {
   padding: var(--space-5) var(--space-3);
   text-align: center;
-  color: var(--color-ink-faint, #888);
+  color: var(--color-ink-faint);
   font-size: var(--fs-sm);
 }
 
@@ -133,7 +133,7 @@
 }
 
 .notif-row-unread {
-  background: rgba(46, 113, 87, 0.06);
+  background: var(--notif-unread-bg);
 }
 
 .notif-row-icon {
@@ -161,7 +161,7 @@
 
 .notif-row-time {
   font-size: var(--fs-xs);
-  color: var(--color-ink-faint, #888);
+  color: var(--color-ink-faint);
 }
 
 .notif-row-dot {
@@ -186,7 +186,7 @@
   align-items: center;
   gap: 4px;
   font-size: var(--fs-xs);
-  color: var(--color-ink-faint, #777);
+  color: var(--color-ink-faint);
   background: var(--color-parchment);
   padding: 2px 8px;
   border-radius: var(--radius-pill);
@@ -199,18 +199,18 @@
 }
 
 .scheduled-indicator {
-  color: #8a6d1a;
-  border-color: #d8c168;
-  background: #fdf6e2;
+  color: var(--notif-scheduled-text);
+  border-color: var(--notif-scheduled-border);
+  background: var(--notif-scheduled-bg);
 }
 
 /* ---------- PostComposer admin controls ---------- */
 .post-composer-admin {
   margin-top: var(--space-3);
   padding: var(--space-3);
-  border: 1px dashed var(--color-border-strong, var(--color-border));
+  border: 1px dashed var(--composer-admin-border);
   border-radius: var(--radius-md);
-  background: rgba(0, 0, 0, 0.02);
+  background: var(--composer-admin-bg);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -242,13 +242,13 @@
 
 .post-composer-admin-meta {
   font-size: var(--fs-xs);
-  color: var(--color-ink-faint, #888);
+  color: var(--color-ink-faint);
 }
 
 .post-composer-schedule-input {
   padding: 6px 10px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border-strong, var(--color-border));
+  border: 1px solid var(--color-border-strong);
   font-size: var(--fs-sm);
 }
 
@@ -256,7 +256,7 @@
   margin-bottom: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  background: rgba(46, 113, 87, 0.10);
+  background: var(--notif-info-bg);
   color: var(--color-green-dark);
   font-size: var(--fs-sm);
 }

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function ForumHome() {
+  usePageTitle('Forums');
   const [spaces, setSpaces] = useState([]);
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);

@@ -1,7 +1,9 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function AdminHub() {
+  usePageTitle('Admin');
   const { profile, loading } = useAuth();
   const isAdmin = profile?.role === 'admin';
 

@@ -2,6 +2,13 @@
   min-height: 100%;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-overlay);
+}
+
+/* Lesson viewer gets a clean backdrop — no bg-image bleed through */
+.lesson-view-wrapper {
+  background-color: var(--color-cream);
+  min-height: calc(100vh - var(--nav-height));
 }
 
 .app-main {

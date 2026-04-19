@@ -1,10 +1,17 @@
+/* ======================================================================
+   Theme variables — warm earth for light, warm charcoal for dark.
+   Every color used in the app routes through a semantic token here so
+   a single [data-theme] swap recolors the whole surface.
+   ====================================================================== */
+
 :root {
-  /* Warm, grounded palette */
+  /* Warm, grounded palette — light */
   --color-cream: #fdfaf2;
   --color-parchment: #f6efdf;
   --color-sand: #ece3cd;
   --color-ink: #2a241c;
   --color-ink-soft: #4c4338;
+  --color-ink-faint: #6e6454;
   --color-muted: #7a6f60;
 
   --color-green: #3d5b47;
@@ -17,11 +24,100 @@
 
   --color-terracotta: #b2593f;
   --color-error: #a1352a;
+  --color-error-hover: #872720;
+  --color-error-soft-bg: rgba(161, 53, 42, 0.08);
   --color-success: #2f6a46;
 
   --color-surface: #ffffff;
+  --color-surface-alt: #fbfaf3;
   --color-border: #e3d9c1;
   --color-border-strong: #c9bc9c;
+
+  /* Page backdrop (behind body image) + overlay tint on content area */
+  --bg-page: var(--color-cream);
+  --bg-image: url('/bg-light-castle.webp');
+  --bg-overlay: rgba(255, 252, 245, 0.78);
+
+  /* Form + modal backdrops */
+  --color-form-error-bg: #fbeae6;
+  --color-form-error-border: #e8c9c3;
+  --color-form-success-bg: #e7f1ea;
+  --color-form-success-border: #cbe1d3;
+  --color-modal-backdrop: rgba(42, 36, 28, 0.55);
+
+  /* Nav sticky header tint (lives above the bg image) */
+  --nav-bg: rgba(253, 250, 242, 0.92);
+
+  /* Pinned post + live event tints */
+  --color-pinned-tint: #fff9ed;
+  --color-live-tint: #fff8ec;
+
+  /* Event type pill tints */
+  --tint-live-call-bg: #efe4c9;
+  --tint-live-call-border: var(--color-amber-soft);
+  --tint-live-call-text: var(--color-amber-dark);
+  --tint-workshop-bg: #e1eae1;
+  --tint-workshop-border: #b7cbb9;
+  --tint-workshop-text: var(--color-green-dark);
+  --tint-coaching-bg: #f2dfd1;
+  --tint-coaching-border: #e6c4ac;
+  --tint-coaching-text: #8a4a2f;
+  --tint-qa-bg: #e7ddee;
+  --tint-qa-border: #cfbdda;
+  --tint-qa-text: #5c3e6e;
+
+  /* Dietary approach pills */
+  --diet-keto-bg: #e8f0e4;
+  --diet-keto-border: #c4d6bc;
+  --diet-keto-text: #2b4233;
+  --diet-carnivore-bg: #f1dcd4;
+  --diet-carnivore-border: #debaad;
+  --diet-carnivore-text: #7a2c1a;
+  --diet-paleo-bg: #e9dfcb;
+  --diet-paleo-border: #d0bd99;
+  --diet-paleo-text: #715230;
+  --diet-low-carb-bg: #eae3d2;
+  --diet-low-carb-border: #cdbf9e;
+  --diet-low-carb-text: #5f4d2c;
+  --diet-ancestral-bg: #e0d9c1;
+  --diet-ancestral-border: #c4b891;
+  --diet-ancestral-text: var(--color-ink-soft);
+  --diet-exploring-bg: #e5dfcf;
+  --diet-exploring-border: #ccc0a1;
+  --diet-exploring-text: #6e6454;
+
+  /* Status pills */
+  --status-green-bg: #e2f0e7;
+  --status-green-text: var(--color-green-dark);
+  --status-amber-bg: var(--color-amber-soft);
+  --status-amber-text: var(--color-amber-dark);
+  --status-red-bg: #f7d9d4;
+  --status-red-text: var(--color-error);
+
+  /* Notification + info tints */
+  --notif-unread-bg: rgba(46, 113, 87, 0.06);
+  --notif-scheduled-bg: #fdf6e2;
+  --notif-scheduled-border: #d8c168;
+  --notif-scheduled-text: #8a6d1a;
+  --notif-info-bg: rgba(46, 113, 87, 0.10);
+  --composer-admin-bg: rgba(0, 0, 0, 0.02);
+  --composer-admin-border: var(--color-border-strong);
+
+  /* Hover + focus ring tints */
+  --focus-ring: rgba(61, 91, 71, 0.15);
+  --ghost-hover-bg: rgba(0, 0, 0, 0.06);
+  --ghost-hover-bg-soft: rgba(0, 0, 0, 0.04);
+  --avatar-overlay: rgba(42, 36, 28, 0.55);
+  --avatar-overlay-strong: rgba(42, 36, 28, 0.72);
+  --avatar-overlay-stronger: rgba(42, 36, 28, 0.88);
+
+  /* YouTube placeholder */
+  --video-placeholder: linear-gradient(135deg, #2a241c, #4c4338);
+
+  /* Admin-tag badges text shadow (always rests on colored bg) */
+  --tag-on-color-text: #ffffff;
+  --tag-on-color-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  --tag-swatch-ring: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
 
   /* Typography */
   --font-serif: 'Fraunces', 'Georgia', 'Times New Roman', serif;
@@ -68,4 +164,228 @@
   --nav-height: 64px;
   --content-max: 1120px;
   --content-narrow: 720px;
+}
+
+/* ----------------------------------------------------------------------
+   Dark theme — warm charcoal (blue-black base, warm accents preserved)
+   ---------------------------------------------------------------------- */
+
+[data-theme="dark"] {
+  --color-cream: #1a1a2e;
+  --color-parchment: #252540;
+  --color-sand: #2f2f4a;
+  --color-ink: #e8e6e0;
+  --color-ink-soft: #c8c4ba;
+  --color-ink-faint: #8a8494;
+  --color-muted: #9a93a5;
+
+  --color-green: #6a9a78;
+  --color-green-dark: #8abf98;
+  --color-green-soft: #4e7a5d;
+
+  --color-amber: #e1a658;
+  --color-amber-dark: #f0c380;
+  --color-amber-soft: #8a6a3a;
+
+  --color-terracotta: #d07866;
+  --color-error: #e85d4f;
+  --color-error-hover: #c94a3d;
+  --color-error-soft-bg: rgba(232, 93, 79, 0.12);
+  --color-success: #72c18d;
+
+  --color-surface: #242440;
+  --color-surface-alt: #2a2a48;
+  --color-border: #393956;
+  --color-border-strong: #4f4f6e;
+
+  --bg-page: #0e0e1c;
+  --bg-image: url('/bg-dark-castle.webp');
+  --bg-overlay: rgba(15, 15, 28, 0.72);
+
+  --color-form-error-bg: #3a2020;
+  --color-form-error-border: #5a3030;
+  --color-form-success-bg: #1e3828;
+  --color-form-success-border: #2e5540;
+  --color-modal-backdrop: rgba(5, 5, 12, 0.72);
+
+  --nav-bg: rgba(26, 26, 46, 0.92);
+
+  --color-pinned-tint: #3a3524;
+  --color-live-tint: #3a3220;
+
+  --tint-live-call-bg: #3d331c;
+  --tint-live-call-border: #5a4630;
+  --tint-live-call-text: #f0c380;
+  --tint-workshop-bg: #223a2a;
+  --tint-workshop-border: #3a5a42;
+  --tint-workshop-text: #9ad4a8;
+  --tint-coaching-bg: #3d2a22;
+  --tint-coaching-border: #5a3d30;
+  --tint-coaching-text: #e4a890;
+  --tint-qa-bg: #2f2440;
+  --tint-qa-border: #4a3d5e;
+  --tint-qa-text: #c0a8d8;
+
+  --diet-keto-bg: #1e3a28;
+  --diet-keto-border: #3a5a42;
+  --diet-keto-text: #9ad4a8;
+  --diet-carnivore-bg: #3a2018;
+  --diet-carnivore-border: #5a3828;
+  --diet-carnivore-text: #e89078;
+  --diet-paleo-bg: #3a2e1c;
+  --diet-paleo-border: #5a4a30;
+  --diet-paleo-text: #e0b880;
+  --diet-low-carb-bg: #3a321c;
+  --diet-low-carb-border: #5a4e30;
+  --diet-low-carb-text: #d0c088;
+  --diet-ancestral-bg: #2e2a1e;
+  --diet-ancestral-border: #4a4230;
+  --diet-ancestral-text: #c0b898;
+  --diet-exploring-bg: #2e2a22;
+  --diet-exploring-border: #4a4434;
+  --diet-exploring-text: #b8b098;
+
+  --status-green-bg: #1e3828;
+  --status-green-text: #9ad4a8;
+  --status-amber-bg: #3d331c;
+  --status-amber-text: #f0c380;
+  --status-red-bg: #3a2020;
+  --status-red-text: #e89078;
+
+  --notif-unread-bg: rgba(138, 191, 152, 0.10);
+  --notif-scheduled-bg: #342b14;
+  --notif-scheduled-border: #6a5730;
+  --notif-scheduled-text: #e4c870;
+  --notif-info-bg: rgba(138, 191, 152, 0.14);
+  --composer-admin-bg: rgba(255, 255, 255, 0.03);
+  --composer-admin-border: var(--color-border-strong);
+
+  --focus-ring: rgba(106, 154, 120, 0.28);
+  --ghost-hover-bg: rgba(255, 255, 255, 0.08);
+  --ghost-hover-bg-soft: rgba(255, 255, 255, 0.05);
+  --avatar-overlay: rgba(10, 10, 20, 0.65);
+  --avatar-overlay-strong: rgba(10, 10, 20, 0.80);
+  --avatar-overlay-stronger: rgba(10, 10, 20, 0.92);
+
+  --video-placeholder: linear-gradient(135deg, #0a0a14, #1a1a2e);
+
+  --tag-on-color-text: #ffffff;
+  --tag-on-color-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  --tag-swatch-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* System preference fallback — applies only when the user has not
+   explicitly chosen a theme (no data-theme attribute set). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --color-cream: #1a1a2e;
+    --color-parchment: #252540;
+    --color-sand: #2f2f4a;
+    --color-ink: #e8e6e0;
+    --color-ink-soft: #c8c4ba;
+    --color-ink-faint: #8a8494;
+    --color-muted: #9a93a5;
+
+    --color-green: #6a9a78;
+    --color-green-dark: #8abf98;
+    --color-green-soft: #4e7a5d;
+
+    --color-amber: #e1a658;
+    --color-amber-dark: #f0c380;
+    --color-amber-soft: #8a6a3a;
+
+    --color-terracotta: #d07866;
+    --color-error: #e85d4f;
+    --color-error-hover: #c94a3d;
+    --color-error-soft-bg: rgba(232, 93, 79, 0.12);
+    --color-success: #72c18d;
+
+    --color-surface: #242440;
+    --color-surface-alt: #2a2a48;
+    --color-border: #393956;
+    --color-border-strong: #4f4f6e;
+
+    --bg-page: #0e0e1c;
+    --bg-image: url('/bg-dark-castle.webp');
+    --bg-overlay: rgba(15, 15, 28, 0.72);
+
+    --color-form-error-bg: #3a2020;
+    --color-form-error-border: #5a3030;
+    --color-form-success-bg: #1e3828;
+    --color-form-success-border: #2e5540;
+    --color-modal-backdrop: rgba(5, 5, 12, 0.72);
+
+    --nav-bg: rgba(26, 26, 46, 0.92);
+
+    --color-pinned-tint: #3a3524;
+    --color-live-tint: #3a3220;
+
+    --tint-live-call-bg: #3d331c;
+    --tint-live-call-border: #5a4630;
+    --tint-live-call-text: #f0c380;
+    --tint-workshop-bg: #223a2a;
+    --tint-workshop-border: #3a5a42;
+    --tint-workshop-text: #9ad4a8;
+    --tint-coaching-bg: #3d2a22;
+    --tint-coaching-border: #5a3d30;
+    --tint-coaching-text: #e4a890;
+    --tint-qa-bg: #2f2440;
+    --tint-qa-border: #4a3d5e;
+    --tint-qa-text: #c0a8d8;
+
+    --diet-keto-bg: #1e3a28;
+    --diet-keto-border: #3a5a42;
+    --diet-keto-text: #9ad4a8;
+    --diet-carnivore-bg: #3a2018;
+    --diet-carnivore-border: #5a3828;
+    --diet-carnivore-text: #e89078;
+    --diet-paleo-bg: #3a2e1c;
+    --diet-paleo-border: #5a4a30;
+    --diet-paleo-text: #e0b880;
+    --diet-low-carb-bg: #3a321c;
+    --diet-low-carb-border: #5a4e30;
+    --diet-low-carb-text: #d0c088;
+    --diet-ancestral-bg: #2e2a1e;
+    --diet-ancestral-border: #4a4230;
+    --diet-ancestral-text: #c0b898;
+    --diet-exploring-bg: #2e2a22;
+    --diet-exploring-border: #4a4434;
+    --diet-exploring-text: #b8b098;
+
+    --status-green-bg: #1e3828;
+    --status-green-text: #9ad4a8;
+    --status-amber-bg: #3d331c;
+    --status-amber-text: #f0c380;
+    --status-red-bg: #3a2020;
+    --status-red-text: #e89078;
+
+    --notif-unread-bg: rgba(138, 191, 152, 0.10);
+    --notif-scheduled-bg: #342b14;
+    --notif-scheduled-border: #6a5730;
+    --notif-scheduled-text: #e4c870;
+    --notif-info-bg: rgba(138, 191, 152, 0.14);
+    --composer-admin-bg: rgba(255, 255, 255, 0.03);
+    --composer-admin-border: var(--color-border-strong);
+
+    --focus-ring: rgba(106, 154, 120, 0.28);
+    --ghost-hover-bg: rgba(255, 255, 255, 0.08);
+    --ghost-hover-bg-soft: rgba(255, 255, 255, 0.05);
+    --avatar-overlay: rgba(10, 10, 20, 0.65);
+    --avatar-overlay-strong: rgba(10, 10, 20, 0.80);
+    --avatar-overlay-stronger: rgba(10, 10, 20, 0.92);
+
+    --video-placeholder: linear-gradient(135deg, #0a0a14, #1a1a2e);
+
+    --tag-on-color-text: #ffffff;
+    --tag-on-color-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+    --tag-swatch-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.35);
+  }
 }

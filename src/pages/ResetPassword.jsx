@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function ResetPassword() {
+  usePageTitle('Reset password');
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);

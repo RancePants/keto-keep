@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function Landing() {
+  usePageTitle();
   return (
     <div className="landing">
       <section className="hero">

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function Signup() {
+  usePageTitle('Join free');
   const { session, signUp, loading } = useAuth();
 
   const [email, setEmail] = useState('');

@@ -6,9 +6,12 @@ import pkg from '../../package.json';
 export default function Layout() {
   return (
     <div className="app-shell">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       <Navbar />
       <SuspendedBanner />
-      <main className="app-main">
+      <main id="main-content" className="app-main" tabIndex={-1}>
         <Outlet />
       </main>
       <footer className="app-footer">

@@ -1076,7 +1076,7 @@
 }
 
 .course-form-delete:hover:not(:disabled) {
-  background: rgba(161, 53, 42, 0.08);
+  background: var(--color-error-soft-bg);
 }
 
 .lesson-form-note {

@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import PostCard from '../components/forum/PostCard.jsx';
+import usePageTitle from '../lib/usePageTitle.js';
 
 export default function PostDetail() {
+  usePageTitle('Post');
   const { slug, postId } = useParams();
   const [space, setSpace] = useState(null);
   const [post, setPost] = useState(null);

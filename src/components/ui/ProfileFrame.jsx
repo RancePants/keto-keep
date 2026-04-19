@@ -37,6 +37,10 @@ const FRAME_SLUG = {
 const FRAME_SCALE = 1.30;
 const FRAME_OFFSET_RATIO = 0.15;
 
+// Percentage inset from each overlay edge where the transparent avatar hole begins.
+// Used to cut out the center of the black backing so only the frame border is backed.
+const INSET_PCT = (FRAME_OFFSET_RATIO / FRAME_SCALE) * 100; // ≈ 11.54
+
 export default function ProfileFrame({
   frameType = 'none',
   size = 'sm',
@@ -65,20 +69,38 @@ export default function ProfileFrame({
       </span>
       {/* PNG frame overlay — slightly larger than avatar so border extends beyond */}
       {slug && (
-        <img
-          src={`/frames/frame-${slug}.png`}
-          alt=""
-          aria-hidden="true"
-          className="frame-overlay"
-          style={{
-            position: 'absolute',
-            top: overlayOffset,
-            left: overlayOffset,
-            width: overlaySize,
-            height: overlaySize,
-            pointerEvents: 'none',
-          }}
-        />
+        <>
+          {/* Black backing prevents background bleed through semi-transparent frame pixels */}
+          <span
+            aria-hidden="true"
+            className="frame-backing"
+            style={{
+              position: 'absolute',
+              top: overlayOffset,
+              left: overlayOffset,
+              width: overlaySize,
+              height: overlaySize,
+              background: '#000',
+              clipPath: `polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, ${INSET_PCT}% ${INSET_PCT}%, ${100 - INSET_PCT}% ${INSET_PCT}%, ${100 - INSET_PCT}% ${100 - INSET_PCT}%, ${INSET_PCT}% ${100 - INSET_PCT}%)`,
+              WebkitClipPath: `polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, ${INSET_PCT}% ${INSET_PCT}%, ${100 - INSET_PCT}% ${INSET_PCT}%, ${100 - INSET_PCT}% ${100 - INSET_PCT}%, ${INSET_PCT}% ${100 - INSET_PCT}%)`,
+              pointerEvents: 'none',
+            }}
+          />
+          <img
+            src={`/frames/frame-${slug}.png`}
+            alt=""
+            aria-hidden="true"
+            className="frame-overlay"
+            style={{
+              position: 'absolute',
+              top: overlayOffset,
+              left: overlayOffset,
+              width: overlaySize,
+              height: overlaySize,
+              pointerEvents: 'none',
+            }}
+          />
+        </>
       )}
     </span>
   );

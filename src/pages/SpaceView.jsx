@@ -146,10 +146,11 @@ export default function SpaceView() {
       setHasMore(true);
       const { rows, done } = await loadPage(spaceId, 0);
       if (cancelled) return;
+      await hydrateMeta(rows);
+      if (cancelled) return;
       setPosts(rows);
       setHasMore(!done);
       setLoading(false);
-      await hydrateMeta(rows);
     })();
     return () => {
       cancelled = true;
@@ -161,11 +162,11 @@ export default function SpaceView() {
     setLoadingMore(true);
     const next = page + 1;
     const { rows, done } = await loadPage(space.id, next);
+    await hydrateMeta(rows);
     setPosts((prev) => [...prev, ...rows]);
     setPage(next);
     setHasMore(!done);
     setLoadingMore(false);
-    await hydrateMeta(rows);
   };
 
   const refresh = useCallback(async () => {

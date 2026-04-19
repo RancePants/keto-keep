@@ -5,6 +5,7 @@ import EmojiReactionBar from './EmojiReactionBar.jsx';
 import ReplyComposer from './ReplyComposer.jsx';
 import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
 import BadgesInline from '../profile/BadgesInline.jsx';
+import StreakBadge from '../ui/StreakBadge.jsx';
 import Modal from '../ui/Modal.jsx';
 import { formatRelative, isEdited } from '../../lib/forumHelpers.js';
 import { supabase } from '../../lib/supabase.js';
@@ -96,6 +97,9 @@ export default function ReplyItem({
               <DietaryApproachTag value={author.dietary_approach} size="sm" />
             )}
             <BadgesInline badges={author?.badges} limit={3} size={12} />
+            {author?.current_streak > 0 && (
+              <StreakBadge streak={author.current_streak} size="sm" showCount />
+            )}
             <span className="reply-time">
               {formatRelative(reply.created_at)}
               {isEdited(reply.created_at, reply.updated_at) ? ' · edited' : ''}

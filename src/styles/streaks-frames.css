@@ -1,0 +1,367 @@
+/* ======================================================================
+   Streaks & profile frames — Phase 5E.
+   Styles for StreakBadge, ProfileFrame, vacation-mode UI, and frame
+   selector. Palette colors live inside the SVGs themselves so badges
+   and frames look identical across light/dark themes.
+   ====================================================================== */
+
+/* ---------- StreakBadge ---------- */
+
+.streak-badge-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.streak-badge {
+  display: inline-block;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.22));
+}
+
+.streak-badge-flame {
+  filter: drop-shadow(0 0 2px rgba(240, 138, 46, 0.55));
+}
+
+.streak-badge-count {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.78em;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+
+.streak-badge-wrap-sm .streak-badge-count { font-size: 0.78rem; }
+.streak-badge-wrap-md .streak-badge-count { font-size: 0.9rem; }
+.streak-badge-wrap-lg .streak-badge-count { font-size: 1.1rem; }
+
+/* Milestone glow accents — subtle halo in the same palette as the art */
+.streak-badge-wrap-lg .streak-badge-first_week   { filter: drop-shadow(0 0 3px rgba(244, 161, 74, 0.55)); }
+.streak-badge-wrap-lg .streak-badge-two_weeks    { filter: drop-shadow(0 0 3px rgba(216, 216, 216, 0.55)); }
+.streak-badge-wrap-lg .streak-badge-one_month    { filter: drop-shadow(0 0 4px rgba(218, 165, 32, 0.65)); }
+.streak-badge-wrap-lg .streak-badge-two_months   { filter: drop-shadow(0 0 4px rgba(244, 161, 74, 0.55)); }
+.streak-badge-wrap-lg .streak-badge-three_months { filter: drop-shadow(0 0 4px rgba(216, 216, 216, 0.6)); }
+.streak-badge-wrap-lg .streak-badge-half_year    { filter: drop-shadow(0 0 5px rgba(218, 165, 32, 0.75)); }
+.streak-badge-wrap-lg .streak-badge-full_year    { filter: drop-shadow(0 0 6px rgba(218, 165, 32, 0.85)); }
+
+/* ---------- Profile streak block (own + member profile) ---------- */
+
+.profile-streak-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.profile-streak-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.profile-streak-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profile-streak-current {
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.profile-streak-longest {
+  font-size: var(--fs-sm);
+}
+
+.profile-streak-frozen {
+  margin-top: var(--space-1);
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  background: var(--notif-info-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  display: inline-block;
+  align-self: flex-start;
+}
+
+.profile-streak-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-streak-progress-label {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+}
+
+.profile-streak-progress-bar {
+  position: relative;
+  height: 8px;
+  background: var(--color-sand);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.profile-streak-progress-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-amber), var(--color-amber-dark));
+  border-radius: var(--radius-pill);
+  transition: width var(--t-slow);
+}
+
+/* ---------- Dashboard meta row ---------- */
+
+.dashboard-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+/* ---------- Sidebar streak slot ---------- */
+
+.sidebar-user-streak {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-user-streak .streak-badge-count {
+  color: var(--sidebar-text);
+}
+
+/* ---------- Member card meta row ---------- */
+
+.member-card-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 2px;
+}
+
+/* ---------- Profile frame wrapper ---------- */
+
+.profile-frame {
+  /* size is set inline as width/height px */
+  vertical-align: middle;
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.profile-frame-svg {
+  display: block;
+}
+
+/* The inner avatar slot already has borderRadius+overflow hidden inline.
+   Force its children (img / fallback / nested components) to fill. */
+.profile-frame-avatar > img,
+.profile-frame-avatar > div,
+.profile-frame-avatar > span {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-frame-avatar .avatar-fallback,
+.profile-frame-avatar .sidebar-user-avatar-fallback,
+.profile-frame-avatar .member-card-avatar-fallback {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-green-soft);
+  color: var(--color-cream);
+  font-family: var(--font-serif);
+  font-weight: 600;
+}
+
+/* ---------- Vacation mode section ---------- */
+
+.vacation-mode-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.vacation-mode-section .section-title {
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin: 0;
+}
+
+.vacation-mode-section .section-sub {
+  color: var(--color-muted);
+  font-size: var(--fs-sm);
+  margin: 0 0 var(--space-2);
+  line-height: 1.5;
+}
+
+.vacation-mode-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.vacation-mode-active {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.vacation-mode-current {
+  padding: var(--space-3) var(--space-4);
+  background: var(--notif-info-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-soft);
+  font-size: var(--fs-sm);
+}
+
+.vacation-mode-current strong {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.vacation-mode-span {
+  font-size: var(--fs-xs);
+}
+
+/* ---------- Frame selector ---------- */
+
+.frame-selector-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-5);
+}
+
+.frame-selector-section .section-title {
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin: 0;
+}
+
+.frame-selector-section .section-sub {
+  color: var(--color-muted);
+  font-size: var(--fs-sm);
+  margin: 0 0 var(--space-2);
+  line-height: 1.5;
+}
+
+.frame-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-3);
+}
+
+.frame-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
+  font-family: inherit;
+  color: var(--color-ink);
+  text-align: center;
+}
+
+.frame-tile:hover:not(:disabled) {
+  border-color: var(--color-amber);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.frame-tile:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+}
+
+.frame-tile-selected {
+  border-color: var(--color-amber);
+  box-shadow: 0 0 0 2px var(--color-amber-soft), var(--shadow-sm);
+}
+
+.frame-tile-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+}
+
+.frame-tile-preview {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+.frame-tile-lock {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  font-size: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.frame-tile-name {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1.2;
+}
+
+.frame-tile-sub {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  line-height: 1.2;
+}
+
+/* ---------- Reply head streak alignment ---------- */
+
+.reply-head .streak-badge-wrap {
+  margin-left: 2px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 640px) {
+  .frame-tile-grid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  }
+
+  .profile-streak-row {
+    gap: var(--space-3);
+  }
+}

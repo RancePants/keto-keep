@@ -4,6 +4,7 @@ import UpcomingEventsCard from '../components/events/UpcomingEventsCard.jsx';
 import MyLearningCard from '../components/courses/MyLearningCard.jsx';
 import DietaryApproachTag from '../components/profile/DietaryApproachTag.jsx';
 import BadgesInline from '../components/profile/BadgesInline.jsx';
+import StreakBadge from '../components/ui/StreakBadge.jsx';
 import { useMemberBadges } from '../components/profile/useMemberBadges.js';
 import usePageTitle from '../lib/usePageTitle.js';
 
@@ -20,12 +21,15 @@ export default function Dashboard() {
       <header className="page-header">
         <h1 className="page-title">Welcome back, {name}!</h1>
         <p className="page-sub">Good to see you in The Keep.</p>
-        {(profile?.dietary_approach || myBadges.length > 0) && (
+        {(profile?.dietary_approach || myBadges.length > 0 || profile?.current_streak > 0) && (
           <div className="dashboard-meta">
             {profile?.dietary_approach && (
               <DietaryApproachTag value={profile.dietary_approach} size="md" />
             )}
             <BadgesInline badges={myBadges} limit={5} size={16} />
+            {profile?.current_streak > 0 && (
+              <StreakBadge streak={profile.current_streak} size="md" showCount />
+            )}
           </div>
         )}
       </header>

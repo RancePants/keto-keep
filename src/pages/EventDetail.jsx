@@ -64,7 +64,7 @@ export default function EventDetail() {
       const [profRes, badgeRes] = await Promise.all([
         supabase
           .from('profiles')
-          .select('id, display_name, avatar_url, role, dietary_approach')
+          .select('id, display_name, avatar_url, role, dietary_approach, selected_frame, current_streak')
           .in('id', userIds),
         supabase
           .from('member_badges')

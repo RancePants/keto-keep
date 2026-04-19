@@ -53,7 +53,7 @@ export default function MembersDirectory() {
     const profilesRes = await supabase
       .from('profiles')
       .select(
-        'id, display_name, avatar_url, bio, dietary_approach, journey_duration, state, city, role, status, created_at'
+        'id, display_name, avatar_url, bio, dietary_approach, journey_duration, state, city, role, status, created_at, selected_frame, current_streak'
       )
       .order('display_name', { ascending: true });
 

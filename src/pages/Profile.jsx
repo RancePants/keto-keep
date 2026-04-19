@@ -21,10 +21,15 @@ import AwardBadgeModal from '../components/profile/AwardBadgeModal.jsx';
 import AssignAdminTagModal from '../components/members/AssignAdminTagModal.jsx';
 import ManageMemberModal from '../components/members/ManageMemberModal.jsx';
 import Modal from '../components/ui/Modal.jsx';
+import StreakBadge from '../components/ui/StreakBadge.jsx';
+import ProfileFrame from '../components/ui/ProfileFrame.jsx';
+import VacationModeSection from '../components/profile/VacationModeSection.jsx';
+import FrameSelector from '../components/profile/FrameSelector.jsx';
+import { progressToNext } from '../lib/streakHelpers.js';
 import usePageTitle from '../lib/usePageTitle.js';
 
 // ---------------- Avatar ----------------
-function Avatar({ path, displayName, size = 128 }) {
+function Avatar({ path, displayName, size = 128, frameType = 'none' }) {
   const { getAvatarUrl } = useAuth();
   const [url, setUrl] = useState(null);
 
@@ -42,13 +47,28 @@ function Avatar({ path, displayName, size = 128 }) {
   const initial = (displayName || '?').trim().charAt(0).toUpperCase();
   const dimStyle = { width: size, height: size };
 
-  if (path && url) {
-    return <img src={url} alt={displayName || 'Avatar'} className="avatar-img" style={dimStyle} />;
-  }
-  return (
-    <div className="avatar-fallback" style={dimStyle} aria-label={displayName || 'Avatar'}>
+  const inner = path && url ? (
+    <img
+      src={url}
+      alt={displayName || 'Avatar'}
+      className="avatar-img"
+      style={frameType === 'none' ? dimStyle : { width: '100%', height: '100%', objectFit: 'cover' }}
+    />
+  ) : (
+    <div
+      className="avatar-fallback"
+      style={frameType === 'none' ? dimStyle : { width: '100%', height: '100%' }}
+      aria-label={displayName || 'Avatar'}
+    >
       <span>{initial}</span>
     </div>
+  );
+
+  if (!frameType || frameType === 'none') return inner;
+  return (
+    <ProfileFrame frameType={frameType} size={size}>
+      {inner}
+    </ProfileFrame>
   );
 }
 
@@ -286,6 +306,7 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
               path={profile.avatar_url}
               displayName={form.display_name || profile.display_name}
               size={140}
+              frameType={profile.selected_frame}
             />
             <button
               type="button"
@@ -463,6 +484,18 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
   );
 }
 
+// ProfileEditor owns the main form. The vacation + frame sections are
+// self-contained and live outside the form — they save via their own RPCs /
+// updateProfile calls.
+function ProfileEditorExtras({ profile, onSaved }) {
+  return (
+    <>
+      <VacationModeSection profile={profile} onChanged={onSaved} />
+      <FrameSelector profile={profile} onChanged={onSaved} />
+    </>
+  );
+}
+
 // ---------------- Delete own account (danger zone) ----------------
 
 function DeleteAccountSection({ isOwner }) {
@@ -631,6 +664,7 @@ function ProfileView({
             path={profile.avatar_url}
             displayName={profile.display_name}
             size={140}
+            frameType={profile.selected_frame}
           />
         </div>
         <div className="profile-meta">
@@ -675,6 +709,8 @@ function ProfileView({
           )}
         </div>
       </div>
+
+      <ProfileStreakBlock profile={profile} />
 
       {profile.about_me && (
         <section className="profile-block">
@@ -946,6 +982,7 @@ export default function Profile() {
             uploadAvatar={uploadAvatar}
             onSaved={refreshProfile}
           />
+          <ProfileEditorExtras profile={ownProfile} onSaved={refreshProfile} />
           <DeleteAccountSection isOwner={isOwner} />
         </section>
       </div>
@@ -1191,4 +1228,61 @@ function RoleChangeModal({ open, onClose, action, targetUserId, targetName, onCh
       </div>
     </Modal>
   );
+}
+
+// ---------------- Streak view block ----------------
+
+function ProfileStreakBlock({ profile }) {
+  const current = Number(profile?.current_streak) || 0;
+  const longest = Number(profile?.longest_streak) || 0;
+  const hasAny = current > 0 || longest > 0;
+
+  // If this member has never logged a streak day, skip the block entirely.
+  if (!hasAny) return null;
+
+  const frozen =
+    profile?.streak_freeze_start &&
+    profile?.streak_freeze_end &&
+    isDateWithin(new Date(), profile.streak_freeze_start, profile.streak_freeze_end);
+
+  const progress = progressToNext(current);
+
+  return (
+    <section className="profile-block profile-streak-block">
+      <h3 className="profile-block-title">Streak</h3>
+      <div className="profile-streak-row">
+        <StreakBadge streak={current} size="lg" />
+        <div className="profile-streak-text">
+          <div className="profile-streak-current">🔥 {current} day{current === 1 ? '' : 's'}</div>
+          <div className="profile-streak-longest muted">Longest: {longest} day{longest === 1 ? '' : 's'}</div>
+          {frozen && (
+            <div className="profile-streak-frozen" title={`Freeze ends ${profile.streak_freeze_end}`}>
+              ❄️ Vacation — streak frozen until {formatDate(profile.streak_freeze_end)}
+            </div>
+          )}
+        </div>
+      </div>
+      {progress.next && (
+        <div className="profile-streak-progress">
+          <div className="profile-streak-progress-label">
+            {progress.remaining} day{progress.remaining === 1 ? '' : 's'} to {progress.next.name}
+          </div>
+          <div className="profile-streak-progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.pct}>
+            <span style={{ width: `${progress.pct}%` }} />
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function isDateWithin(today, startStr, endStr) {
+  try {
+    const t = today;
+    const start = new Date(startStr + 'T00:00:00');
+    const end = new Date(endStr + 'T23:59:59');
+    return t >= start && t <= end;
+  } catch {
+    return false;
+  }
 }

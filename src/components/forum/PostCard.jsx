@@ -6,6 +6,7 @@ import ReplySection from './ReplySection.jsx';
 import ForumModTools from './ForumModTools.jsx';
 import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
 import BadgesInline from '../profile/BadgesInline.jsx';
+import StreakBadge from '../ui/StreakBadge.jsx';
 import Modal from '../ui/Modal.jsx';
 import { usePrivateImage } from './usePrivateImage.js';
 import { formatRelative, isEdited } from '../../lib/forumHelpers.js';
@@ -110,6 +111,9 @@ export default function PostCard({
               <DietaryApproachTag value={author.dietary_approach} size="sm" />
             )}
             <BadgesInline badges={author?.badges} limit={3} size={14} />
+            {author?.current_streak > 0 && (
+              <StreakBadge streak={author.current_streak} size="sm" showCount />
+            )}
           </div>
           <div className="post-meta">
             <span>{formatRelative(post.created_at)}</span>

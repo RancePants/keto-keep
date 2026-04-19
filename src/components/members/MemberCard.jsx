@@ -4,22 +4,31 @@ import { usePrivateImage } from '../forum/usePrivateImage.js';
 import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
 import BadgesInline from '../profile/BadgesInline.jsx';
 import InterestTagChip from '../profile/InterestTagChip.jsx';
+import ProfileFrame from '../ui/ProfileFrame.jsx';
+import StreakBadge from '../ui/StreakBadge.jsx';
 import {
   formatLocation,
   journeyLabel,
 } from '../../lib/profileHelpers.js';
 import { safeTagColor, statusColorClass, statusLabel } from '../../lib/memberHelpers.js';
 
-function Avatar({ path, displayName }) {
+function Avatar({ path, displayName, frameType = 'none' }) {
   const url = usePrivateImage('avatars', path);
   const initial = (displayName || '?').trim().charAt(0).toUpperCase() || '?';
-  if (path && url) {
-    return <img src={url} alt={displayName || 'Avatar'} className="member-card-avatar" />;
-  }
-  return (
+
+  const inner = path && url ? (
+    <img src={url} alt={displayName || 'Avatar'} className="member-card-avatar" />
+  ) : (
     <div className="member-card-avatar-fallback" aria-label={displayName || 'Avatar'}>
       <span>{initial}</span>
     </div>
+  );
+
+  if (!frameType || frameType === 'none') return inner;
+  return (
+    <ProfileFrame frameType={frameType} size={64}>
+      {inner}
+    </ProfileFrame>
   );
 }
 
@@ -55,7 +64,11 @@ export default function MemberCard({
         aria-label={`View ${profile.display_name || 'member'}'s profile`}
       >
         <div className="member-card-header">
-          <Avatar path={profile.avatar_url} displayName={profile.display_name} />
+          <Avatar
+            path={profile.avatar_url}
+            displayName={profile.display_name}
+            frameType={profile.selected_frame}
+          />
           <div className="member-card-heading">
             <h3 className="member-card-name">
               {profile.display_name || 'Member'}
@@ -68,6 +81,9 @@ export default function MemberCard({
                 <span className={`status-pill ${statusColorClass(profile.status)}`}>
                   {statusLabel(profile.status)}
                 </span>
+              )}
+              {profile.current_streak > 0 && (
+                <StreakBadge streak={profile.current_streak} size="sm" showCount />
               )}
             </div>
             {profile.journey_duration && (

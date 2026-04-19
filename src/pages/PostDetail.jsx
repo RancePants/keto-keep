@@ -38,7 +38,7 @@ export default function PostDetail() {
     const [profRes, reactRes, badgeRes] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, display_name, avatar_url, role, dietary_approach')
+        .select('id, display_name, avatar_url, role, dietary_approach, selected_frame, current_streak')
         .eq('id', postRes.data.author_id)
         .maybeSingle(),
       supabase

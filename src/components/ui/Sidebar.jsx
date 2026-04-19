@@ -7,9 +7,11 @@ import NotificationBell from '../notifications/NotificationBell.jsx';
 import ThemeToggle from './ThemeToggle.jsx';
 import SidebarNavLink from './SidebarNavLink.jsx';
 import SidebarSection from './SidebarSection.jsx';
+import ProfileFrame from './ProfileFrame.jsx';
+import StreakBadge from './StreakBadge.jsx';
 import pkg from '../../../package.json';
 
-function SidebarAvatar({ path, displayName, size = 36 }) {
+function SidebarAvatar({ path, displayName, frameType = 'none', size = 36 }) {
   const { getAvatarUrl } = useAuth();
   const [url, setUrl] = useState(null);
 
@@ -26,17 +28,14 @@ function SidebarAvatar({ path, displayName, size = 36 }) {
 
   const initial = (displayName || '?').trim().charAt(0).toUpperCase();
   const dim = { width: size, height: size };
-  if (path && url) {
-    return (
-      <img
-        src={url}
-        alt={displayName || 'Avatar'}
-        className="sidebar-user-avatar"
-        style={dim}
-      />
-    );
-  }
-  return (
+  const inner = path && url ? (
+    <img
+      src={url}
+      alt={displayName || 'Avatar'}
+      className="sidebar-user-avatar"
+      style={dim}
+    />
+  ) : (
     <div
       className="sidebar-user-avatar sidebar-user-avatar-fallback"
       style={dim}
@@ -44,6 +43,13 @@ function SidebarAvatar({ path, displayName, size = 36 }) {
     >
       <span>{initial}</span>
     </div>
+  );
+
+  if (!frameType || frameType === 'none') return inner;
+  return (
+    <ProfileFrame frameType={frameType} size={size}>
+      {inner}
+    </ProfileFrame>
   );
 }
 
@@ -123,7 +129,11 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
 
         {profile && (
           <div className="sidebar-user">
-            <SidebarAvatar path={profile.avatar_url} displayName={displayName} />
+            <SidebarAvatar
+              path={profile.avatar_url}
+              displayName={displayName}
+              frameType={profile.selected_frame}
+            />
             <div className="sidebar-user-meta">
               <div className="sidebar-user-name">{displayName}</div>
               {dietary && (
@@ -134,6 +144,11 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
               {!dietary && (
                 <div className="sidebar-user-diet sidebar-user-diet-muted">
                   {dietaryLabel(null) || 'Member'}
+                </div>
+              )}
+              {profile.current_streak > 0 && (
+                <div className="sidebar-user-streak">
+                  <StreakBadge streak={profile.current_streak} size="sm" showCount />
                 </div>
               )}
             </div>

@@ -28,10 +28,52 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSuspended, setIsSuspended] = useState(false);
+  // Transient milestone trigger — set when update_login_streak reports a new
+  // milestone, read (and cleared) by a watcher that owns the toast.
+  const [lastMilestone, setLastMilestone] = useState(null);
 
   // Cache object URLs for avatars so we don't re-download on every render.
   // Keyed by storage path; value is an object URL.
   const avatarCacheRef = useRef(new Map());
+  // Only run the streak update once per user per session — consecutive profile
+  // refetches (tag saves, avatar uploads, etc.) must not re-call the RPC.
+  const streakUpdatedForUserRef = useRef(null);
+
+  const clearLastMilestone = useCallback(() => setLastMilestone(null), []);
+
+  const runStreakUpdate = useCallback(async (userId) => {
+    if (!userId) return;
+    if (streakUpdatedForUserRef.current === userId) return;
+    streakUpdatedForUserRef.current = userId;
+    try {
+      const { data, error } = await supabase.rpc('update_login_streak');
+      if (error) {
+        console.error('update_login_streak failed:', error.message);
+        return;
+      }
+      if (!data) return;
+      // Fold the returned streak values into the cached profile so every
+      // consumer sees them immediately — no second fetch.
+      setProfile((prev) =>
+        prev && prev.id === userId
+          ? {
+              ...prev,
+              current_streak: data.current_streak ?? prev.current_streak,
+              longest_streak: data.longest_streak ?? prev.longest_streak,
+            }
+          : prev
+      );
+      if (data.milestone_reached) {
+        setLastMilestone({
+          key: data.milestone_reached,
+          streak: data.current_streak ?? 0,
+          at: Date.now(),
+        });
+      }
+    } catch (e) {
+      console.error('update_login_streak threw:', e);
+    }
+  }, []);
 
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) {
@@ -70,6 +112,11 @@ export function AuthProvider({ children }) {
       if (data?.theme_preference) {
         applyTheme(data.theme_preference);
       }
+      // Fire-and-forget streak update. Only runs once per user per session
+      // thanks to streakUpdatedForUserRef.
+      runStreakUpdate(userId).catch((e) =>
+        console.error('streak update failed:', e)
+      );
       return data;
     } catch (e) {
       console.error('Unexpected error loading profile:', e);
@@ -77,7 +124,7 @@ export function AuthProvider({ children }) {
       setIsSuspended(false);
       return null;
     }
-  }, []);
+  }, [runStreakUpdate]);
 
   useEffect(() => {
     let mounted = true;
@@ -190,6 +237,8 @@ export function AuthProvider({ children }) {
         URL.revokeObjectURL(url);
       }
       avatarCacheRef.current.clear();
+      streakUpdatedForUserRef.current = null;
+      setLastMilestone(null);
     }
   }, []);
 
@@ -220,6 +269,7 @@ export function AuthProvider({ children }) {
         'about_me',
         'my_why',
         'theme_preference',
+        'selected_frame',
       ];
       const payload = {};
       for (const k of allowed) {
@@ -378,8 +428,10 @@ export function AuthProvider({ children }) {
       setTheme,
       deleteOwnAccount,
       refreshProfile: () => fetchProfile(session?.user?.id),
+      lastMilestone,
+      clearLastMilestone,
     }),
-    [session, profile, loading, isSuspended, isAdmin, isOwner, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, setTheme, deleteOwnAccount, fetchProfile]
+    [session, profile, loading, isSuspended, isAdmin, isOwner, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, setTheme, deleteOwnAccount, fetchProfile, lastMilestone, clearLastMilestone]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

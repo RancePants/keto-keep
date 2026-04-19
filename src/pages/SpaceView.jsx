@@ -59,7 +59,7 @@ export default function SpaceView() {
     const [profRes, reactRes, replyRes, badgeRes] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, display_name, avatar_url, role, dietary_approach')
+        .select('id, display_name, avatar_url, role, dietary_approach, selected_frame, current_streak')
         .in('id', authorIds),
       supabase
         .from('forum_reactions')

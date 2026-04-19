@@ -44,7 +44,7 @@ export default function ReplySection({
         const [profRes, badgeRes] = await Promise.all([
           supabase
             .from('profiles')
-            .select('id, display_name, avatar_url, role, dietary_approach')
+            .select('id, display_name, avatar_url, role, dietary_approach, selected_frame, current_streak')
             .in('id', authorIds),
           supabase
             .from('member_badges')

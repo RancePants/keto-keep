@@ -4,6 +4,7 @@ import Layout from './components/Layout.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import { ToastProvider } from './components/ui/Toast.jsx';
+import StreakMilestoneWatcher from './components/ui/StreakMilestoneWatcher.jsx';
 import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
@@ -34,6 +35,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
+          <StreakMilestoneWatcher />
           <ScrollToTop />
           <Routes>
           <Route element={<Layout />}>

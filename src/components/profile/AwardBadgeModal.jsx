@@ -25,6 +25,7 @@ export default function AwardBadgeModal({
   const [selected, setSelected] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [badgeToRevoke, setBadgeToRevoke] = useState(null);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -97,9 +98,9 @@ export default function AwardBadgeModal({
     onClose?.();
   };
 
-  const revoke = async (badgeId) => {
-    if (busy) return;
-    if (!window.confirm(`Remove this badge from ${targetName || 'this member'}?`)) return;
+  const confirmedRevoke = async () => {
+    const badgeId = badgeToRevoke;
+    setBadgeToRevoke(null);
     setBusy(true);
     setErr('');
     const { error } = await supabase
@@ -116,6 +117,26 @@ export default function AwardBadgeModal({
   };
 
   return (
+    <>
+    <Modal
+      open={!!badgeToRevoke}
+      onClose={() => setBadgeToRevoke(null)}
+      title="Remove badge"
+      variant="danger"
+      size="sm"
+    >
+      <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--color-ink-soft)' }}>
+        Remove this badge from <strong>{targetName || 'this member'}</strong>?
+      </p>
+      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
+        <button type="button" className="btn btn-ghost" onClick={() => setBadgeToRevoke(null)}>
+          Cancel
+        </button>
+        <button type="button" className="btn btn-danger" onClick={confirmedRevoke}>
+          Remove badge
+        </button>
+      </div>
+    </Modal>
     <Modal open={open} onClose={onClose} title={`Badges — ${targetName || 'Member'}`} size="md">
       <div className="award-badge-body">
         <section className="award-section">
@@ -170,7 +191,7 @@ export default function AwardBadgeModal({
                     <button
                       type="button"
                       className="icon-btn"
-                      onClick={() => revoke(a.badge_id)}
+                      onClick={() => setBadgeToRevoke(a.badge_id)}
                       disabled={busy}
                     >
                       Remove
@@ -185,5 +206,6 @@ export default function AwardBadgeModal({
         {err && <div className="form-error" role="alert">{err}</div>}
       </div>
     </Modal>
+    </>
   );
 }

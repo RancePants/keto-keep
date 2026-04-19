@@ -36,6 +36,7 @@ export default function CourseFormModal({ open, onClose, course, onSaved, onDele
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isEdit = !!course?.id;
 
@@ -128,15 +129,8 @@ export default function CourseFormModal({ open, onClose, course, onSaved, onDele
     }
   };
 
-  const remove = async () => {
-    if (!isEdit || deleting) return;
-    if (
-      !window.confirm(
-        'Delete this course? All modules, lessons, and member progress will be removed.'
-      )
-    ) {
-      return;
-    }
+  const doDelete = async () => {
+    setConfirmDelete(false);
     setDeleting(true);
     setError(null);
     try {
@@ -153,6 +147,26 @@ export default function CourseFormModal({ open, onClose, course, onSaved, onDele
   };
 
   return (
+    <>
+    <Modal
+      open={confirmDelete}
+      onClose={() => setConfirmDelete(false)}
+      title="Delete course"
+      variant="danger"
+      size="sm"
+    >
+      <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--color-ink-soft)' }}>
+        Delete this course? All modules, lessons, and member progress will be removed.
+      </p>
+      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
+        <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>
+          Cancel
+        </button>
+        <button type="button" className="btn btn-danger" onClick={doDelete}>
+          Delete course
+        </button>
+      </div>
+    </Modal>
     <Modal
       open={open}
       onClose={saving || deleting ? undefined : onClose}
@@ -248,7 +262,7 @@ export default function CourseFormModal({ open, onClose, course, onSaved, onDele
             <button
               type="button"
               className="btn btn-ghost course-form-delete"
-              onClick={remove}
+              onClick={() => setConfirmDelete(true)}
               disabled={saving || deleting}
             >
               {deleting ? 'Deleting…' : 'Delete course'}
@@ -270,5 +284,6 @@ export default function CourseFormModal({ open, onClose, course, onSaved, onDele
         </div>
       </form>
     </Modal>
+    </>
   );
 }

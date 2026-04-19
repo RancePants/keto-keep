@@ -6,6 +6,7 @@ import ReplySection from './ReplySection.jsx';
 import ForumModTools from './ForumModTools.jsx';
 import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
 import BadgesInline from '../profile/BadgesInline.jsx';
+import Modal from '../ui/Modal.jsx';
 import { usePrivateImage } from './usePrivateImage.js';
 import { formatRelative, isEdited } from '../../lib/forumHelpers.js';
 import { supabase } from '../../lib/supabase.js';
@@ -38,6 +39,7 @@ export default function PostCard({
   const [editBody, setEditBody] = useState(post.body);
   const [saving, setSaving] = useState(false);
   const [liveReplyCount, setLiveReplyCount] = useState(replyCount ?? 0);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   // Capture mount time once so render stays pure. Scheduled badge accuracy
   // refreshes on the next navigation / parent re-fetch — good enough.
   const [mountedAt] = useState(() => Date.now());
@@ -60,8 +62,8 @@ export default function PostCard({
     if (onChanged) await onChanged();
   };
 
-  const doDelete = async () => {
-    if (!window.confirm('Delete this post? All replies will be removed.')) return;
+  const confirmedDelete = async () => {
+    setConfirmDelete(false);
     const { error } = await supabase.from('forum_posts').delete().eq('id', post.id);
     if (error) {
       console.error('Delete post failed:', error.message);
@@ -128,7 +130,7 @@ export default function PostCard({
           isPinned={post.is_pinned}
           onTogglePin={isAdmin ? togglePin : null}
           onEdit={canEdit ? () => setEditing(true) : null}
-          onDelete={canEdit ? doDelete : null}
+          onDelete={canEdit ? () => setConfirmDelete(true) : null}
         />
       </header>
 
@@ -215,6 +217,25 @@ export default function PostCard({
           onReplyCountChange={setLiveReplyCount}
         />
       )}
+      <Modal
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="Delete post"
+        variant="danger"
+        size="sm"
+      >
+        <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--color-ink-soft)' }}>
+          Delete this post? All replies will be removed.
+        </p>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
+          <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>
+            Cancel
+          </button>
+          <button type="button" className="btn btn-danger" onClick={confirmedDelete}>
+            Delete post
+          </button>
+        </div>
+      </Modal>
     </article>
   );
 }

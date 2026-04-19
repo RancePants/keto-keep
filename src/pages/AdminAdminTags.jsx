@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../contexts/useAuth.js';
 import { ADMIN_TAG_COLORS, safeTagColor } from '../lib/memberHelpers.js';
 import usePageTitle from '../lib/usePageTitle.js';
+import Modal from '../components/ui/Modal.jsx';
 
 const BLANK_FORM = {
   name: '',
@@ -25,6 +26,7 @@ export default function AdminAdminTags() {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(BLANK_FORM);
   const [saving, setSaving] = useState(false);
+  const [tagToDelete, setTagToDelete] = useState(null);
 
   const load = useCallback(async () => {
     setErr('');
@@ -113,13 +115,9 @@ export default function AdminAdminTags() {
     }
   };
 
-  const deleteTag = async (tag) => {
-    if (
-      !window.confirm(
-        `Delete internal tag "${tag.name}"? Any members assigned this tag will lose the assignment.`
-      )
-    )
-      return;
+  const confirmedDeleteTag = async () => {
+    const tag = tagToDelete;
+    setTagToDelete(null);
     const { error } = await supabase.from('admin_tags').delete().eq('id', tag.id);
     if (error) {
       setErr(error.message);
@@ -141,6 +139,26 @@ export default function AdminAdminTags() {
   }
 
   return (
+    <>
+    <Modal
+      open={!!tagToDelete}
+      onClose={() => setTagToDelete(null)}
+      title="Delete internal tag"
+      variant="danger"
+      size="sm"
+    >
+      <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--color-ink-soft)' }}>
+        Delete <strong>{tagToDelete?.name}</strong>? Any members assigned this tag will lose the assignment.
+      </p>
+      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
+        <button type="button" className="btn btn-ghost" onClick={() => setTagToDelete(null)}>
+          Cancel
+        </button>
+        <button type="button" className="btn btn-danger" onClick={confirmedDeleteTag}>
+          Delete tag
+        </button>
+      </div>
+    </Modal>
     <div className="page page-narrow">
       <header className="page-header">
         <div className="feed-breadcrumbs">
@@ -304,7 +322,7 @@ export default function AdminAdminTags() {
                     <button
                       type="button"
                       className="icon-btn icon-btn-danger"
-                      onClick={() => deleteTag(t)}
+                      onClick={() => setTagToDelete(t)}
                     >
                       Delete
                     </button>
@@ -316,6 +334,7 @@ export default function AdminAdminTags() {
         )}
       </section>
     </div>
+    </>
   );
 }
 

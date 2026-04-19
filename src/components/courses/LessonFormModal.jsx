@@ -25,6 +25,7 @@ export default function LessonFormModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isEdit = !!lesson?.id;
 
@@ -113,9 +114,8 @@ export default function LessonFormModal({
     }
   };
 
-  const remove = async () => {
-    if (!isEdit || deleting) return;
-    if (!window.confirm('Delete this lesson? Member progress on it will be removed.')) return;
+  const doDelete = async () => {
+    setConfirmDelete(false);
     setDeleting(true);
     setError(null);
     try {
@@ -132,6 +132,26 @@ export default function LessonFormModal({
   };
 
   return (
+    <>
+    <Modal
+      open={confirmDelete}
+      onClose={() => setConfirmDelete(false)}
+      title="Delete lesson"
+      variant="danger"
+      size="sm"
+    >
+      <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--color-ink-soft)' }}>
+        Delete this lesson? Member progress on it will be removed.
+      </p>
+      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
+        <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>
+          Cancel
+        </button>
+        <button type="button" className="btn btn-danger" onClick={doDelete}>
+          Delete lesson
+        </button>
+      </div>
+    </Modal>
     <Modal
       open={open}
       onClose={saving || deleting ? undefined : onClose}
@@ -177,7 +197,7 @@ export default function LessonFormModal({
             <button
               type="button"
               className="btn btn-ghost course-form-delete"
-              onClick={remove}
+              onClick={() => setConfirmDelete(true)}
               disabled={saving || deleting}
             >
               {deleting ? 'Deleting…' : 'Delete lesson'}
@@ -199,5 +219,6 @@ export default function LessonFormModal({
         </div>
       </form>
     </Modal>
+    </>
   );
 }

@@ -5,6 +5,7 @@ import EmojiReactionBar from './EmojiReactionBar.jsx';
 import ReplyComposer from './ReplyComposer.jsx';
 import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
 import BadgesInline from '../profile/BadgesInline.jsx';
+import Modal from '../ui/Modal.jsx';
 import { formatRelative, isEdited } from '../../lib/forumHelpers.js';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
@@ -28,6 +29,7 @@ export default function ReplyItem({
   const [editing, setEditing] = useState(false);
   const [editBody, setEditBody] = useState(reply.body);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const saveEdit = async () => {
     if (!editBody.trim() || saving) return;
@@ -48,8 +50,8 @@ export default function ReplyItem({
     }
   };
 
-  const deleteReply = async () => {
-    if (!window.confirm('Delete this reply?')) return;
+  const confirmedDeleteReply = async () => {
+    setConfirmDelete(false);
     const { error } = await supabase.from('forum_replies').delete().eq('id', reply.id);
     if (error) {
       console.error('Delete reply failed:', error.message);
@@ -59,6 +61,26 @@ export default function ReplyItem({
   };
 
   return (
+    <>
+    <Modal
+      open={confirmDelete}
+      onClose={() => setConfirmDelete(false)}
+      title="Delete reply"
+      variant="danger"
+      size="sm"
+    >
+      <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--color-ink-soft)' }}>
+        Delete this reply?
+      </p>
+      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
+        <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>
+          Cancel
+        </button>
+        <button type="button" className="btn btn-danger" onClick={confirmedDeleteReply}>
+          Delete reply
+        </button>
+      </div>
+    </Modal>
     <div className={`reply ${nested ? 'reply-nested' : ''}`}>
       <UserAvatar author={author} size="xs" />
       <div className="reply-body-wrap">
@@ -123,7 +145,7 @@ export default function ReplyItem({
               <button type="button" className="reply-action" onClick={() => setEditing(true)}>
                 Edit
               </button>
-              <button type="button" className="reply-action" onClick={deleteReply}>
+              <button type="button" className="reply-action" onClick={() => setConfirmDelete(true)}>
                 Delete
               </button>
             </>
@@ -146,5 +168,6 @@ export default function ReplyItem({
         )}
       </div>
     </div>
+    </>
   );
 }

@@ -44,6 +44,7 @@ export default function EventFormModal({ open, onClose, event, onSaved, onDelete
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isEdit = !!event?.id;
 
@@ -134,9 +135,8 @@ export default function EventFormModal({ open, onClose, event, onSaved, onDelete
     }
   };
 
-  const remove = async () => {
-    if (!isEdit || deleting) return;
-    if (!window.confirm('Delete this event? All RSVPs will be removed.')) return;
+  const doDelete = async () => {
+    setConfirmDelete(false);
     setDeleting(true);
     setError(null);
     try {
@@ -153,6 +153,26 @@ export default function EventFormModal({ open, onClose, event, onSaved, onDelete
   };
 
   return (
+    <>
+    <Modal
+      open={confirmDelete}
+      onClose={() => setConfirmDelete(false)}
+      title="Delete event"
+      variant="danger"
+      size="sm"
+    >
+      <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--color-ink-soft)' }}>
+        Delete this event? All RSVPs will be removed.
+      </p>
+      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
+        <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>
+          Cancel
+        </button>
+        <button type="button" className="btn btn-danger" onClick={doDelete}>
+          Delete event
+        </button>
+      </div>
+    </Modal>
     <Modal
       open={open}
       onClose={saving || deleting ? undefined : onClose}
@@ -262,7 +282,7 @@ export default function EventFormModal({ open, onClose, event, onSaved, onDelete
             <button
               type="button"
               className="btn btn-ghost event-form-delete"
-              onClick={remove}
+              onClick={() => setConfirmDelete(true)}
               disabled={saving || deleting}
             >
               {deleting ? 'Deleting…' : 'Delete event'}
@@ -284,5 +304,6 @@ export default function EventFormModal({ open, onClose, event, onSaved, onDelete
         </div>
       </form>
     </Modal>
+    </>
   );
 }

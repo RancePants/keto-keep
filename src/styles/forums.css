@@ -541,7 +541,7 @@
 .avatar-sm {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   object-fit: cover;
   background: var(--color-parchment);
   border: 1px solid var(--color-border);
@@ -550,7 +550,7 @@
 .avatar-sm-fallback {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: linear-gradient(135deg, var(--color-green-soft), var(--color-green));
   color: var(--color-cream);
   display: grid;
@@ -563,7 +563,7 @@
 .avatar-xs {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   object-fit: cover;
   background: var(--color-parchment);
   border: 1px solid var(--color-border);
@@ -572,7 +572,7 @@
 .avatar-xs-fallback {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: linear-gradient(135deg, var(--color-green-soft), var(--color-green));
   color: var(--color-cream);
   display: grid;

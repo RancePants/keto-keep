@@ -164,7 +164,7 @@
 .member-card-avatar {
   width: 56px;
   height: 56px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   object-fit: cover;
   flex-shrink: 0;
   background: var(--color-sand);
@@ -172,7 +172,7 @@
 .member-card-avatar-fallback {
   width: 56px;
   height: 56px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: var(--color-green-soft);
   color: var(--color-cream);
   display: flex;

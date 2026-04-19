@@ -122,7 +122,7 @@
 }
 
 .sidebar-user-avatar {
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   object-fit: cover;
   flex: 0 0 auto;
 }

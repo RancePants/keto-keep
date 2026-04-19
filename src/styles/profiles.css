@@ -342,13 +342,13 @@
   font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
-  border-bottom-left-radius: var(--radius-md);
-  border-bottom-right-radius: var(--radius-md);
+  border-bottom-left-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
 }
 .avatar-editable .avatar-overlay:hover { background: var(--avatar-overlay-stronger); }
 .avatar-img,
 .avatar-fallback {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   object-fit: cover;
 }
 .avatar-fallback {

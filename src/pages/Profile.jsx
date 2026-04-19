@@ -24,7 +24,7 @@ import Modal from '../components/ui/Modal.jsx';
 import StreakBadge from '../components/ui/StreakBadge.jsx';
 import ProfileFrame from '../components/ui/ProfileFrame.jsx';
 import VacationModeSection from '../components/profile/VacationModeSection.jsx';
-import FrameSelector from '../components/profile/FrameSelector.jsx';
+import FramePickerModal from '../components/profile/FramePickerModal.jsx';
 import { progressToNext } from '../lib/streakHelpers.js';
 import usePageTitle from '../lib/usePageTitle.js';
 
@@ -169,6 +169,7 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [framePickerOpen, setFramePickerOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -324,7 +325,24 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
               onChange={onFileChange}
               hidden
             />
+            {/* Frame picker trigger */}
+            <button
+              type="button"
+              className="avatar-frame-trigger"
+              onClick={() => setFramePickerOpen(true)}
+              aria-label="Change profile frame"
+              title="Change frame"
+            >
+              🖼
+            </button>
           </div>
+          <FramePickerModal
+            key={framePickerOpen ? `fp-${profile?.selected_frame}` : 'fp-closed'}
+            open={framePickerOpen}
+            onClose={() => setFramePickerOpen(false)}
+            profile={profile}
+            onChanged={onSaved}
+          />
 
           <div className="profile-meta">
             <div className="profile-badges">
@@ -491,7 +509,6 @@ function ProfileEditorExtras({ profile, onSaved }) {
   return (
     <>
       <VacationModeSection profile={profile} onChanged={onSaved} />
-      <FrameSelector profile={profile} onChanged={onSaved} />
     </>
   );
 }

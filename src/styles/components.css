@@ -361,7 +361,7 @@
 
 /* ------- Avatars ------- */
 .avatar-img {
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   object-fit: cover;
   border: 3px solid var(--color-parchment);
   box-shadow: var(--shadow-sm);
@@ -369,7 +369,7 @@
 }
 
 .avatar-fallback {
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: linear-gradient(135deg, var(--color-green-soft), var(--color-green));
   color: var(--color-cream);
   display: grid;
@@ -384,14 +384,14 @@
 .avatar-wrap {
   position: relative;
   display: inline-block;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
 }
 
 .avatar-editable .avatar-overlay {
   position: absolute;
   inset: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: var(--avatar-overlay);
   color: var(--color-cream);
   font-weight: 700;

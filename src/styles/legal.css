@@ -1,0 +1,245 @@
+/* ======================================================================
+   Legal pages — Terms, Privacy, Disclaimer.
+   Standalone public routes with no sidebar. Parchment-card look with
+   a readable reading width.
+   ====================================================================== */
+
+.legal-page {
+  max-width: 800px;
+  margin: var(--space-6) auto;
+  padding: var(--space-7) var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(42, 36, 28, 0.08);
+  color: var(--color-ink-soft);
+  line-height: 1.65;
+}
+
+.legal-header {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.legal-title {
+  color: var(--color-green-dark);
+  font-size: clamp(1.6rem, 3.2vw, 2.1rem);
+  margin: 0 0 var(--space-3);
+  line-height: 1.2;
+}
+
+.legal-effective-date {
+  color: var(--color-muted);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+.legal-page section {
+  margin-bottom: var(--space-6);
+}
+
+.legal-heading {
+  color: var(--color-green-dark);
+  font-size: var(--fs-lg);
+  margin: 0 0 var(--space-3);
+  line-height: 1.3;
+}
+
+.legal-subheading {
+  color: var(--color-ink);
+  font-size: var(--fs-md);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.legal-page p {
+  margin: 0 0 var(--space-3);
+}
+
+.legal-page p:last-child {
+  margin-bottom: 0;
+}
+
+.legal-page a {
+  color: var(--color-amber-dark);
+  text-decoration: underline;
+}
+
+.legal-page a:hover {
+  color: var(--color-terracotta);
+}
+
+.legal-list {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-5);
+}
+
+.legal-list li {
+  margin-bottom: var(--space-2);
+}
+
+.legal-footer {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-5);
+  margin-top: var(--space-7);
+  color: var(--color-muted);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.legal-footer p {
+  margin: 0 0 var(--space-2);
+}
+
+.legal-nav {
+  margin-top: var(--space-3) !important;
+}
+
+.legal-nav-sep {
+  margin: 0 var(--space-2);
+  color: var(--color-border-strong);
+}
+
+@media (max-width: 620px) {
+  .legal-page {
+    margin: var(--space-3) var(--space-2);
+    padding: var(--space-5) var(--space-4);
+    border-radius: 10px;
+  }
+  .legal-title {
+    font-size: 1.45rem;
+  }
+}
+
+/* ------- Footer legal links (used in Layout and Landing) ------- */
+.footer-legal-links {
+  display: inline-flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.footer-legal-links a {
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.8;
+}
+
+.footer-legal-links a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.footer-trademark {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--fs-xs, 0.78rem);
+}
+
+/* ------- Invite page ------- */
+.invite-link-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.invite-link-input {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-alt);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+}
+
+.invite-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+.invite-code-chip {
+  font-size: var(--fs-sm);
+}
+
+.invite-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.invite-list-item {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-alt);
+}
+
+.invite-list-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.invite-list-link:hover {
+  background: var(--color-parchment);
+  border-radius: 10px;
+}
+
+.invite-list-name {
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.invite-list-date {
+  font-size: var(--fs-sm);
+}
+
+/* ------- Signup ref chip ------- */
+.auth-ref-chip {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-form-success-bg);
+  border: 1px solid var(--color-form-success-border);
+  border-radius: 8px;
+  font-size: var(--fs-sm);
+  color: var(--color-green-dark);
+}
+
+/* ------- Signup terms checkbox ------- */
+.field-checkbox {
+  flex-direction: row !important;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.field-checkbox input[type="checkbox"] {
+  margin-top: 0.25rem;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-green);
+}
+
+/* ------- Danger zone ------- */
+.danger-zone {
+  margin-top: var(--space-6);
+  border-top: 2px solid var(--color-form-error-border);
+  padding-top: var(--space-5);
+}
+
+.danger-zone-title {
+  color: var(--color-error);
+}

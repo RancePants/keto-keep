@@ -1,18 +1,35 @@
 import { useCallback, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
 import Sidebar from './ui/Sidebar.jsx';
 import SidebarMobileHeader from './ui/SidebarMobileHeader.jsx';
 import SuspendedBanner from './SuspendedBanner.jsx';
 import pkg from '../../package.json';
 
-const PRE_AUTH_PATHS = new Set([
+// Paths that render with no sidebar — public marketing + legal pages, and
+// pre-auth routes.
+const NO_SIDEBAR_PATHS = new Set([
   '/',
   '/login',
   '/signup',
   '/reset-password',
   '/update-password',
+  '/terms',
+  '/privacy',
+  '/disclaimer',
 ]);
+
+function FooterLegalLinks() {
+  return (
+    <span className="footer-legal-links">
+      <Link to="/terms">Terms</Link>
+      <span className="footer-sep">·</span>
+      <Link to="/privacy">Privacy</Link>
+      <span className="footer-sep">·</span>
+      <Link to="/disclaimer">Disclaimer</Link>
+    </span>
+  );
+}
 
 export default function Layout() {
   const { session } = useAuth();
@@ -23,7 +40,7 @@ export default function Layout() {
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   const showSidebar =
-    !!session && !PRE_AUTH_PATHS.has(location.pathname);
+    !!session && !NO_SIDEBAR_PATHS.has(location.pathname);
 
   if (!showSidebar) {
     return (
@@ -39,8 +56,13 @@ export default function Layout() {
           <div className="footer-inner">
             <span>© 2026 The Keto Keep</span>
             <span className="footer-sep">·</span>
+            <FooterLegalLinks />
+            <span className="footer-sep">·</span>
             <span className="version">v{pkg.version}</span>
           </div>
+          <span className="footer-trademark">
+            The Keto Keep™ is a trademark of Full Spectrum Human LLC.
+          </span>
         </footer>
       </div>
     );
@@ -62,8 +84,13 @@ export default function Layout() {
           <div className="footer-inner">
             <span>© 2026 The Keto Keep</span>
             <span className="footer-sep">·</span>
+            <FooterLegalLinks />
+            <span className="footer-sep">·</span>
             <span className="version">v{pkg.version}</span>
           </div>
+          <span className="footer-trademark">
+            The Keto Keep™ is a trademark of Full Spectrum Human LLC.
+          </span>
         </footer>
       </div>
     </div>

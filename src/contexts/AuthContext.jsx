@@ -268,6 +268,34 @@ export function AuthProvider({ children }) {
     [session]
   );
 
+  const deleteOwnAccount = useCallback(async () => {
+    if (!session?.user) return { ok: false, error: new Error('Not authenticated') };
+    try {
+      const { error } = await supabase.rpc('delete_own_account');
+      if (error) return { ok: false, error };
+      // Sign out on the client — server-side cascade has already removed the user.
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        // Session is already invalid — ignore.
+        console.warn('Post-delete signOut warning:', e?.message || e);
+      }
+      try {
+        localStorage.removeItem('kk-theme');
+      } catch {
+        // localStorage may be blocked
+      }
+      for (const url of avatarCacheRef.current.values()) {
+        URL.revokeObjectURL(url);
+      }
+      avatarCacheRef.current.clear();
+      return { ok: true, error: null };
+    } catch (e) {
+      console.error('deleteOwnAccount threw:', e);
+      return { ok: false, error: e };
+    }
+  }, [session]);
+
   const getAvatarUrl = useCallback(async (path) => {
     if (!path) return null;
     const cache = avatarCacheRef.current;
@@ -348,9 +376,10 @@ export function AuthProvider({ children }) {
       uploadAvatar,
       getAvatarUrl,
       setTheme,
+      deleteOwnAccount,
       refreshProfile: () => fetchProfile(session?.user?.id),
     }),
-    [session, profile, loading, isSuspended, isAdmin, isOwner, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, setTheme, fetchProfile]
+    [session, profile, loading, isSuspended, isAdmin, isOwner, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, setTheme, deleteOwnAccount, fetchProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

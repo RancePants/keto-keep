@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
+import { useToast } from '../components/ui/toastContext.js';
 import { supabase } from '../lib/supabase.js';
 import {
   ABOUT_SOFT_LIMIT,
@@ -462,6 +463,105 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
   );
 }
 
+// ---------------- Delete own account (danger zone) ----------------
+
+function DeleteAccountSection({ isOwner }) {
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [err, setErr] = useState('');
+  const { deleteOwnAccount } = useAuth();
+  const toast = useToast();
+  const navigate = useNavigate();
+
+  if (isOwner) return null;
+
+  const closeModal = () => {
+    if (deleting) return;
+    setOpen(false);
+    setConfirmText('');
+    setErr('');
+  };
+
+  const onConfirm = async () => {
+    if (confirmText.trim().toUpperCase() !== 'DELETE') {
+      setErr('Type DELETE to confirm.');
+      return;
+    }
+    setDeleting(true);
+    setErr('');
+    const { ok, error } = await deleteOwnAccount();
+    setDeleting(false);
+    if (!ok) {
+      setErr(error?.message || 'Could not delete your account.');
+      return;
+    }
+    toast.success("Your account was deleted. Take care of yourself out there.");
+    navigate('/', { replace: true });
+  };
+
+  return (
+    <section className="profile-edit-section danger-zone">
+      <h2 className="section-title danger-zone-title">Danger zone</h2>
+      <p className="section-sub">
+        Permanently delete your account and all associated data. This cannot be undone.
+      </p>
+      <button
+        type="button"
+        className="btn btn-danger"
+        onClick={() => setOpen(true)}
+      >
+        Delete my account
+      </button>
+
+      <Modal
+        open={open}
+        onClose={closeModal}
+        title="Delete your account?"
+        size="sm"
+        variant="warning"
+      >
+        <div className="manage-member-body">
+          <p className="manage-member-lead">
+            This will permanently delete your account, profile, posts, replies,
+            reactions, and everything else tied to it. <strong>This cannot be undone.</strong>
+          </p>
+          <label className="field">
+            <span className="field-label">Type <strong>DELETE</strong> to confirm</span>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="characters"
+              disabled={deleting}
+            />
+          </label>
+          {err && <div className="form-error" role="alert">{err}</div>}
+          <div className="manage-member-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={closeModal}
+              disabled={deleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={onConfirm}
+              disabled={deleting || confirmText.trim().toUpperCase() !== 'DELETE'}
+            >
+              {deleting ? 'Deleting…' : 'Delete my account'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </section>
+  );
+}
+
 // ---------------- Viewer ----------------
 
 function ProfileView({
@@ -846,6 +946,7 @@ export default function Profile() {
             uploadAvatar={uploadAvatar}
             onSaved={refreshProfile}
           />
+          <DeleteAccountSection isOwner={isOwner} />
         </section>
       </div>
     );

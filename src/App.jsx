@@ -23,6 +23,10 @@ import EventDetail from './pages/EventDetail.jsx';
 import CoursesHome from './pages/CoursesHome.jsx';
 import CourseDetail from './pages/CourseDetail.jsx';
 import LessonView from './pages/LessonView.jsx';
+import InviteFriends from './pages/InviteFriends.jsx';
+import TermsOfUse from './pages/TermsOfUse.jsx';
+import PrivacyPolicy from './pages/PrivacyPolicy.jsx';
+import HealthDisclaimer from './pages/HealthDisclaimer.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -166,6 +170,17 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/invite"
+              element={
+                <ProtectedRoute>
+                  <InviteFriends />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/terms" element={<TermsOfUse />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/disclaimer" element={<HealthDisclaimer />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

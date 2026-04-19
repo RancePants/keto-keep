@@ -1,212 +1,207 @@
-# CURRENT BUILD PLAN — Phase 5C: Owner Role + Sidebar Navigation
+# CURRENT BUILD PLAN — Phase 5D: Referral System + Self-Delete + Legal Pages
 
-> **Session goal:** Add the `owner` role tier to the database, rebuild the app layout from top-navbar to collapsible sidebar navigation, and deploy as v0.9.0.
+> **Session goal:** Add referral tracking system with invite button, member self-service account deletion, and legal pages (Terms, Privacy, Disclaimer). Deploy as v0.10.0.
 > **Created:** 2026-04-19 (Session 22 Chat)
 
 ---
 
-## Phase 5C-1: Owner Role Schema (do first — small, unblocks role management UI)
+## Phase 5D-1: Schema Changes (Supabase MCP execute_sql)
 
-### Schema changes (via Supabase MCP execute_sql)
+### Referral system tables
 
-- [x] **1A.** Add `owner` value to `app_role` enum:
+- [x] **1A.** Create `referral_codes` table:
   ```sql
-  ALTER TYPE public.app_role ADD VALUE 'owner';
+  CREATE TABLE public.referral_codes (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    code text NOT NULL UNIQUE,
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
+  CREATE INDEX referral_codes_user_id_idx ON public.referral_codes(user_id);
+  ALTER TABLE public.referral_codes ENABLE ROW LEVEL SECURITY;
   ```
 
-- [x] **1B.** Create `is_owner()` SECURITY DEFINER function:
+- [x] **1B.** Create `referrals` table:
   ```sql
-  CREATE OR REPLACE FUNCTION public.is_owner()
-  RETURNS boolean
-  LANGUAGE plpgsql
-  SECURITY DEFINER
-  SET search_path = ''
-  AS $$
-  BEGIN
-    RETURN EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = (SELECT auth.uid())
-      AND role = 'owner'
-    );
-  END;
-  $$;
+  CREATE TABLE public.referrals (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    referrer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    referred_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    code_used text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE(referred_id)  -- a member can only be referred once
+  );
+  CREATE INDEX referrals_referrer_id_idx ON public.referrals(referrer_id);
+  CREATE INDEX referrals_referred_id_idx ON public.referrals(referred_id);
+  ALTER TABLE public.referrals ENABLE ROW LEVEL SECURITY;
   ```
 
-- [x] **1C.** Update `is_admin()` to include owner (owner is a superset of admin):
+- [x] **1C.** Add `referred_by` column to profiles:
   ```sql
-  CREATE OR REPLACE FUNCTION public.is_admin()
-  RETURNS boolean
-  LANGUAGE plpgsql
-  SECURITY DEFINER
-  SET search_path = ''
-  AS $$
-  BEGIN
-    RETURN EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = (SELECT auth.uid())
-      AND role IN ('admin', 'owner')
-    );
-  END;
-  $$;
+  ALTER TABLE public.profiles
+    ADD COLUMN referred_by uuid REFERENCES auth.users(id) ON DELETE SET NULL;
   ```
 
-- [x] **1D.** Create `set_member_role(target_id uuid, new_role app_role)` SECURITY DEFINER function:
-  - Guard: caller must be owner (`is_owner()`)
-  - Guard: cannot change own role
-  - Guard: cannot set role to `owner` (only one owner, ever)
-  - Guard: target must exist
-  - Executes: `UPDATE profiles SET role = new_role WHERE id = target_id`
-  - Returns: the new role as text
+- [x] **1D.** RLS policies for `referral_codes`:
+  - SELECT: authenticated can read own codes (`(select auth.uid()) = user_id`)
+  - INSERT: authenticated can create own codes (`(select auth.uid()) = user_id`), gated by `is_active_or_admin()`
+  - DELETE: own codes only (`(select auth.uid()) = user_id`)
+  - Admin SELECT: admins can read all codes (for stats)
 
-- [x] **1E.** Promote Rance to `owner`:
-  ```sql
-  -- Disable trigger, update, re-enable (same bootstrap pattern as Phase 1)
-  ALTER TABLE public.profiles DISABLE TRIGGER on_role_change_attempt;
-  UPDATE public.profiles SET role = 'owner' WHERE email = 'rancepants@gmail.com';
-  ALTER TABLE public.profiles ENABLE TRIGGER on_role_change_attempt;
-  ```
+- [x] **1E.** RLS policies for `referrals`:
+  - SELECT: authenticated can read own referrals (where `referrer_id = (select auth.uid())`)
+  - INSERT: system-level only via SECURITY DEFINER function (see 1F)
+  - Admin SELECT: admins can read all referrals (for stats)
 
-- [x] **1F.** Update `protect_role_change` trigger to allow owner to change roles:
-  - Current trigger prevents all non-admin role changes
-  - Updated: allow if caller `is_owner()`, OR if the change is being done by `set_member_role` (SECURITY DEFINER bypasses the trigger's RLS check)
-  - Actually verify: does the SECURITY DEFINER function bypass the trigger? If yes, the trigger might not need changes. Test this.
+- [x] **1F.** Create `record_referral(p_referred_id uuid, p_code text)` SECURITY DEFINER function:
+  - Looks up the referral code → gets `referrer_id`
+  - Guards: code must exist, referred_id must not already have a referral row
+  - Inserts into `referrals` + updates `profiles.referred_by`
+  - Called during signup flow when `?ref=` param is present
 
-- [x] **1G.** Run security + performance advisors. Expected: no new findings.
+- [x] **1G.** Create `generate_referral_code(p_user_id uuid)` SECURITY DEFINER function:
+  - Generates a short alphanumeric code (8 chars, uppercase)
+  - Inserts into `referral_codes`
+  - Returns the code
+  - Guard: caller must be the user or admin
 
-- [x] **1H.** Verify via SQL: `SELECT id, email, role FROM profiles WHERE role = 'owner';` → Rance's row.
+- [x] **1H.** RESTRICTIVE write-gate on `referral_codes` INSERT calling `is_active_or_admin()` (suspended members can't generate invite links)
 
-### Frontend changes for owner role
+### Self-service account deletion
 
-- [x] **1I.** Update `AuthContext` — add `isOwner` boolean (true when `profile.role === 'owner'`). Keep `isAdmin` true for both admin and owner.
+- [x] **1I.** Create `delete_own_account()` SECURITY DEFINER function:
+  - Gets `(select auth.uid())` as the caller
+  - Guard: caller must not be owner (owner can't self-delete — platform would be orphaned)
+  - Calls the existing cascade delete pattern: `DELETE FROM auth.users WHERE id = caller_id`
+  - Returns success boolean
+  - Note: this is similar to `delete_member()` but without the admin guard — it only operates on self
 
-- [x] **1J.** Add role management UI to `Profile.jsx` (owner view of other members):
-  - "Promote to Admin" button (visible when viewing a `member`, only for owner)
-  - "Demote to Member" button (visible when viewing an `admin`, only for owner)
-  - Calls `set_member_role` RPC
-  - Confirmation modal (Modal variant="warning")
-  - Never shows on own profile or on other owners
+### Run advisors
 
-- [x] **1K.** Update `ManageMemberModal` — hide suspend/ban/delete actions when target is `owner` (same guard as admin-on-admin, extended to owner)
+- [x] **1J.** Run security + performance advisors. Remediate any findings.
 
 ---
 
-## Phase 5C-2: Sidebar Navigation (layout overhaul)
+## Phase 5D-2: Referral System Frontend
 
-### New components to create
+- [x] **2A.** Create `src/lib/referralHelpers.js`:
+  - `generateCode()` — calls `generate_referral_code` RPC or inserts directly
+  - `getMyCode()` — fetches the user's existing referral code (or generates one on first access)
+  - `getMyReferrals()` — fetches referral count + list of referred members
+  - `buildInviteUrl(code)` — returns `https://theketokeep.com/join?ref={code}` (or the workers.dev URL pre-domain-cutover)
 
-- [x] **2A.** `src/components/ui/Sidebar.jsx` — the main sidebar component:
-  - **Desktop (≥768px):** Fixed left panel, ~260px wide, always visible
-  - **Mobile (<768px):** Slide-in drawer from left, triggered by hamburger in slim top bar
-  - **Structure from top to bottom:**
-    - Logo block: TKK heraldic crest logo (transparent PNG) + "The Keto Keep" text
-    - User block: avatar + display name + dietary approach pill (compact)
-    - Nav sections with headers:
-      - **Community:** Forums, Events, Members
-      - **Learning:** Courses
-      - **My Stuff:** My Profile, Invite Friends (placeholder for Phase 5D)
-      - **Admin** (owner/admin only): Admin Hub, Tags, Admin Tags
-    - Footer block: Theme toggle + notification bell + version
-  - Active route highlighted with warm accent (castle-torch amber)
-  - Castle stone texture background (subtle, via CSS — NOT the full bg image)
-  - Warm ambient glow/accent at top (like firelight)
-  - Collapse animation on mobile: slide from left with backdrop overlay
+- [x] **2B.** Create `src/pages/InviteFriends.jsx` (replaces the "SOON" placeholder):
+  - Shows the user's unique invite link with a "Copy link" button (clipboard API)
+  - Native share button on mobile (Web Share API with fallback to copy)
+  - Shows referral stats: "You've invited {n} people"
+  - List of referred members (avatar + display name + join date)
+  - If no referral code exists yet, auto-generate one on page load
+  - Route: `/invite`
 
-- [x] **2B.** `src/components/ui/SidebarMobileHeader.jsx` — slim top bar for mobile only:
-  - Hamburger icon (left) → toggles sidebar drawer
-  - "The Keto Keep" text or small logo (center)
-  - Notification bell (right) — moved from old navbar
+- [x] **2C.** Update Sidebar — replace "Invite Friends (SOON)" with active link to `/invite`
 
-- [x] **2C.** `src/components/ui/SidebarNavLink.jsx` — individual nav item:
-  - Icon (emoji or simple SVG) + label + optional badge (unread count, etc.)
-  - Active state detection via `useLocation`
-  - onClick closes mobile drawer
+- [x] **2D.** Update signup flow — capture `ref` query parameter:
+  - On the `/signup` route, check `URLSearchParams` for `ref` param
+  - Store in component state during registration
+  - After successful signup + profile creation, call `record_referral()` RPC
+  - Show a warm message: "You were invited by {referrer_display_name}!" (optional — only if we can fetch the referrer's name from the code)
 
-- [x] **2D.** `src/components/ui/SidebarSection.jsx` — section wrapper:
-  - Section title (small caps, muted) + children nav links
-  - Collapsible on mobile (optional — might not need this complexity)
-
-### Layout changes
-
-- [x] **2E.** Rewrite `src/components/Layout.jsx`:
-  - Remove `<Navbar />` import entirely
-  - New structure: `<div className="app-layout">` containing `<Sidebar />` + `<main className="main-content">` + (mobile) `<SidebarMobileHeader />`
-  - `<main>` gets `id="main-content"` and skip-link target (preserve a11y)
-  - Footer moves inside `<main>` (scrolls with content, not fixed)
-  - SuspendedBanner stays inside `<main>` (below mobile header, above content)
-
-- [x] **2F.** Delete or gut `src/components/Navbar.jsx`:
-  - Everything moves to Sidebar — navbar is no longer needed
-  - Keep the file temporarily as reference, delete after verification
-
-- [x] **2G.** Move `NotificationBell` from Navbar to Sidebar footer (desktop) and SidebarMobileHeader (mobile)
-
-- [x] **2H.** Move `ThemeToggle` from Navbar to Sidebar footer
-
-- [x] **2I.** Move `AdminDropdown` functionality into Sidebar "Admin" section (no dropdown needed — it's just nav links now)
-
-### Styling
-
-- [x] **2J.** New `src/styles/sidebar.css`:
-  - `.sidebar` — fixed left, 260px, full height, `overflow-y: auto`
-  - Background: subtle stone texture via CSS gradient or very muted bg-image tint (NOT the full castle image — that stays on body). Consider: `background-color: var(--sidebar-bg)` with a stone-like warm charcoal
-  - Warm accent glow at top (radial gradient, amber/orange, very subtle)
-  - `.sidebar-logo` — centered logo image, max 80px
-  - `.sidebar-brand` — "The Keto Keep" in warm gold/parchment, medieval-ish feel
-  - `.sidebar-user` — compact user card (avatar 36px + name + dietary pill)
-  - `.sidebar-section-title` — uppercase, small, muted, letter-spaced
-  - `.sidebar-nav-link` — full-width row, padding, hover highlight, active accent bar (left border, 3px, amber)
-  - `.sidebar-footer` — bottom-pinned, contains theme toggle + bell + version
-  - Mobile drawer: `transform: translateX(-100%)` → `translateX(0)` transition, backdrop overlay
-  - Dark mode: stone tones darken, accent glow warms
-  - Light mode: parchment sidebar with subtle warmth
-
-- [x] **2K.** Update `src/styles/layout.css`:
-  - `.app-layout` — flex row: sidebar + main-content
-  - `.main-content` — `margin-left: 260px` on desktop, `margin-left: 0` on mobile
-  - Remove old `.app-shell` navbar-related layout rules
-  - Preserve background image + overlay behavior on body / .app-shell
-
-- [x] **2L.** Update `src/styles/base.css` — add new CSS variables:
-  - `--sidebar-bg`, `--sidebar-bg-dark`, `--sidebar-text`, `--sidebar-accent`, `--sidebar-hover`, `--sidebar-active-border`, `--sidebar-section-title`, `--sidebar-glow` (both light + dark theme blocks)
-
-- [x] **2M.** Audit all 10 stylesheets for any `nav`/`.navbar` references that need updating
-
-### Route and page adjustments
-
-- [x] **2N.** Update `App.jsx` — verify all routes still work with the new layout wrapper
-
-- [x] **2O.** Public landing page (unauthenticated) — should NOT show the sidebar. Keep it full-width with its own layout (or a minimal header). The sidebar is for the authenticated community experience only.
-
-- [x] **2P.** Login / Signup / Password Reset pages — also no sidebar. These are pre-auth flows.
-
-### Testing
-
-- [x] **2Q.** Desktop verification: sidebar visible, content area properly offset, all nav links work, active states correct, theme toggle works, bell works, admin section only for admins
-
-- [x] **2R.** Mobile verification: hamburger opens drawer, drawer closes on nav click, drawer closes on backdrop click, drawer closes on Escape, content not scrollable when drawer is open
-
-- [x] **2S.** Keyboard/a11y: skip-to-main-content still works, Tab order is logical (sidebar links → main content), drawer focus-trapped on mobile when open
-
-- [x] **2T.** Dark mode: sidebar colors adapt, glow adjusts, all contrast ratios acceptable
+- [ ] **2E.** Admin referral stats (stretch — DEFERRED to a later session):
+  - On the Admin Hub or a new `/admin/referrals` page
+  - Table: member name, their code, referral count
+  - Sortable by referral count (leaderboard)
 
 ---
 
-## Final steps
+## Phase 5D-3: Self-Service Account Deletion Frontend
 
-- [x] **3A.** Copy new logo files into `public/` directory (tkk-logo-transparent.png for sidebar, tkk-logo-with-bg.png as asset)
-- [x] **3B.** `npm run lint` — zero errors
-- [x] **3C.** `npm run build` — clean
-- [x] **3D.** Bump `package.json` to `0.9.0`
-- [x] **3E.** Git commit with descriptive message, push to main
-- [x] **3F.** Verify Cloudflare Workers auto-deploy
+- [x] **3A.** Add "Delete my account" section to Profile edit page (`/profile/edit`):
+  - Danger zone section at the very bottom, visually separated
+  - Red "Delete my account" button
+  - Opens Modal (variant="danger") with:
+    - Warning: "This will permanently delete your account and all your data. This cannot be undone."
+    - Typed confirmation: "Type DELETE to confirm"
+    - Cancel + "Delete my account" buttons
+  - On confirm: calls `delete_own_account()` RPC
+  - On success: signs out, redirects to landing page with a farewell toast or message
+  - Guard: does NOT render for owner role (owner can't self-delete)
+
+- [x] **3B.** Update AuthContext — handle the post-deletion state:
+  - After `delete_own_account()` succeeds, call `supabase.auth.signOut()`
+  - Clear localStorage (theme, etc.)
+  - Redirect to `/` (landing page)
+
+---
+
+## Phase 5D-4: Legal Pages
+
+- [x] **4A.** Create `src/pages/TermsOfUse.jsx`:
+  - Route: `/terms`
+  - Renders the Terms of Use content (hardcoded JSX, styled with `.legal-page` CSS)
+  - No sidebar (public page, accessible pre and post-auth)
+  - Back link or breadcrumb to landing page / dashboard
+
+- [x] **4B.** Create `src/pages/PrivacyPolicy.jsx`:
+  - Route: `/privacy`
+  - Same layout as Terms
+  - No sidebar
+
+- [x] **4C.** Create `src/pages/HealthDisclaimer.jsx`:
+  - Route: `/disclaimer`
+  - Same layout as Terms
+  - No sidebar
+
+- [x] **4D.** Add `src/styles/legal.css`:
+  - `.legal-page` — max-width 800px, centered, parchment card background, readable typography
+  - `.legal-heading` — section headers
+  - `.legal-list` — styled list items
+  - `.legal-effective-date` — muted date line
+  - Responsive for mobile
+  - Import from `styles/index.css`
+
+- [x] **4E.** Add routes to `App.jsx`:
+  - `/terms` → `TermsOfUse`
+  - `/privacy` → `PrivacyPolicy`
+  - `/disclaimer` → `HealthDisclaimer`
+  - These should be public routes (no ProtectedRoute wrapper)
+
+- [x] **4F.** Update footer — add "Terms · Privacy · Disclaimer" links:
+  - Both on the landing page footer and the authenticated footer in Layout
+  - Add trademark line: "The Keto Keep™ is a trademark of Full Spectrum Human LLC"
+
+- [x] **4G.** Update signup flow — add Terms agreement checkbox:
+  - Checkbox: "I agree to the Terms of Use and Privacy Policy" (with links)
+  - Signup button disabled until checked
+  - This is a UI gate only (not stored in DB — the act of signing up constitutes acceptance per the Terms)
+
+- [x] **4H.** Content for legal pages is in `D:\The Keto Keep\legal\`:
+  - `TERMS_OF_USE.md`
+  - `PRIVACY_POLICY.md`
+  - `HEALTH_DISCLAIMER.md`
+  - Convert markdown content to JSX for the page components
+  - Replace `[INSERT DATE BEFORE LAUNCH]` placeholders with launch date
+  - Replace `[INSERT CONTACT EMAIL]` with the appropriate email address
+  - **ASK RANCE** for the contact email before building
+
+---
+
+## Phase 5D-5: Final Steps
+
+- [x] **5A.** `npm run lint` — zero errors
+- [x] **5B.** `npm run build` — clean
+- [x] **5C.** Bump `package.json` to `0.10.0`
+- [x] **5D.** Git commit with descriptive message, push to main
+- [x] **5E.** Verify Cloudflare Workers auto-deploy
+- [x] **5F.** Smoke test: generate invite link, copy, open in incognito, sign up with ref param, verify referral recorded
+- [x] **5G.** Smoke test: delete a test account via profile settings, verify cascade cleanup
 
 ---
 
 ## Notes for Claude Code
 
-- The sidebar stone texture should be achieved via CSS (gradients, subtle patterns), NOT by loading the castle background images into the sidebar. The castle images stay on `body` as the page background.
-- The sidebar should feel like the interior wall of the keep — warm, sturdy, slightly rough texture.
-- The ambient glow at the top of the sidebar should evoke torchlight — a very subtle radial gradient from warm amber to transparent, maybe 80px tall.
-- Nav link icons: use simple emoji or Unicode for now (🏰 Forums, 📅 Events, 👥 Members, 📚 Courses, 👤 Profile, 🔗 Invite, ⚙️ Admin). SVG icons can come later.
-- The "Invite Friends" nav link is a placeholder that shows "Coming soon" or just doesn't navigate yet. The referral system builds in Phase 5D.
-- Preserve ALL existing functionality — this is a layout change, not a feature change. Every page, modal, and interaction should work exactly as before, just with sidebar nav instead of top nav.
+- The invite URL should use the current deployment URL (workers.dev) until the custom domain is wired. The `referralHelpers.buildInviteUrl()` can read from `window.location.origin` so it auto-adapts when the domain changes.
+- The legal pages should NOT have the sidebar. They're standalone public pages like the landing page. This means they need the same layout treatment as the unauthenticated landing/login/signup routes.
+- The referral code format: 8 uppercase alphanumeric characters (e.g., `TKK8A3F2`). Prefix with "TKK" for brand recognition: `TKK` + 5 random chars = 8 total.
+- Account deletion: the `delete_own_account()` function should cascade through `auth.users` deletion, which will cascade to profiles and everything else via existing FK cascades. Test this carefully.
+- The legal content files in `D:\The Keto Keep\legal\` are the source of truth. Convert to JSX but preserve all content.
+- **Before building:** Ask Rance for the contact email to replace `[INSERT CONTACT EMAIL]` in the legal docs.

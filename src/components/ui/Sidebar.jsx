@@ -189,10 +189,10 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
               end
             />
             <SidebarNavLink
+              to="/invite"
               icon="🔗"
               label="Invite Friends"
-              disabled
-              tooltip="Coming soon"
+              onNavigate={handleNavigate}
             />
           </SidebarSection>
 

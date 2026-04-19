@@ -56,71 +56,31 @@ export default function ProfileFrame({
       style={{ width: px, height: px, display: 'inline-block', position: 'relative', flexShrink: 0 }}
       aria-label={ariaLabel}
     >
-      {slug && (
-        /* Layer 1: Charcoal square behind avatar — 5% bigger than avatar,
-           centered. Fills rounded-corner gaps between photo and frame inner edge. */
-        <span
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            top: -Math.round(px * 0.025),
-            left: -Math.round(px * 0.025),
-            width: Math.round(px * 1.05),
-            height: Math.round(px * 1.05),
-            background: '#2a2a2a',
-            pointerEvents: 'none',
-            zIndex: 0,
-          }}
-        />
-      )}
-
-      {/* Layer 2: Avatar — above the behind-avatar backer */}
+      {/* Avatar layer fills the container */}
       <span
         className="profile-frame-avatar"
-        style={{ display: 'block', width: '100%', height: '100%', position: 'relative', zIndex: 1 }}
+        style={{ display: 'block', width: '100%', height: '100%' }}
       >
         {children}
       </span>
 
+      {/* Frame overlay — PNGs have charcoal baked in with transparent center */}
       {slug && (
-        <>
-          {/* Layer 3: Backing PNG — frame-shaped charcoal silhouette.
-              Clip-path cuts out the avatar area so photo shows through. */}
-          <img
-            src={`/frames/frame-${slug}-backing.png`}
-            alt=""
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              top: overlayOffset,
-              left: overlayOffset,
-              width: overlaySize,
-              height: overlaySize,
-              maxWidth: 'none',
-              clipPath: 'polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, 16.67% 16.67%, 83.33% 16.67%, 83.33% 83.33%, 16.67% 83.33%, 16.67% 16.67%)',
-              pointerEvents: 'none',
-              zIndex: 2,
-            }}
-          />
-
-          {/* Layer 4: Frame PNG — decorative artwork on top */}
-          <img
-            src={`/frames/frame-${slug}.png`}
-            alt=""
-            aria-hidden="true"
-            className="frame-overlay"
-            style={{
-              position: 'absolute',
-              top: overlayOffset,
-              left: overlayOffset,
-              width: overlaySize,
-              height: overlaySize,
-              maxWidth: 'none',
-              pointerEvents: 'none',
-              zIndex: 3,
-            }}
-          />
-        </>
+        <img
+          src={`/frames/frame-${slug}.png`}
+          alt=""
+          aria-hidden="true"
+          className="frame-overlay"
+          style={{
+            position: 'absolute',
+            top: overlayOffset,
+            left: overlayOffset,
+            width: overlaySize,
+            height: overlaySize,
+            maxWidth: 'none',
+            pointerEvents: 'none',
+          }}
+        />
       )}
     </span>
   );

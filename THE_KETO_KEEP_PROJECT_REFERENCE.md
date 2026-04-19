@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 15 — Phase 5B-1 schema applied)
+> **Canonical version date:** 2026-04-18 (Session 17 — Phase 5B-2 schema applied)
 
 ---
 
@@ -80,13 +80,14 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.5.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 14 — Phase 5A frontend (Enhanced Profiles + Badges + Interest Tags) |
-| Supabase schema | v5B1 (Phase 5B-1 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | latest migration: `phase5b1_directory_admin_tags_member_mgmt` |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 15 — Phase 5B-1 schema applied |
+| Frontend app | v0.6.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 16 — Phase 5B-1 frontend (Directory + Admin Tags + Member Management) |
+| Supabase schema | v5B2 (Phase 5B-2 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 17 — Phase 5B-2 schema applied: notifications, broadcasts, scheduled posts |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 17 — Phase 5B-2 schema applied |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 | Phase 5A schema draft | APPLIED (reference copy) | `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` | session 13 — matches applied migration (incl. FK cover indexes) |
 | Phase 5B-1 schema draft | APPLIED (reference copy) | `Project Reference/PHASE5B1_SCHEMA_DRAFT.sql` | session 15 — matches applied migration |
+| Phase 5B-2 schema draft | APPLIED (reference copy) | `Project Reference/PHASE5B2_SCHEMA_DRAFT.sql` | session 17 — matches applied migration |
 
 ---
 
@@ -325,16 +326,25 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Draft schema: `member_status` enum + `profiles.status` column; `admin_tags` + `member_admin_tags` tables (admin-only RLS); RESTRICTIVE write-gate policies on six member-writable tables (`forum_posts`, `forum_replies`, `forum_reactions`, `event_rsvps`, `lesson_progress`, `member_tags`); helper functions `is_active_or_admin()`, `set_member_status()`, `delete_member()`; 6 seed admin tags → `Project Reference/PHASE5B1_SCHEMA_DRAFT.sql`
 - [x] Applied migration `phase5b1_directory_admin_tags_member_mgmt` (session 15, 2026-04-18)
 - [x] Ran security + performance advisors. Security: only pre-existing `auth_leaked_password_protection` WARN. Performance: zero `auth_rls_initplan`, zero `unindexed_foreign_keys` (draft ships FK indexes for `admin_tags.created_by`, `member_admin_tags.assigned_by`, `member_admin_tags.tag_id`). Remaining `unused_index` INFOs expected on fresh indexes.
-- [ ] Frontend: `/members` directory page with search + filters (dietary, journey, state, interest tags)
-- [ ] Frontend: admin-only views — admin tag chips on directory cards, admin tag filter, status filter, admin tag assignment UI
-- [ ] Frontend: suspend / ban / delete member actions in admin management view
-- [ ] Frontend: status indicator for admins, suspended/banned UX (banner + friendly write-gate error)
-- [ ] Frontend: AuthContext sign-out-if-banned check (defense-in-depth; Supabase Auth ban is later hardening)
-- [ ] `/admin` hub index page linking `/admin/tags`, `/members` admin view, directory filters (deferred from Phase 5A)
+- [x] Frontend: `/members` directory page with search + filters (dietary, journey, state, interest tags) — session 16
+- [x] Frontend: admin-only views — admin tag chips on directory cards, admin tag filter, status filter, admin tag assignment UI — session 16
+- [x] Frontend: suspend / ban / delete member actions in admin management view — session 16 (`ManageMemberModal` → `set_member_status` / `delete_member` RPCs; delete requires typed name confirmation)
+- [x] Frontend: status indicator for admins, suspended/banned UX (sticky banner + write-gate disables on composers/RSVP/lesson/profile edit) — session 16
+- [x] Frontend: AuthContext sign-out-if-banned check (defense-in-depth; Supabase Auth ban is later hardening) — session 16 (`isSuspended` flag + banned → signOut + `/login?banned=1`)
+- [x] `/admin` hub index page linking `/admin/tags`, `/admin/admin-tags`, `/members`, `/forums/admin-hq` — session 16
+
+**Phase 5B-2 — Notifications, Admin Broadcasts, Scheduled Posts** (schema applied session 17)
+- [x] Draft schema: `notification_type` enum (7 values), `notifications` table (9 columns, RLS enabled), 3 indexes on notifications, 4 permissive + 1 restrictive RLS policies on notifications; `forum_posts` +`is_broadcast` + `scheduled_at` columns; 2 partial indexes on forum_posts; `broadcast_notification()` + `mark_all_notifications_read()` SECURITY DEFINER functions → `Project Reference/PHASE5B2_SCHEMA_DRAFT.sql`
+- [x] Applied migration `phase5b2_notifications_broadcasts_scheduled` (session 17, 2026-04-18)
+- [x] Ran security + performance advisors. Security: only pre-existing `auth_leaked_password_protection` WARN. Performance: zero `auth_rls_initplan`, zero `unindexed_foreign_keys` (actor_id FK cover index included in draft). Remaining `unused_index` INFOs all expected on fresh indexes.
+- [ ] Frontend: navbar bell icon + unread count badge + notification dropdown
+- [ ] Frontend: post composer admin broadcast toggle + scheduled datetime picker
+- [ ] Frontend: feed query update — filter out future scheduled posts for non-admins
+- [ ] Frontend: admin scheduled post indicator on feed cards
+- [ ] Version bump to v0.7.0 on deploy
 
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email)
-- [ ] Notification system (at minimum: in-app indicators)
 - [ ] Performance and UX polish
 - [ ] Accessibility review
 - [ ] Supabase security + performance advisor audit (both types, run separately)
@@ -414,6 +424,19 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Phase 5B-1: hard delete for `delete_member()` (cascade auth.users → profiles → everything) | Matches the "it's a community, not a content platform" ethos — when someone is removed, their posts/replies/reactions go with them. Soft-delete-and-anonymize is a heavier pattern that can be added later if members ever ask us to preserve conversations after a deletion. Starting strict, loosening on demand. |
 | 2026-04-18 | Phase 5B-1: `is_active_or_admin()` SECURITY DEFINER helper called from RLS | Same pattern as `is_admin()`: SECURITY DEFINER + `(select auth.uid())` wrapping lets the restrictive policies do a single profiles lookup per query without RLS recursion, and keeps the gate expression one function call instead of an inline subquery. Zero `auth_rls_initplan` advisor findings confirms the wrapping is clean. |
 | 2026-04-18 | Phase 5B-1: admin management functions guard self-action + admin-on-admin | `set_member_status()` and `delete_member()` both refuse to act when `target_id = auth.uid()` or when the target is an admin. Prevents foot-guns (accidentally suspending yourself) and prevents an admin from being weaponized against the other hosts. Auth-level ban (the actual login block) is a later hardening step via Edge Function. |
+| 2026-04-18 | Phase 5B-1 frontend: client-side filter + 20-per-page pagination on `/members` directory | Community size is small (tens to low hundreds expected). One `profiles` SELECT + 3 ancillary fetches (badges, member_tags, member_admin_tags) + 2 catalogs at mount time is cheaper to reason about than server-side paged queries. Admin RLS returns `[]` for non-admins on `member_admin_tags`, so the same code path serves both audiences. Revisit if membership crosses ~500. |
+| 2026-04-18 | Phase 5B-1 frontend: suspended UX = RLS write-gate plus UI soft-disables, not a hard route block | Suspended users can still read (forums, events, courses, profiles). Posting / replying / RSVPing / lesson progress / profile edits are disabled in the UI AND gated by RESTRICTIVE RLS. Defense-in-depth: the UI state is for ergonomics, the DB is for correctness. Banned users get logged out via AuthContext and land on `/login?banned=1`. |
+| 2026-04-18 | Phase 5B-1 frontend: SuspendedBanner dismissal is session-scoped via `sessionStorage` | Per-session dismissal avoids pestering the user on every pageview within a session but re-surfaces on next login. localStorage would hide the banner forever; not showing it at all would leave the user confused about why actions are disabled. sessionStorage threads the needle. |
+| 2026-04-18 | Phase 5B-1 frontend: shared Modal primitive promoted from `components/events/` to `components/ui/` with `variant` prop (warning / danger) | Phase 3 introduced Modal scoped to events. Phase 5B-1 needed the same primitive for ManageMemberModal + AssignAdminTagModal with action-specific chrome (amber for suspend, red for ban/delete). Promoted to shared, added variant prop, left `components/events/Modal.jsx` as a one-line re-export so EventFormModal keeps working without an import sweep. |
+| 2026-04-18 | Phase 5B-1 frontend: Navbar admin dropdown replaces the static "Admin" badge | Phase 5A had an Admin badge next to the nav links purely as a visual flag. With `/admin`, `/admin/tags`, `/admin/admin-tags`, `/members`, and `/forums/admin-hq` all being admin surfaces, a non-clickable badge was wasting the best navigation real estate. Dropdown keeps the badge shape + palette (green pill, shield) and surfaces five links without crowding the primary nav. |
+| 2026-04-18 | Phase 5B-1 frontend: admin tags on a profile viewer live in their own block with "Manage tags" button, not inline next to the dietary pill | Interest tags are identity ("this is who I am"); admin tags are operational metadata ("here's what hosts know about this person"). Keeping them in a separate profile block — with a title and Manage button — makes the admin-only nature obvious to hosts and prevents visual leakage into the member-facing header. |
+| 2026-04-18 | Phase 5B-1 frontend: `delete_member` requires typing the display name | Soft-deletes are reversible. Hard cascade-delete is not. Forcing the host to type the member's display name is a speed bump that prevents a misclick from wiping months of a member's history. Same pattern GitHub uses for repo delete — proven friction that's worth the two seconds. |
+| 2026-04-18 | Phase 5B-2: notification INSERT policy is actor-or-admin, not self-only | A notification row has two principals — the recipient (`user_id`) and the actor who triggered the event (`actor_id`). Allowing INSERT when `auth.uid() = actor_id` lets the app insert notifications on behalf of the action-taker (e.g. "you replied to a post → insert notification for post author"). Admin can insert with `actor_id IS NULL` for system notifications. The `broadcast_notification()` SECURITY DEFINER function bypasses RLS for bulk inserts, so the permissive gate doesn't need to cover that path. |
+| 2026-04-18 | Phase 5B-2: notification inserts are application-level, not DB triggers | Trigger-per-event keeps DB surface small and lets notification logic change (new types, opt-out preferences, rate limiting) without schema migrations. The frontend/API layer inserts notification rows when the triggering action occurs. This is the right trade-off at small community scale; a trigger approach can be layered on later if latency or consistency becomes a concern. |
+| 2026-04-18 | Phase 5B-2: scheduled posts use client-side time filtering, not a cron job | Non-admin feed queries add `AND (scheduled_at IS NULL OR scheduled_at <= now())`. Posts "publish" when the clock passes `scheduled_at` — no worker, no cron, no Edge Function needed for MVP. Admins see all posts with a "Scheduled" badge. This is sufficient at small scale and has zero infrastructure cost. A cron-based publish step can be added later if draft-preview or push notifications on publish become requirements. |
+| 2026-04-18 | Phase 5B-2: `broadcast_notification()` is SECURITY DEFINER with internal admin guard | Broadcasting requires inserting one row per active member — crossing user ownership boundaries that normal RLS would block. SECURITY DEFINER is the established project pattern for this class of cross-user operation (same as `set_member_status`, `delete_member`). The function checks `is_admin()` internally and raises an exception for non-admins, so the privilege escalation is narrowly scoped. |
+| 2026-04-18 | Phase 5B-2: `mark_all_notifications_read()` is SECURITY DEFINER | The `notifications_update_own` RLS policy already allows users to update their own notifications, but the function takes a single-round-trip UPDATE for all unread rows instead of requiring the frontend to enumerate IDs. SECURITY DEFINER keeps the implementation simple and consistent with the helper-function pattern in this project. |
+| 2026-04-18 | Phase 5B-2: broadcast + scheduled as application-level gates, not RLS | Only admins should set `is_broadcast = true` or a future `scheduled_at`. The existing `forum_posts` INSERT policy already restricts to authenticated users. Admin-only broadcast is enforced at the UI layer (broadcast toggle only visible to admins) and by `broadcast_notification()` checking `is_admin()`. Adding an RLS constraint on `is_broadcast` would complicate the existing permissive policy without meaningful security gain — if someone crafts a direct API call to set `is_broadcast`, the worst outcome is a post flagged as a broadcast with no recipients (the function is what fans out the notifications). Same reasoning for `scheduled_at`. |
 
 ---
 
@@ -464,15 +487,84 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5B-1 — schema applied (frontend pending)
-**Last Updated:** 2026-04-18 (Session 15)
-**Frontend Version:** v0.5.0 (unchanged this session) — Phase 5A frontend deployed on Cloudflare Workers. No frontend changes this session; Phase 5B-1 UI (directory, admin tag management, member management actions) comes next.
-**Supabase Schema:** v5B1 — migration `phase5b1_directory_admin_tags_member_mgmt` applied. Adds `member_status` enum, `profiles.status` column + partial index, `admin_tags` + `member_admin_tags` tables with admin-only RLS (7 policies), 13 RESTRICTIVE write-gate policies across 6 member-writable tables, 3 helper/admin functions (`is_active_or_admin`, `set_member_status`, `delete_member`), 3 FK cover indexes, and 6 seed admin tag rows. Advisors clean: security — only pre-existing `auth_leaked_password_protection` WARN; performance — zero `auth_rls_initplan`, zero `unindexed_foreign_keys`.
-**Status:** Phase 5B-1 schema end-to-end applied and advisor-clean. Next: Phase 5B-1 frontend (directory, admin tag UI, member management actions).
+**Current Phase:** Phase 5B-2 — schema applied; frontend next
+**Last Updated:** 2026-04-18 (Session 17)
+**Frontend Version:** v0.6.0 — Phase 5B-1 frontend deployed on Cloudflare Workers. Adds `/members` directory with search + dietary/journey/state/interest-tag filters; admin overlays for status + internal-tag filters and per-card admin-tag chips; `ManageMemberModal` (suspend/unsuspend/ban/unban/delete) + `AssignAdminTagModal` wired to `set_member_status` / `delete_member` RPCs; `/admin` hub + `/admin/admin-tags` internal-tag CRUD with color picker; Navbar admin dropdown replacing the static badge; SuspendedBanner + write-attempt guards on PostComposer, ReplyComposer, RsvpControls, LessonView Mark-Complete, and Profile edit route; AuthContext banned → signOut + `/login?banned=1`, suspended → `isSuspended` flag.
+**Supabase Schema:** v5B2 — migration `phase5b2_notifications_broadcasts_scheduled` applied. Adds `notification_type` enum (7 values); `notifications` table (9 columns) with RLS enabled (4 permissive + 1 restrictive policy); 3 indexes on notifications; `forum_posts.is_broadcast` + `forum_posts.scheduled_at` columns with 2 partial indexes; `broadcast_notification()` + `mark_all_notifications_read()` SECURITY DEFINER functions. Advisors clean: security — only pre-existing `auth_leaked_password_protection` WARN; performance — zero `auth_rls_initplan`, zero `unindexed_foreign_keys`.
+**Status:** Phase 5B-2 schema complete. Next: Phase 5B-2 frontend (navbar bell + notification dropdown, broadcast toggle in post composer, scheduled post picker, feed filter for non-admins).
 
 ---
 
 ## SESSION LOG
+
+### Session 17 — 2026-04-18 (Claude Code — Phase 5B-2 schema applied)
+**Goal:** Apply the Phase 5B-2 schema draft as migration `phase5b2_notifications_broadcasts_scheduled`, run both advisors, remediate any new findings, update reference file, commit + push.
+
+**What was done:**
+- Applied migration `phase5b2_notifications_broadcasts_scheduled` via Supabase MCP. Created enum `public.notification_type` (7 values: `reply_to_post`, `reply_to_comment`, `reaction`, `badge_awarded`, `new_event`, `status_change`, `admin_broadcast`); created table `public.notifications` (9 columns: id, user_id, type, title, body, link, actor_id, read, created_at) with RLS enabled immediately; created 3 indexes (`notifications_user_created_idx` on (user_id, created_at desc), `notifications_user_unread_idx` partial WHERE read=false, `notifications_actor_id_idx` FK cover on actor_id); created 4 permissive RLS policies (`notifications_select_own`, `notifications_insert_actor_or_admin`, `notifications_update_own`, `notifications_delete_own`) and 1 restrictive write-gate policy (`active_gate_notifications_insert` calling `is_active_or_admin()`); altered `forum_posts` to add `is_broadcast boolean NOT NULL default false` and `scheduled_at timestamptz`; created 2 partial indexes on forum_posts (`forum_posts_scheduled_idx` WHERE scheduled_at IS NOT NULL, `forum_posts_broadcast_idx` WHERE is_broadcast=true); created `broadcast_notification(p_post_id, p_title, p_body, p_link)` SECURITY DEFINER function (admin guard via `is_admin()`, bulk-inserts one notification per active member, returns row count); created `mark_all_notifications_read()` SECURITY DEFINER function (updates all unread rows for calling user, returns count).
+- Verified post-apply state via `execute_sql`: enum has 7 values ✓; notifications table has 9 columns with correct types ✓; RLS enabled (relrowsecurity=true) ✓; 5 policies on notifications (4 permissive + 1 restrictive) ✓; forum_posts has is_broadcast (boolean, default false) + scheduled_at (timestamptz, null) ✓; all 5 new indexes exist ✓; both functions exist ✓.
+- Ran security advisor: only pre-existing `auth_leaked_password_protection` WARN — no new schema-level findings.
+- Ran performance advisor: **zero** `auth_rls_initplan` findings (confirms `(select auth.uid())` wrapping clean on all new policies). **Zero** `unindexed_foreign_keys` (actor_id FK cover index included in draft). Remaining findings are all `unused_index` INFOs — expected on fresh indexes and pre-existing tables.
+- Updated reference file: canonical version date (session 17), canonical versions table (schema → v5B2 + Phase 5B-2 draft row as APPLIED), Phase 5 roadmap (Phase 5B-2 subsection with schema items checked and frontend items pending), six new Architecture & Design Decisions entries, Current Status block.
+
+**Decisions made:**
+- Notification INSERT policy is actor-or-admin (`auth.uid() = actor_id` OR `actor_id IS NULL AND is_admin()`). This covers the app-level insert pattern: the actor (e.g. replier) inserts the notification for the recipient; admins insert system notifications with null actor. Broadcast inserts bypass RLS via `broadcast_notification()` SECURITY DEFINER.
+- Application-level inserts, not DB triggers. Keeps trigger surface small; notification logic (opt-out, rate limits, new types) evolves without schema migrations.
+- Scheduled posts use client-side time filtering (`AND (scheduled_at IS NULL OR scheduled_at <= now())`). No cron or Edge Function needed for MVP. Admins see all posts with a "Scheduled" indicator.
+- `broadcast_notification()` SECURITY DEFINER with internal `is_admin()` guard — same pattern as `set_member_status` / `delete_member`. The privilege escalation is narrowly scoped to the function body.
+- `mark_all_notifications_read()` SECURITY DEFINER for single-round-trip "mark all" without enumerating IDs on the client.
+- Broadcast + scheduled as application-level gates (not RLS on `is_broadcast`/`scheduled_at`). A crafted direct API call setting `is_broadcast=true` with no `broadcast_notification()` call produces a flagged post but no notification fan-out — acceptable risk at this community scale.
+
+**Next Session Handoff:**
+- **Phase 5B-2 frontend** — build in Claude Code (Sonnet 4.6 / medium effort):
+  1. Navbar bell icon + unread count badge (query `notifications` WHERE `user_id = auth.uid() AND read = false`, count only). Update on any page load via AuthContext or a lightweight hook.
+  2. Notification dropdown (latest 10 notifications, click to navigate to `link`, mark-read on open via `mark_all_notifications_read()` RPC or individual update).
+  3. Post composer: admin-only broadcast toggle (`is_broadcast`) + scheduled datetime picker (`scheduled_at`). Both only visible/editable for admins.
+  4. Feed query update in `SpaceView` / forum listing: non-admin adds `AND (scheduled_at IS NULL OR scheduled_at <= now())`. Admin sees all, with a "Scheduled" pill on future-dated cards.
+  5. App-level notification inserts: when a reply is posted → insert `reply_to_post` or `reply_to_comment` notification for the parent author. When a reaction is added → insert `reaction` notification. When a badge is awarded → insert `badge_awarded` notification. Start with reply + badge; reaction can follow.
+  6. Version bump to v0.7.0 on deploy.
+- Open question still open (non-blocking): Co-Host #3 name.
+- No blockers.
+
+### Session 16 — 2026-04-18 (Claude Code — Phase 5B-1 frontend build + deploy v0.6.0)
+**Goal:** Build the Phase 5B-1 frontend — member directory, admin tag management + assignment, member management actions (suspend/ban/delete), admin hub + navbar dropdown, suspended/banned UX, write-attempt guards — and ship as v0.6.0.
+
+**What was done:**
+- New shared helpers under `src/lib/memberHelpers.js`: `MEMBER_STATUSES` (value/label/tone triples), `statusLabel`, `statusColorClass`, `ADMIN_TAG_COLORS` (8-swatch palette), `safeTagColor` (regex hex validation).
+- Promoted `Modal` primitive to `src/components/ui/Modal.jsx` with a new `variant` prop (`warning` / `danger`) and left `src/components/events/Modal.jsx` as a one-line re-export so EventFormModal stays working without an import sweep.
+- Extended `AuthContext`: banned-status → `supabase.auth.signOut()` + `window.location.replace('/login?banned=1')`; suspended-status → new `isSuspended` boolean on the context value. Both statuses flow through `fetchProfile` so they re-check on every auth event.
+- Added `/login?banned=1` banner in `Login.jsx` (`.form-error.banned-notice`).
+- New components under `src/components/members/`: `AssignAdminTagModal` (toggleable chip grid + optional note; insert/delete on `member_admin_tags` with `assigned_by = user.id`), `ManageMemberModal` (action-based with `ACTION_COPY` map for suspend/unsuspend/ban/unban/delete; calls `set_member_status` / `delete_member` RPCs; delete requires typed display-name confirmation), `MemberCard` (avatar via `usePrivateImage`, dietary pill, status pill admin-only, journey + location, bio, `BadgesInline`, interest chips +N overflow, admin tag colored badges, three-dot menu with contextual action list), `MemberFilters` (search + dietary/journey/state dropdowns, admin-only status + admin-tag dropdowns, interest tag chip toggle row, clear-filters button), `AdminDropdown` (navbar replacement for the static Admin badge, click-outside + Escape dismiss).
+- New pages: `MembersDirectory.jsx` at `/members` (one profiles SELECT + parallel fetches of badges, member_tags, member_admin_tags, tags catalog, admin_tags catalog; client-side filter + 20-per-page pagination; AssignAdminTagModal + ManageMemberModal integrated), `AdminAdminTags.jsx` at `/admin/admin-tags` (admin-gated via Navigate; create/edit/delete form with inline ColorPicker component using `ADMIN_TAG_COLORS` + hex text input), `AdminHub.jsx` at `/admin` (tool card grid → /members, /admin/tags, /admin/admin-tags, /forums/admin-hq).
+- New `SuspendedBanner.jsx` mounted in `Layout.jsx` below the navbar — sticky amber banner, dismissible per-session via `sessionStorage`, only renders when `isSuspended`.
+- Navbar: replaced static `admin-badge` span with `<AdminDropdown />`; added `Members` NavLink after `Courses`.
+- Dashboard: added `Members` quick-link; admin row now points to `/admin` hub instead of `/admin/tags`.
+- Profile.jsx extensions: admin-only status pill in profile-badges row; admin-only "Internal tags" block with chip row (color swatches via `safeTagColor`) + "Manage tags" button opening `AssignAdminTagModal`; admin-only "Manage member" block with contextual Suspend/Unsuspend, Ban/Unban, and Delete buttons opening `ManageMemberModal`; edit route returns a "profile edits disabled while suspended" panel when `isSuspended`. Both `ProfilePage` and `OtherProfile` wrappers now manage `tagModalOpen` + `manageAction` + `adminTagsVersion` state and render all three modals (AwardBadge, AssignAdminTag, ManageMember) with onChanged → refresh.
+- Write-attempt guards: `PostComposer` / `ReplyComposer` render a dashed-border muted panel when `isSuspended`; `RsvpControls` disables each RSVP button with a tooltip and shows a suspended hint below; `LessonView` Mark-Complete button disables with tooltip + muted note; Profile `/profile/edit` route short-circuits to a "disabled" panel.
+- New routes in `App.jsx`: `/admin` → `AdminHub`, `/admin/admin-tags` → `AdminAdminTags`, `/members` → `MembersDirectory` (all `ProtectedRoute`-wrapped).
+- New styles file `src/styles/members.css` — imported from `styles/index.css`. Covers suspended banner, banned-notice, member filters, member grid + card (with admin-only menu, admin tag badges), status pill tones, admin tag chips + list rows (rich form), color picker, admin hub, admin dropdown, profile admin blocks, assign-tag modal body, manage-member modal body + warning/danger header variants, btn-danger/btn-warning/btn-small utilities, composer disabled states.
+- Version: `package.json` bumped `0.5.0` → `0.6.0`.
+- Lint: zero errors after fixing two `react-hooks/set-state-in-effect` findings in `SuspendedBanner` and `ManageMemberModal` (both wrapped their setState in the standard `await Promise.resolve()` pattern).
+- Build: `npm run build` clean (75 KB CSS gzipped 11.8 KB, 601 KB JS gzipped 167 KB).
+- RLS smoke test via `execute_sql`: confirmed `admin_tags` + `member_admin_tags` tables, `profiles.status` column, `set_member_status` + `delete_member` + `is_active_or_admin` functions all exist, and 6 seed admin tags present.
+- Committed as `949f3a5` and pushed to `main`. Cloudflare Workers auto-deploy picks up the build.
+
+**Decisions made:**
+- `/members` directory uses client-side filtering + pagination against a single `profiles` SELECT (with 4 parallel ancillary fetches at mount). Server-side paging + filter pushdown is overkill at the expected community size and would duplicate the RLS-aware admin/non-admin split that `adminTags` already handles (RLS returns `[]` for non-admins, so the same query works for both).
+- Admin tags on profile viewer get their own titled block ("Internal tags"), not inline next to the dietary pill. Keeps operational metadata visually distinct from identity.
+- SuspendedBanner dismissal is `sessionStorage`-scoped, not localStorage. Session-scoped = re-surfaces on next login (good — user needs to know), but doesn't pester on every pageview within a session.
+- `delete_member` modal requires typing the member's display name. Cascade delete is irreversible; a typed confirmation is the proven speed bump (same pattern as GitHub repo delete).
+- Navbar: promoted the static `admin-badge` span to a real `AdminDropdown` component. With five admin surfaces now (`/admin`, `/admin/tags`, `/admin/admin-tags`, `/members`, `/forums/admin-hq`) a non-clickable flag was wasting the prime nav real estate.
+
+**Next Session Handoff:**
+- Phase 5B-1 is shipped. Rance should smoke-test on desktop + mobile: browse `/members`, apply filters, view own + another profile, open `AssignAdminTagModal` on a non-admin member, suspend a test account and confirm the banner + composer/RSVP/lesson disables, unsuspend and confirm restoration, try the delete flow on a throwaway test account (hard delete — be sure it's truly disposable).
+- **Phase 5B later waves** — pick the next one in Chat before the next Code session. Candidates (roughly in priority):
+  1. Member-to-member messaging (approach TBD — in-app DMs vs. email bridge vs. a contact-form pattern). This is still the biggest unbuilt member-facing surface.
+  2. Notification system (at minimum: in-app bell with unread count, probably backed by a `notifications` table + a small trigger set on post replies / reactions / badge awards).
+  3. Auth-level ban hardening via Edge Function calling `supabase.auth.admin.updateUserById({ ban_duration: '87600h' })`. Builds on Phase 5B-1's RLS gates; removes the "banned user could log in and just read" edge case.
+  4. Performance / UX polish + accessibility review + Supabase advisor audit + enable leaked-password protection.
+- Open question still open (non-blocking): Co-Host #3 name.
+- No blockers.
 
 ### Session 15 — 2026-04-18 (Claude Code — Phase 5B-1 schema applied)
 **Goal:** Apply the approved Phase 5B-1 schema draft (member directory, internal admin tags, member management, RLS write gates), run both advisors, remediate any new findings, update reference file, commit + push.

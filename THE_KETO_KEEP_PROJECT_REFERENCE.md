@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-19 (Session 23 — v0.11.2 deployed; modal centering + frame backing patch)
+> **Canonical version date:** 2026-04-19 (Session 24 — v0.11.10 deployed; custom frame PNGs baked-in backing + ProfileFrame simplification)
 
 ---
 
@@ -115,7 +115,7 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.11.3 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 23 — frame mask-image backing + remove duplicate none option |
+| Frontend app | v0.11.10 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 24 — custom frame PNGs with baked-in backing + simplified ProfileFrame |
 | Supabase schema | v5E (owner role, referral_codes, referrals, profiles+terms/deletion/streak/frame cols, frame_catalog, legal pages) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 22 — owner role (22a), referrals+legal+deletion (22b), streaks+frames (22c) |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
@@ -464,6 +464,46 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Filtered `frame_type === 'none'` from catalog in FramePickerModal + FrameSelector — hardcoded None button is the single no-frame option — session 23
 - [x] Version bump to v0.11.3 — session 23
 
+**Phase 5E patch — Drop-Shadow Backing** (deployed session 23, v0.11.4)
+- [x] Replaced mask-image backing with CSS `drop-shadow(0 0 0 #000)` x3 on frame img — single element, zero alignment issues — session 23
+- [x] Version bump to v0.11.4 — session 23
+
+**Phase 5E patch — Frame Width Fix + Save/Vacation UX** (deployed session 23, v0.11.5)
+- [x] Added `maxWidth: 'none'` to frame overlay img — fixes base.css `img { max-width: 100% }` squishing frames into portrait rectangles — session 23
+- [x] Save profile now navigates to `/profile` view on success; button renamed "Save changes" — session 23
+- [x] Vacation mode refactored from edit-page section to modal triggered from streak area (`VacationModeModal.jsx`); old `VacationModeSection.jsx` deleted — session 23
+- [x] Version bump to v0.11.5 — session 23
+
+**Phase 5E patch — Frame Scale + Charcoal Backing + Spacing** (deployed session 23, v0.11.6)
+- [x] `FRAME_SCALE` 1.30→1.50, `FRAME_OFFSET_RATIO` 0.15→0.25 — frame center hole now clears avatar, full profile picture visible — session 23
+- [x] Replaced drop-shadow with charcoal (`#2a2a2a`) mask-image backing span + `maxWidth: 'none'` on both elements — session 23
+- [x] Frame picker tile spacing: increased padding, gap, and grid spacing in `streaks-frames.css` — session 23
+- [x] Profile avatar breathing room: `overflow: visible` on `.profile-panel`, extra padding on `.profile-top` — session 23
+- [x] Version bump to v0.11.6 — session 23
+
+**Phase 5E patch — Frame Backing Clip-Path + Profile Spacing** (deployed session 24, v0.11.7)
+- [x] Replaced mask-image backing with clip-path evenodd polygon on a surface-color span — overshoot beyond frame edges invisible against panel background — session 24
+- [x] `.profile-top .avatar-wrap { margin-right: var(--space-4) }` for frame-to-info gap — session 24
+- [x] `padding-bottom: var(--space-4)` on `.profile-top`; `.profile-top + .profile-block { border-top: none }` removes double divider — session 24
+- [x] Frame picker tile gap `10px → 14px`; bottom padding `--space-4 → --space-5` — session 24
+- [x] Version bump to v0.11.7 — session 24
+
+**Phase 5E patch — Charcoal Backing Stacked Mask + Frame Alignment** (deployed session 24, v0.11.8)
+- [x] Frame backing: `#2a2a2a` + evenodd clip-path + 5× stacked `mask-image` with `maskComposite: add` to clip outer boundary to frame pixels only — session 24
+- [x] `.profile-top .profile-frame:not(.profile-frame-none) { margin-top: 35px }` — frame top aligns with name — session 24
+- [x] Version bump to v0.11.8 — session 24
+
+**Phase 5E patch — Simple Charcoal Backing + Frame Picker Spacing** (deployed session 24, v0.11.9)
+- [x] Removed all mask properties; backing is just `#2a2a2a` + evenodd clip-path — simpler is better — session 24
+- [x] Large frame picker preview: `margin-bottom: 30px` on `.frame-picker-preview .profile-frame` — session 24
+- [x] Frame tile gap `14px → 4px`; `.frame-option-preview { margin-bottom: 18px }` for frame overshoot clearance — session 24
+- [x] Version bump to v0.11.9 — session 24
+
+**Phase 5E patch — Custom Frame PNGs + ProfileFrame Simplification** (deployed session 24, v0.11.10)
+- [x] Replaced all 9 Gemini-generated frame PNGs with custom hand-crafted versions from `Frames\` — charcoal backing baked directly into the PNG, no CSS hacks needed — session 24
+- [x] Removed all backing spans, clip-paths, masks, z-indexes from ProfileFrame.jsx — component is now two layers: avatar + frame overlay — session 24
+- [x] Version bump to v0.11.10 — session 24
+
 **Phase 5B — Pre-launch Cleanup** (deployed session 21, v0.8.2)
 - [x] Replaced all 9 `window.confirm` / `window.alert` instances with `Modal variant="danger"` — session 21. Files changed: `AdminTags.jsx`, `AdminAdminTags.jsx`, `PostCard.jsx`, `ReplyItem.jsx`, `EventFormModal.jsx`, `CourseFormModal.jsx`, `ModuleFormModal.jsx`, `LessonFormModal.jsx`, `AwardBadgeModal.jsx`
 - [x] Supabase security + performance advisor audit — session 21. Security: only pre-existing `auth_leaked_password_protection` WARN (Pro Plan feature; accepted). Performance: 21 expected `unused_index` INFO (FK cover indexes + query indexes on low-volume fresh DB); zero `auth_rls_initplan`; zero `unindexed_foreign_keys`. No remediation needed.
@@ -652,11 +692,14 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5B-3 — polish, accessibility, dark mode deployed v0.8.0
-**Last Updated:** 2026-04-19 (Session 19)
-**Frontend Version:** v0.8.0 — Phase 5B-3 polish/accessibility/dark-mode wave deployed on Cloudflare Workers. Theme system: full light/dark CSS custom-property palette in `variables.css` with `[data-theme="dark"]` override block plus `@media (prefers-color-scheme: dark)` fallback for system preference; every color across the 10 stylesheet files now routes through a semantic token. Castle background images (light + dark webp) rendered on `body` with `.app-shell` overlay tint; inline theme-flash prevention script in `index.html` reads `localStorage.kk-theme` before React boots. `ThemeToggle` in navbar cycles system → light → dark with sun/moon/monitor glyph and aria-label reflecting current state. `AuthContext` extended with `setTheme(theme)` that persists to `profiles.theme_preference` + `localStorage`, and the allow-list in `updateProfile` grew to include `theme_preference`. Accessibility: skip-to-main-content link in `Layout`, focus trap + `aria-labelledby` in shared `Modal`, `sr-only` utility class. UX polish: `usePageTitle(title)` hook applied to all 19 pages (format: "Title · The Keto Keep"), `ScrollToTop` component on route change, `Toast` system (`ToastProvider` + `useToast` hook), shared `LoadingSpinner` / `ErrorState` / `EmptyState` components, castle-themed `NotFound` page.
-**Supabase Schema:** v5B3 — `profiles.theme_preference text not null default 'system' check (theme_preference in ('light','dark','system'))` column added via Supabase MCP execute_sql. Advisors clean (only pre-existing warnings: `auth_leaked_password_protection` WARN deferred by design; `unused_index` INFO entries). No migration file generated — change is additive and applied directly.
-**Status:** Phase 5B-3 shipped end-to-end at v0.8.0. Next: pick the next Phase 5B wave (member-to-member messaging, auth-level ban hardening, leaked-password protection, or jump to Phase 5C).
+**Current Phase:** Phase 5E complete — v0.11.10 deployed
+**Last Updated:** 2026-04-19 (Session 24)
+**Frontend Version:** v0.11.10 — All Phase 5E frame-rendering work complete. ProfileFrame is now two layers only: avatar `<span>` + frame `<img>` overlay. Nine custom frame PNGs in `public/frames/` have charcoal backing baked in (transparent center hole, decorative border with backing). No CSS masks, clip-paths, or z-index stacking anywhere in ProfileFrame. Frame overlay at 150% avatar size, offset -25% top/left, `maxWidth: 'none'` to override base.css reset. Profile page: frame aligns with name via `margin-top: 35px` on framed `.profile-frame`; avatar-wrap has `margin-right: var(--space-4)`; first `.profile-block` after `.profile-top` has no border-top. Frame picker tile gap 4px, frame-option-preview has 18px margin-bottom for overshoot clearance; large preview gets 30px margin-bottom.
+**Supabase Schema:** v5E — unchanged from session 23.
+**Session 24 — Next Session Handoff:**
+- Frame rendering is stable. No outstanding frame issues.
+- Next candidates (decide in Chat before opening Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Supabase leaked-password toggle, Phase 5D coach listing.
+- No blockers or prerequisites for any of the above.
 
 ---
 
@@ -1089,29 +1132,28 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 - Complete deferred end gate items (done in Session 23)
 - Begin Phase 5F: Landing page polish
 
-### Session 23 — 2026-04-19 (Chat + Claude Code — patch)
-**Goal:** Fix modal centering + frame transparency issues from v0.11.1. Complete deferred Session 22 end gate.
+### Session 23 — 2026-04-19 (Chat + Claude Code — bugfix marathon)
+**Goal:** Fix frame/modal bugs from v0.11.1. Complete deferred Session 22 end gate. Profile UX improvements.
 
 **What was done:**
 - Start gate: read reference file + Session 22 handoff, confirmed v0.11.1 deployed successfully
-- Identified 2 UI bugs from screenshot: (1) modal centering behind sidebar, (2) frame transparency bleed-through
-- Designed fixes: sidebar-aware modal backdrop offset + black clip-path backing behind frame PNGs
-- Wrote `CURRENT_BUILD_PLAN.md` for v0.11.2 patch
-- Code completed v0.11.2: both fixes applied, built, committed, pushed, auto-deployed
-- Identified follow-up issue: clip-path polygon created black rectangles beyond decorative frame edges + duplicate None/No Frame options
-- Redesigned frame backing: mask-image approach using the frame PNG itself as the mask — far more elegant, zero math
-- Code completed v0.11.3: mask-image backing + deduplicated none option, built, committed, pushed, auto-deployed
-- Completed deferred Session 22 end gate: canonical versions updated to v0.11.3, roadmap updated with Phase 5D/5E items, architecture decisions logged, session logs written
+- v0.11.2: modal sidebar centering + clip-path frame backing (clip-path caused black rectangles)
+- v0.11.3: mask-image frame backing + deduplicate None option (mask misaligned due to width squish)
+- v0.11.4: drop-shadow frame backing (single element, but not strong enough for transparent gaps)
+- v0.11.5: `maxWidth: 'none'` fix for frame width squish + save exits edit mode + vacation mode modal
+- v0.11.6: FRAME_SCALE 1.50 + charcoal mask-image backing (now aligned with maxWidth fix) + tile spacing + profile avatar breathing room
+- Completed deferred Session 22 end gate: canonical versions, roadmap, architecture decisions, session logs
 
-**Decisions made:** Modal backdrop offset via CSS var (`left: var(--sidebar-width, 260px)`), frame backing via `mask-image` using frame PNG’s own alpha channel (replaced clip-path polygon from v0.11.2), deduplicate none option by filtering `frame_type === 'none'` from catalog.
+**Decisions made:** Modal backdrop sidebar offset, frame backing iterated through clip-path → mask-image → drop-shadow → charcoal mask-image (with maxWidth fix), FRAME_SCALE 1.50/OFFSET 0.25 for full avatar visibility, vacation mode as modal on streak area, save navigates to profile view.
 
 **Next Session Handoff:**
 - Begin **Phase 5F: Landing page polish**
-- Content source: `THE_KETO_KEEP_CONTENT_REFERENCE.md` (bios, FAQs, value props)
-- Assets: `bgfullcastle.png` (hero), `tkklogotransparent.png` (logo), light/dark castle backgrounds
+- Content source: `THE_KETO_KEEP_CONTENT_REFERENCE.md`
+- Assets: `bgfullcastle.png` (hero), `tkklogotransparent.png` (logo)
 - Scope: hero section, value propositions, team bios, FAQ section, brand CTAs
-- Justine admin seed (email: `jvrbrts@gmail.com`) — check if she’s signed up
+- Justine admin seed (email: `jvrbrts@gmail.com`)
 - Domain planning (`theketokeep.com` currently on Mighty Networks)
+- Copy dated reference file: `THE_KETO_KEEP_PROJECT_REFERENCE_2026-04-19_S23.md` (first Code task — Chat can’t copy files on user filesystem)
 - No blockers. Ready to build.
 
 ### Session 2 — 2026-04-18

@@ -315,6 +315,8 @@
   border-radius: var(--radius-md);
 }
 
+.frame-picker-preview .profile-frame { margin-bottom: 30px; }
+
 .frame-picker-preview-label {
   font-size: var(--fs-sm);
   margin: 0;
@@ -335,7 +337,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 4px;
   padding: var(--space-3) var(--space-3) var(--space-5);
   background: var(--color-surface);
   border: 2px solid var(--color-border);
@@ -373,6 +375,7 @@
   position: relative;
   display: inline-block;
   line-height: 0;
+  margin-bottom: 18px;
 }
 
 .frame-option-preview-none {

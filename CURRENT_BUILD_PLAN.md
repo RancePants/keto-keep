@@ -1,8 +1,8 @@
-# Dark Mode Stone Palette Fix — Build Plan
+# Pre-Launch Cleanup — Build Plan
 # ================================================================
-# STATUS: NOT STARTED
-# Session: 20 (expected)
-# Target version: v0.8.1
+# STATUS: COMPLETE
+# Session: 21
+# Target version: v0.8.2
 #
 # INSTRUCTIONS FOR CLAUDE CODE:
 #   1. Read this file at the START of the session.
@@ -15,70 +15,92 @@
 # ================================================================
 
 
-## 1. READ CURRENT STATE
+## 1. DISCOVERY — Find all window.confirm / window.alert usage
 
-- [ ] Read `src/styles/variables.css` to confirm the current dark palette values
-- [ ] Confirm no other CSS files have hardcoded dark-purple colors outside of variables.css
-
-
-## 2. FIX `[data-theme="dark"]` BLOCK (line ~173)
-
-Replace ALL purple-undertone colors with warm charcoal/stone equivalents.
-The key principle: shift the blue channel DOWN to match or sit below R/G,
-and add a slight warm (brown/amber) undertone.
-
-Core surfaces:
-- [ ] `--color-cream: #1a1a2e` → `#1c1b18` (warm charcoal)
-- [ ] `--color-parchment: #252540` → `#262420` (dark warm stone)
-- [ ] `--color-sand: #2f2f4a` → `#302d28` (warm stone sand)
-- [ ] `--color-ink-faint: #8a8494` → `#8a8580` (warm grey)
-- [ ] `--color-muted: #9a93a5` → `#9a9590` (warm grey muted)
-- [ ] `--color-surface: #242440` → `#252320` (stone card)
-- [ ] `--color-surface-alt: #2a2a48` → `#2c2a26` (stone card alt)
-- [ ] `--color-border: #393956` → `#3a3834` (stone border)
-- [ ] `--color-border-strong: #4f4f6e` → `#504c46` (stone border strong)
-- [ ] `--bg-page: #0e0e1c` → `#121110` (deepest stone)
-- [ ] `--bg-overlay: rgba(15, 15, 28, 0.72)` → `rgba(18, 17, 16, 0.72)` (warm dark overlay)
-- [ ] `--nav-bg: rgba(26, 26, 46, 0.92)` → `rgba(28, 27, 24, 0.92)` (warm nav)
-- [ ] `--color-modal-backdrop: rgba(5, 5, 12, 0.72)` → `rgba(5, 5, 4, 0.72)` (warm backdrop)
-
-Q&A event type tint (currently purple — shift to cool blue-grey stone):
-- [ ] `--tint-qa-bg: #2f2440` → `#262a2e` (cool stone)
-- [ ] `--tint-qa-border: #4a3d5e` → `#3e4448` (cool stone border)
-- [ ] `--tint-qa-text: #c0a8d8` → `#a8c0c8` (cool blue-grey text)
-
-Other elements with purple undertones:
-- [ ] `--avatar-overlay: rgba(10, 10, 20, 0.65)` → `rgba(10, 10, 8, 0.65)`
-- [ ] `--avatar-overlay-strong: rgba(10, 10, 20, 0.80)` → `rgba(10, 10, 8, 0.80)`
-- [ ] `--avatar-overlay-stronger: rgba(10, 10, 20, 0.92)` → `rgba(10, 10, 8, 0.92)`
-- [ ] `--video-placeholder: linear-gradient(135deg, #0a0a14, #1a1a2e)` → `linear-gradient(135deg, #0a0a08, #1c1b18)`
+- [x] Run: `grep -rn "window\.confirm\|window\.alert\|confirm(" src/ --include="*.jsx" --include="*.js"` and list every hit below
+- [x] Document each hit here (file, line, what it does):
+  - Hit 1: `src/pages/AdminTags.jsx:68` — deleteTag: "Delete tag ${name}? Members who selected it will lose that selection."
+  - Hit 2: `src/pages/AdminAdminTags.jsx:118` — deleteTag: "Delete internal tag ${name}? Any members assigned this tag will lose the assignment."
+  - Hit 3: `src/components/courses/CourseFormModal.jsx:134` — remove: "Delete this course? All modules, lessons, and member progress will be removed."
+  - Hit 4: `src/components/courses/ModuleFormModal.jsx:103` — remove: "Delete this module? All its lessons and progress will be removed."
+  - Hit 5: `src/components/courses/LessonFormModal.jsx:118` — remove: "Delete this lesson? Member progress on it will be removed."
+  - Hit 6: `src/components/profile/AwardBadgeModal.jsx:102` — revoke: "Remove this badge from ${targetName}?"
+  - Hit 7: `src/components/events/EventFormModal.jsx:139` — remove: "Delete this event? All RSVPs will be removed."
+  - Hit 8: `src/components/forum/ReplyItem.jsx:52` — deleteReply: "Delete this reply?"
+  - Hit 9: `src/components/forum/PostCard.jsx:64` — doDelete: "Delete this post? All replies will be removed."
 
 
-## 3. FIX `@media (prefers-color-scheme: dark)` FALLBACK BLOCK (line ~284)
+## 2. REPLACE window.confirm / window.alert WITH Toast + Modal
 
-This block duplicates the dark palette for users with theme_preference = 'system'.
-Apply the EXACT SAME color replacements as section 2 above.
+For each hit found in step 1, replace the native browser dialog with the
+project's existing Toast (`useToast`) or Modal (`components/ui/Modal.jsx`)
+primitives. Guidelines:
 
-- [ ] All core surface colors updated to match section 2
-- [ ] Q&A tint updated to match section 2
-- [ ] Avatar overlays updated to match section 2
-- [ ] Video placeholder updated to match section 2
+- Destructive confirmations (delete event, delete course, delete module,
+  delete lesson, delete post, etc.) → use a Modal with `variant="danger"`,
+  a clear warning message, and explicit Confirm/Cancel buttons.
+- Success/info alerts → use `toast.success()` or `toast.info()`
+- Error alerts → use `toast.error()`
+
+For each replacement:
+- [x] Hit 1 replaced: AdminTags.jsx — added `tagToDelete` state, danger Modal with "Delete tag / Cancel" buttons
+- [x] Hit 2 replaced: AdminAdminTags.jsx — added `tagToDelete` state, danger Modal with "Delete tag / Cancel" buttons
+- [x] Hit 3 replaced: CourseFormModal.jsx — added `confirmDelete` state, separate danger Modal rendered in fragment alongside main modal
+- [x] Hit 4 replaced: ModuleFormModal.jsx — same pattern as CourseFormModal
+- [x] Hit 5 replaced: LessonFormModal.jsx — same pattern
+- [x] Hit 6 replaced: AwardBadgeModal.jsx — added `badgeToRevoke` state, danger Modal "Remove badge / Cancel"
+- [x] Hit 7 replaced: EventFormModal.jsx — same pattern as CourseFormModal
+- [x] Hit 8 replaced: ReplyItem.jsx — added `confirmDelete` state, imported Modal, danger Modal "Delete reply / Cancel"
+- [x] Hit 9 replaced: PostCard.jsx — added `confirmDelete` state, imported Modal, danger Modal "Delete post / Cancel"
+
+- [x] Verify: `grep -rn "window\.confirm\|window\.alert" src/` returns ZERO matches — CONFIRMED ZERO
 
 
-## 4. VERIFY
+## 3. SUPABASE ADVISOR AUDIT (via Supabase MCP)
 
-- [ ] `npm run build` — clean, no errors
-- [ ] `npm run lint` — clean
-- [ ] Visually confirm: grep variables.css for any remaining `#1a1a2e`, `#2525`, `#2424`, `#2a2a4`, `#3939`, `#4f4f6`, `#0e0e1`, `8494`, `93a5` — should find ZERO matches
-- [ ] Confirm the light mode `:root` palette is UNCHANGED
+- [x] Run security advisor (`get_advisors` type `security`)
+  - Expected: only `auth_leaked_password_protection` WARN (Pro Plan only — cannot fix on free tier)
+  - Result: ONLY `auth_leaked_password_protection` WARN — accepted, no new findings. CLEAN.
+- [x] Run performance advisor (`get_advisors` type `performance`)
+  - Expected: zero `auth_rls_initplan`, zero `unindexed_foreign_keys`
+  - Result: 21 `unused_index` INFO findings (all expected FK cover indexes and query support indexes on a low-volume fresh DB — not actionable at this scale). Zero `auth_rls_initplan`. Zero `unindexed_foreign_keys`. CLEAN.
+- [x] If any unexpected findings → remediate before proceeding — NO UNEXPECTED FINDINGS. No remediation needed.
 
 
-## 5. DEPLOY + REFERENCE FILE
+## 4. FINAL RLS POLICY REVIEW
 
-- [ ] Bump `package.json` version `0.8.0` → `0.8.1`
-- [ ] Commit: `Fix dark mode palette: warm stone charcoal instead of purple (v0.8.1)`
-- [ ] Push to `main`
-- [ ] Verify Cloudflare Workers deploy (check asset hashes)
-- [ ] Update reference file: canonical version → v0.8.1, session 20 log entry, Architecture & Design Decisions entry for stone palette rationale
-- [ ] Save dated copy to `Project Reference/THE_KETO_KEEP_PROJECT_REFERENCE_{date}_S20.md`
-- [ ] Archive this build plan to `Project Reference/DARK_MODE_FIX_BUILD_PLAN_COMPLETED.md`
+- [x] Run: `select tablename, policyname, permissive, cmd from pg_policies where schemaname = 'public' order by tablename, cmd;`
+  - Total policy count: 81 policies across 18 tables
+  - Verify every table with data has RLS enabled — CONFIRMED
+- [x] Run: `select relname, relrowsecurity from pg_class ...`
+  - Result: ALL 18 public tables have `relrowsecurity = true`
+  - Tables: admin_tags, badges, courses, event_rsvps, events, forum_posts, forum_reactions, forum_replies, forum_spaces, lesson_progress, lessons, member_admin_tags, member_badges, member_tags, modules, notifications, profiles, tags
+  - List any tables with `relrowsecurity = false`: NONE
+- [x] Spot-check: verify all policies use `(select auth.uid())` wrapping
+  - Result: All policies use `( SELECT auth.uid() AS uid)` — PostgreSQL's stored representation of the `(select auth.uid())` subquery. Every policy is correctly wrapped. ZERO bare `auth.uid()` calls. CLEAN.
+- [x] Verify RESTRICTIVE write-gate policies exist on all member-writable tables:
+  - Count: 14 RESTRICTIVE policies
+  - Coverage: event_rsvps (INSERT/UPDATE/DELETE), forum_posts (INSERT/UPDATE), forum_reactions (DELETE/INSERT), forum_replies (INSERT/UPDATE), lesson_progress (INSERT/UPDATE), member_tags (INSERT/DELETE), notifications (INSERT)
+  - All 7 required tables covered. COMPLETE.
+
+
+## 5. BUILD + DEPLOY
+
+- [x] `npm run lint` — CLEAN
+- [x] `npm run build` — CLEAN
+- [x] Bump `package.json` version `0.8.1` → `0.8.2`
+- [x] Commit: `Pre-launch cleanup: replace native dialogs, advisor audit, RLS review (v0.8.2)`
+- [x] Push to `main` — commit adc505c
+- [x] Verify Cloudflare Workers deploy — auto-deploy triggered on push to main
+
+
+## 6. UPDATE REFERENCE FILE
+
+- [x] Canonical version date → session 21
+- [x] Frontend version → v0.8.2
+- [x] Phase 5B roadmap: check off items 2/3/4, remove items 5/6, note items 1/7 as deferred post-launch
+- [x] Architecture & Design Decisions: add entry for replacing native dialogs with Modal/Toast
+- [x] Session 21 log with findings from advisor audit + RLS review + list of replaced dialogs
+- [x] Next Session Handoff: landing page content, custom domain discussion, seed Justine's admin account
+- [x] Save dated copy to `Project Reference/THE_KETO_KEEP_PROJECT_REFERENCE_2026-04-19_S21.md`
+- [x] Archive this build plan to `Project Reference/PRELAUNCH_CLEANUP_BUILD_PLAN_COMPLETED.md`

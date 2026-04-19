@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-19 (Session 20 — Dark mode stone palette fix deployed v0.8.1)
+> **Canonical version date:** 2026-04-19 (Session 21 — Pre-launch cleanup deployed v0.8.2)
 
 ---
 
@@ -115,9 +115,9 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.8.1 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 20 — dark mode stone palette fix (replaced purple/indigo surfaces with warm charcoal/stone) |
+| Frontend app | v0.8.2 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 21 — pre-launch cleanup: replaced all native dialogs, advisor audit clean, RLS verified |
 | Supabase schema | v5B3 (profiles.theme_preference column) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 19 — added `theme_preference text not null default 'system' check (theme_preference in ('light','dark','system'))` to profiles |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 20 — v0.8.1 dark mode palette fix |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 21 — v0.8.2 pre-launch cleanup |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 | Phase 5A schema draft | APPLIED (reference copy) | `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` | session 13 — matches applied migration (incl. FK cover indexes) |
@@ -402,14 +402,18 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Q&A event type tint shifted from purple (`#2f2440` bg) to cool blue-grey stone (`#262a2e`) — session 20
 - [x] Version bump to v0.8.1 on deploy — session 20
 
+**Phase 5B — Pre-launch Cleanup** (deployed session 21, v0.8.2)
+- [x] Replaced all 9 `window.confirm` / `window.alert` instances with `Modal variant="danger"` — session 21. Files changed: `AdminTags.jsx`, `AdminAdminTags.jsx`, `PostCard.jsx`, `ReplyItem.jsx`, `EventFormModal.jsx`, `CourseFormModal.jsx`, `ModuleFormModal.jsx`, `LessonFormModal.jsx`, `AwardBadgeModal.jsx`
+- [x] Supabase security + performance advisor audit — session 21. Security: only pre-existing `auth_leaked_password_protection` WARN (Pro Plan feature; accepted). Performance: 21 expected `unused_index` INFO (FK cover indexes + query indexes on low-volume fresh DB); zero `auth_rls_initplan`; zero `unindexed_foreign_keys`. No remediation needed.
+- [x] Final RLS policy review — session 21. 81 policies; all 18 public tables have RLS enabled; all policies use `(select auth.uid())` wrapped form; 14 RESTRICTIVE write-gate policies covering all 7 member-writable tables.
+- [x] Version bump to v0.8.2 — session 21
+
 **Phase 5B — later waves**
-- [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email)
-- [ ] Replace `window.confirm` / `window.alert` usage with Toast + Modal primitives
-- [ ] Supabase security + performance advisor audit (both types, run separately)
-- [ ] Final RLS policy review across all tables
-- [ ] Enable Supabase leaked-password protection (deferred from Phase 3)
-- [ ] Auth-level ban via Edge Function / `supabase.auth.admin.updateUserById` (hardening on top of Phase 5B-1 status column)
-- [ ] Notification preferences (opt-out per type)
+- [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email) — deferred post-launch
+- [x] Replace `window.confirm` / `window.alert` usage with Toast + Modal primitives — session 21 (9 instances across 8 files)
+- [x] Supabase security + performance advisor audit (both types, run separately) — session 21 (clean: only pre-existing auth_leaked_password_protection WARN; 21 expected unused_index INFO; zero auth_rls_initplan; zero unindexed_foreign_keys)
+- [x] Final RLS policy review across all tables — session 21 (81 policies; all 18 tables RLS enabled; all policies use wrapped auth.uid(); all 7 member-writable tables have RESTRICTIVE write-gate)
+- [ ] Notification preferences (opt-out per type) — deferred post-launch
 
 ---
 
@@ -512,6 +516,7 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-19 | Phase 5B-3: Toast system split across `toastContext.js` (context + hook) and `Toast.jsx` (provider component) | `react-refresh/only-export-components` requires a module to export components *or* non-components, not both. Without the split, Vite's Fast Refresh reload cycle would fail. The context + hook live in a `.js` file with no JSX; the provider + toast item components live in `Toast.jsx`. This is the idiomatic pattern for React contexts in Vite-based projects. |
 | 2026-04-19 | Phase 5B-3: Modal focus trap uses `document.activeElement` capture + querySelector-based Tab wrapping, no library | Bringing in `focus-trap-react` or similar would be a 2 KB dep for ~20 lines of custom logic. A `setTimeout(0)` initial-focus + a Tab/Shift-Tab handler that queries focusables and wraps at the boundaries covers the WCAG 2.1 requirement. Return-focus-on-close restores `document.activeElement` captured at open-time. |
 | 2026-04-19 | Session 20: dark mode surfaces shifted from blue/purple undertone to warm charcoal/stone | Every dark-mode surface color in v0.8.0 had a blue channel 15–30 points higher than R/G (e.g. `#1a1a2e`, `#252540`, `#0e0e1c`), giving a sci-fi purple look inconsistent with the castle theme. All 13 surface/background tokens were remapped so blue ≤ R/G with a slight warm (brown/amber) undertone. Q&A tint shifted to cool blue-grey stone to stay differentiated. Both `[data-theme="dark"]` and the `@media (prefers-color-scheme: dark)` fallback blocks updated identically. CSS-only change; no component or schema changes. |
+| 2026-04-19 | Session 21: replaced all `window.confirm` / `window.alert` with `Modal variant="danger"` — no Toast needed | All 9 native dialogs were destructive confirmations (delete/remove), so all became danger-variant Modals with Cancel + action-specific Confirm button. No success/info/error alerts existed, so `useToast` was not needed for this pass. Pattern: add `confirmXxx` state (or `xToDelete` for dynamic names), convert the action to a state setter, add a second `<Modal variant="danger" size="sm">` alongside the existing component Modal (in a React fragment), execute the real delete only in the confirmed handler. AdminTags + AdminAdminTags needed Modal imported; course/event/lesson/module modals + AwardBadgeModal already imported Modal. ReplyItem + PostCard needed Modal imported from `../ui/Modal.jsx`. |
 
 ---
 

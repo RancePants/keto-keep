@@ -132,6 +132,7 @@
 /* ---------- Profile edit layout ---------- */
 .profile-panel {
   padding: var(--space-5) var(--space-5);
+  overflow: visible;
 }
 
 .profile-edit {
@@ -222,6 +223,7 @@
   gap: var(--space-5);
   align-items: flex-start;
   margin-bottom: var(--space-5);
+  padding: var(--space-5) 0 0 var(--space-5);
 }
 
 .profile-meta {

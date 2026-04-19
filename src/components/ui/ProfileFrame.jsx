@@ -32,10 +32,10 @@ const FRAME_SLUG = {
   coach_seal:    'coach-seal',
 };
 
-// The PNG frames are designed with ~15% decorative border on each side.
-// The overlay is rendered 130% of the avatar size, offset -15% top/left.
-const FRAME_SCALE = 1.30;
-const FRAME_OFFSET_RATIO = 0.15;
+// Frame overlay is 150% of the avatar size so the center hole fully clears the
+// avatar boundary. Offset is (FRAME_SCALE - 1) / 2 to keep the overlay centered.
+const FRAME_SCALE = 1.50;
+const FRAME_OFFSET_RATIO = 0.25;
 
 export default function ProfileFrame({
   frameType = 'none',
@@ -63,24 +63,46 @@ export default function ProfileFrame({
       >
         {children}
       </span>
-      {/* PNG frame overlay — stacked drop-shadows back semi-transparent pixels */}
       {slug && (
-        <img
-          src={`/frames/frame-${slug}.png`}
-          alt=""
-          aria-hidden="true"
-          className="frame-overlay"
-          style={{
-            position: 'absolute',
-            top: overlayOffset,
-            left: overlayOffset,
-            width: overlaySize,
-            height: overlaySize,
-            maxWidth: 'none',
-            pointerEvents: 'none',
-            filter: 'drop-shadow(0 0 0 #000) drop-shadow(0 0 0 #000) drop-shadow(0 0 0 #000)',
-          }}
-        />
+        <>
+          {/* Charcoal backing — masked by the frame PNG so it only fills where
+              the frame has pixels, preventing background bleed through gaps */}
+          <span
+            aria-hidden="true"
+            className="frame-backing"
+            style={{
+              position: 'absolute',
+              top: overlayOffset,
+              left: overlayOffset,
+              width: overlaySize,
+              height: overlaySize,
+              maxWidth: 'none',
+              background: '#2a2a2a',
+              WebkitMaskImage: `url(/frames/frame-${slug}.png)`,
+              WebkitMaskSize: '100% 100%',
+              WebkitMaskRepeat: 'no-repeat',
+              maskImage: `url(/frames/frame-${slug}.png)`,
+              maskSize: '100% 100%',
+              maskRepeat: 'no-repeat',
+              pointerEvents: 'none',
+            }}
+          />
+          <img
+            src={`/frames/frame-${slug}.png`}
+            alt=""
+            aria-hidden="true"
+            className="frame-overlay"
+            style={{
+              position: 'absolute',
+              top: overlayOffset,
+              left: overlayOffset,
+              width: overlaySize,
+              height: overlaySize,
+              maxWidth: 'none',
+              pointerEvents: 'none',
+            }}
+          />
+        </>
       )}
     </span>
   );

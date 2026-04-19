@@ -3,7 +3,7 @@ import { REACTION_EMOJIS, groupReactions } from '../../lib/forumHelpers.js';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
 
-export default function EmojiReactionBar({ target, reactions, onChange }) {
+export default function EmojiReactionBar({ target, reactions, onChange, onReactionAdded }) {
   const { user } = useAuth();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -48,7 +48,11 @@ export default function EmojiReactionBar({ target, reactions, onChange }) {
           emoji,
           ...targetFilter,
         });
-        if (error) console.error('Add reaction failed:', error.message);
+        if (error) {
+          console.error('Add reaction failed:', error.message);
+        } else if (onReactionAdded) {
+          onReactionAdded(emoji);
+        }
       }
       if (onChange) await onChange();
     } finally {

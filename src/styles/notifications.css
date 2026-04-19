@@ -1,0 +1,262 @@
+/* ---------- Notification bell (navbar) ---------- */
+.notif-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.notif-bell-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+
+.notif-bell-trigger:hover {
+  background: var(--color-parchment);
+  color: var(--color-green-dark);
+  border-color: var(--color-green);
+}
+
+.notif-bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--color-cream, #fff);
+}
+
+.notif-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 360px;
+  max-width: calc(100vw - 24px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-dropdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-parchment);
+}
+
+.notif-dropdown-title {
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--color-ink);
+}
+
+.notif-mark-all {
+  border: none;
+  background: none;
+  color: var(--color-green-dark);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.notif-mark-all:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.notif-mark-all:disabled {
+  color: var(--color-ink-faint, #999);
+  cursor: default;
+}
+
+.notif-dropdown-list {
+  max-height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-empty {
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  color: var(--color-ink-faint, #888);
+  font-size: var(--fs-sm);
+}
+
+.notif-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 10px;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: none;
+  background: transparent;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background var(--t-fast);
+}
+
+.notif-row:last-child {
+  border-bottom: none;
+}
+
+.notif-row:hover {
+  background: var(--color-parchment);
+}
+
+.notif-row-unread {
+  background: rgba(46, 113, 87, 0.06);
+}
+
+.notif-row-icon {
+  font-size: 18px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.notif-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notif-row-title {
+  font-size: var(--fs-sm);
+  color: var(--color-ink);
+  word-break: break-word;
+}
+
+.notif-row-unread .notif-row-title {
+  font-weight: 700;
+}
+
+.notif-row-time {
+  font-size: var(--fs-xs);
+  color: var(--color-ink-faint, #888);
+}
+
+.notif-row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-green);
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  .notif-dropdown {
+    right: auto;
+    left: 0;
+  }
+}
+
+/* ---------- PostCard broadcast / scheduled indicators ---------- */
+.broadcast-indicator,
+.scheduled-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  color: var(--color-ink-faint, #777);
+  background: var(--color-parchment);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+}
+
+.broadcast-indicator {
+  color: var(--color-green-dark);
+  border-color: var(--color-green);
+}
+
+.scheduled-indicator {
+  color: #8a6d1a;
+  border-color: #d8c168;
+  background: #fdf6e2;
+}
+
+/* ---------- PostComposer admin controls ---------- */
+.post-composer-admin {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border-strong, var(--color-border));
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.post-composer-admin-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.post-composer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--color-ink);
+  cursor: pointer;
+  user-select: none;
+}
+
+.post-composer-toggle input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-green);
+}
+
+.post-composer-admin-meta {
+  font-size: var(--fs-xs);
+  color: var(--color-ink-faint, #888);
+}
+
+.post-composer-schedule-input {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong, var(--color-border));
+  font-size: var(--fs-sm);
+}
+
+.post-composer-info {
+  margin-bottom: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: rgba(46, 113, 87, 0.10);
+  color: var(--color-green-dark);
+  font-size: var(--fs-sm);
+}

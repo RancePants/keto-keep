@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
+import { useAuth } from '../contexts/useAuth.js';
 import PostComposer from '../components/forum/PostComposer.jsx';
 import PostCard from '../components/forum/PostCard.jsx';
 
 const PAGE_SIZE = 20;
 
 export default function SpaceView() {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
   const { slug } = useParams();
   const [space, setSpace] = useState(null);
   const [spaceError, setSpaceError] = useState(null);
@@ -106,20 +109,24 @@ export default function SpaceView() {
     async (spaceId, pageIdx) => {
       const from = pageIdx * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-      const { data, error } = await supabase
+      let q = supabase
         .from('forum_posts')
         .select('*')
         .eq('space_id', spaceId)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .range(from, to);
+      if (!isAdmin) {
+        q = q.or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`);
+      }
+      const { data, error } = await q;
       if (error) {
         console.error('Load posts failed:', error.message);
         return { rows: [], done: true };
       }
       return { rows: data || [], done: (data || []).length < PAGE_SIZE };
     },
-    []
+    [isAdmin]
   );
 
   // Load first page when space resolves
@@ -164,20 +171,24 @@ export default function SpaceView() {
     const spaceId = space?.id;
     if (!spaceId) return;
     const count = (page + 1) * PAGE_SIZE;
-    const { data, error } = await supabase
+    let q = supabase
       .from('forum_posts')
       .select('*')
       .eq('space_id', spaceId)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .range(0, count - 1);
+    if (!isAdmin) {
+      q = q.or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`);
+    }
+    const { data, error } = await q;
     if (error) {
       console.error('Refresh failed:', error.message);
       return;
     }
     setPosts(data || []);
     await hydrateMeta(data || []);
-  }, [space, page, hydrateMeta]);
+  }, [space, page, hydrateMeta, isAdmin]);
 
   const onPostCreated = useCallback(
     async (newPost) => {
@@ -224,7 +235,7 @@ export default function SpaceView() {
         {space.description && <p className="feed-desc">{space.description}</p>}
       </header>
 
-      <PostComposer spaceId={space.id} onCreated={onPostCreated} />
+      <PostComposer spaceId={space.id} spaceSlug={space.slug} onCreated={onPostCreated} />
 
       {posts.length === 0 ? (
         <div className="feed-empty">

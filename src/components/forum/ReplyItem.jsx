@@ -16,6 +16,8 @@ export default function ReplyItem({
   nested = false,
   canReplyBelow = false,
   onChanged,
+  onReactionAdded,
+  onChildReplyCreated,
 }) {
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
@@ -108,6 +110,7 @@ export default function ReplyItem({
           target={{ kind: 'reply', id: reply.id }}
           reactions={reactions}
           onChange={onChanged}
+          onReactionAdded={onReactionAdded}
         />
         <div className="reply-actions">
           {canReplyBelow && !nested && (
@@ -132,9 +135,10 @@ export default function ReplyItem({
               postId={reply.post_id}
               parentReplyId={reply.id}
               placeholder={`Reply to ${author?.display_name || 'member'}…`}
-              onSubmitted={async () => {
+              onSubmitted={async (newReply) => {
                 setComposing(false);
-                if (onChanged) await onChanged();
+                if (onChildReplyCreated) onChildReplyCreated(newReply);
+                else if (onChanged) await onChanged();
               }}
               onCancel={() => setComposing(false)}
             />

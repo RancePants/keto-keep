@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Modal from '../events/Modal.jsx';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
+import { notifyBadgeAwarded } from '../../lib/notificationHelpers.js';
 import BadgeIcon from './BadgeIcon.jsx';
 
 // Admin-only modal for awarding / revoking a badge to/from a member.
@@ -84,6 +85,14 @@ export default function AwardBadgeModal({
       setErr(error.message);
       return;
     }
+    const badgeMeta = catalog.find((c) => c.id === selected);
+    notifyBadgeAwarded(
+      supabase,
+      targetUserId,
+      badgeMeta?.name,
+      user?.id,
+      `/profile/${targetUserId}`
+    );
     if (onChanged) await onChanged();
     onClose?.();
   };

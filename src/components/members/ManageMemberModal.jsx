@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Modal from '../ui/Modal.jsx';
 import { supabase } from '../../lib/supabase.js';
+import { notifyStatusChange } from '../../lib/notificationHelpers.js';
 
 // action: 'suspend' | 'unsuspend' | 'ban' | 'unban' | 'delete'
 const ACTION_COPY = {
@@ -89,6 +90,15 @@ export default function ManageMemberModal({
       if (error) {
         setErr(error.message);
         return;
+      }
+      // status_change notification on suspend / unsuspend / unban (active again).
+      // Skip on ban (login disabled) and delete (account gone).
+      if (cfg.rpc === 'set_member_status') {
+        const newStatus = cfg.payload(targetUserId).new_status;
+        if (newStatus === 'active' || newStatus === 'suspended') {
+          const { data: actor } = await supabase.auth.getUser();
+          notifyStatusChange(supabase, targetUserId, newStatus, actor?.user?.id);
+        }
       }
       if (onChanged) await onChanged(action);
       onClose?.();

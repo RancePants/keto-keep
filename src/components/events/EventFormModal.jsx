@@ -11,6 +11,7 @@ import {
   localInputToIso,
   getYoutubeEmbedSrc,
 } from '../../lib/eventHelpers.js';
+import { notifyNewEvent } from '../../lib/notificationHelpers.js';
 
 const EMPTY = {
   title: '',
@@ -122,6 +123,7 @@ export default function EventFormModal({ open, onClose, event, onSaved, onDelete
           setError(insErr.message);
           return;
         }
+        notifyNewEvent(supabase, data?.title, data?.id ? `/events/${data.id}` : '/events');
         if (onSaved) await onSaved(data);
       }
       onClose?.();

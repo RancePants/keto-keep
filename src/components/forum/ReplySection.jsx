@@ -1,9 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase.js';
+import { useAuth } from '../../contexts/useAuth.js';
+import {
+  notifyReplyToPost,
+  notifyReplyToComment,
+  notifyReaction,
+} from '../../lib/notificationHelpers.js';
 import ReplyItem from './ReplyItem.jsx';
 import ReplyComposer from './ReplyComposer.jsx';
 
-export default function ReplySection({ postId, onReplyCountChange }) {
+export default function ReplySection({
+  postId,
+  postAuthorId,
+  postTitle,
+  permalink,
+  onReplyCountChange,
+}) {
+  const { user } = useAuth();
   const [replies, setReplies] = useState([]);
   const [authors, setAuthors] = useState({});
   const [reactions, setReactions] = useState([]);
@@ -92,6 +105,25 @@ export default function ReplySection({ postId, onReplyCountChange }) {
 
   const reactionsForReply = (id) => reactions.filter((r) => r.reply_id === id);
 
+  const handleTopLevelReplyCreated = async (newReply) => {
+    if (newReply && user?.id) {
+      notifyReplyToPost(supabase, postAuthorId, user.id, postTitle, permalink);
+    }
+    await load();
+  };
+
+  const handleNestedReplyCreated = async (parentAuthorId, newReply) => {
+    if (newReply && user?.id) {
+      notifyReplyToComment(supabase, parentAuthorId, user.id, permalink);
+    }
+    await load();
+  };
+
+  const handleReplyReaction = (replyAuthorId, emoji) => {
+    if (!user?.id) return;
+    notifyReaction(supabase, replyAuthorId, user.id, emoji, permalink);
+  };
+
   return (
     <div className="reply-section">
       {loading && replies.length === 0 ? (
@@ -107,6 +139,8 @@ export default function ReplySection({ postId, onReplyCountChange }) {
               reactions={reactionsForReply(reply.id)}
               canReplyBelow
               onChanged={load}
+              onReactionAdded={(emoji) => handleReplyReaction(reply.author_id, emoji)}
+              onChildReplyCreated={(child) => handleNestedReplyCreated(reply.author_id, child)}
             />
             {(childrenByParent[reply.id] || []).map((child) => (
               <ReplyItem
@@ -116,12 +150,13 @@ export default function ReplySection({ postId, onReplyCountChange }) {
                 reactions={reactionsForReply(child.id)}
                 nested
                 onChanged={load}
+                onReactionAdded={(emoji) => handleReplyReaction(child.author_id, emoji)}
               />
             ))}
           </div>
         ))
       )}
-      <ReplyComposer postId={postId} onSubmitted={load} />
+      <ReplyComposer postId={postId} onSubmitted={handleTopLevelReplyCreated} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import UserAvatar from './UserAvatar.jsx';
 import EmojiReactionBar from './EmojiReactionBar.jsx';
@@ -10,6 +10,7 @@ import { usePrivateImage } from './usePrivateImage.js';
 import { formatRelative, isEdited } from '../../lib/forumHelpers.js';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
+import { notifyReaction } from '../../lib/notificationHelpers.js';
 
 function PostImage({ path }) {
   const url = usePrivateImage('forum-images', path);
@@ -37,6 +38,13 @@ export default function PostCard({
   const [editBody, setEditBody] = useState(post.body);
   const [saving, setSaving] = useState(false);
   const [liveReplyCount, setLiveReplyCount] = useState(replyCount ?? 0);
+  // Capture mount time once so render stays pure. Scheduled badge accuracy
+  // refreshes on the next navigation / parent re-fetch — good enough.
+  const [mountedAt] = useState(() => Date.now());
+  const scheduledFuture = useMemo(
+    () => Boolean(post.scheduled_at) && new Date(post.scheduled_at).getTime() > mountedAt,
+    [post.scheduled_at, mountedAt]
+  );
 
   const canEdit = isAuthor || isAdmin;
 
@@ -106,6 +114,12 @@ export default function PostCard({
             <span>{formatRelative(post.created_at)}</span>
             {isEdited(post.created_at, post.updated_at) && <span>· edited</span>}
             {post.is_pinned && <span className="pin-indicator">📌 Pinned</span>}
+            {post.is_broadcast && <span className="broadcast-indicator" title="Broadcast">📢 Broadcast</span>}
+            {scheduledFuture && (
+              <span className="scheduled-indicator" title={new Date(post.scheduled_at).toLocaleString()}>
+                🕒 Scheduled for {new Date(post.scheduled_at).toLocaleString()}
+              </span>
+            )}
           </div>
         </div>
         <ForumModTools
@@ -166,6 +180,15 @@ export default function PostCard({
         target={{ kind: 'post', id: post.id }}
         reactions={reactions}
         onChange={onChanged}
+        onReactionAdded={(emoji) => {
+          notifyReaction(
+            supabase,
+            post.author_id,
+            user?.id,
+            emoji,
+            spaceSlug ? `/forums/${spaceSlug}/${post.id}` : null
+          );
+        }}
       />
 
       <div className="post-footer">
@@ -186,6 +209,9 @@ export default function PostCard({
       {expanded && (
         <ReplySection
           postId={post.id}
+          postAuthorId={post.author_id}
+          postTitle={post.title}
+          permalink={spaceSlug ? `/forums/${spaceSlug}/${post.id}` : null}
           onReplyCountChange={setLiveReplyCount}
         />
       )}

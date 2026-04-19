@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
+import { isoToLocalInput, localInputToIso } from '../../lib/eventHelpers.js';
+import { formatRelative } from '../../lib/forumHelpers.js';
 
-export default function PostComposer({ spaceId, onCreated }) {
-  const { user, isSuspended } = useAuth();
+export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
+  const { user, profile, isSuspended } = useAuth();
+  const isAdmin = profile?.role === 'admin';
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -11,7 +14,14 @@ export default function PostComposer({ spaceId, onCreated }) {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [info, setInfo] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Admin-only state
+  const [broadcast, setBroadcast] = useState(false);
+  const [scheduleOn, setScheduleOn] = useState(false);
+  const [scheduleLocal, setScheduleLocal] = useState('');
+  const [lastBroadcast, setLastBroadcast] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,12 +42,40 @@ export default function PostComposer({ spaceId, onCreated }) {
     };
   }, [imageFile]);
 
+  // Load most-recent broadcast timestamp when admin expands the composer.
+  useEffect(() => {
+    if (!isAdmin || !expanded) return undefined;
+    let cancelled = false;
+    (async () => {
+      const { data, error: bErr } = await supabase
+        .from('forum_posts')
+        .select('created_at')
+        .eq('is_broadcast', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      if (bErr) {
+        console.error('Last broadcast lookup failed:', bErr.message);
+        return;
+      }
+      setLastBroadcast(data?.created_at || null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, expanded]);
+
   const reset = () => {
     setTitle('');
     setBody('');
     setImageFile(null);
     setError(null);
+    setInfo(null);
     setExpanded(false);
+    setBroadcast(false);
+    setScheduleOn(false);
+    setScheduleLocal('');
   };
 
   const onPickFile = (e) => {
@@ -63,8 +101,23 @@ export default function PostComposer({ spaceId, onCreated }) {
       setError('Title and body are required.');
       return;
     }
+
+    let scheduledIso = null;
+    if (isAdmin && scheduleOn) {
+      if (!scheduleLocal) {
+        setError('Pick a date/time for the scheduled post.');
+        return;
+      }
+      scheduledIso = localInputToIso(scheduleLocal);
+      if (!scheduledIso || new Date(scheduledIso).getTime() <= Date.now()) {
+        setError('Scheduled time must be in the future.');
+        return;
+      }
+    }
+
     setSaving(true);
     setError(null);
+    setInfo(null);
     try {
       let imagePath = null;
       if (imageFile) {
@@ -82,23 +135,49 @@ export default function PostComposer({ spaceId, onCreated }) {
         imagePath = path;
       }
 
+      const insertPayload = {
+        space_id: spaceId,
+        author_id: user.id,
+        title: title.trim(),
+        body: body.trim(),
+        image_path: imagePath,
+      };
+      if (isAdmin && broadcast) insertPayload.is_broadcast = true;
+      if (scheduledIso) insertPayload.scheduled_at = scheduledIso;
+
       const { data, error: insErr } = await supabase
         .from('forum_posts')
-        .insert({
-          space_id: spaceId,
-          author_id: user.id,
-          title: title.trim(),
-          body: body.trim(),
-          image_path: imagePath,
-        })
+        .insert(insertPayload)
         .select()
         .single();
       if (insErr) {
         setError(insErr.message);
-      } else {
-        reset();
-        if (onCreated) await onCreated(data);
+        return;
       }
+
+      // Fire broadcast notification (admin + checkbox on; not deferred for
+      // scheduled posts — the notification still goes out on create).
+      let broadcastInfo = null;
+      if (isAdmin && broadcast && data?.id) {
+        const link = spaceSlug ? `/forums/${spaceSlug}/${data.id}` : `/forums`;
+        const { data: count, error: bErr } = await supabase.rpc('broadcast_notification', {
+          p_post_id: data.id,
+          p_title: `📢 ${title.trim()}`,
+          p_body: body.trim().slice(0, 280),
+          p_link: link,
+          p_type: 'admin_broadcast',
+        });
+        if (bErr) {
+          console.error('Broadcast notification failed:', bErr.message);
+          broadcastInfo = 'Post created, but broadcast notification failed.';
+        } else {
+          broadcastInfo = `Broadcast sent to ${count ?? 0} member${count === 1 ? '' : 's'}.`;
+        }
+      }
+
+      reset();
+      if (broadcastInfo) setInfo(broadcastInfo);
+      if (onCreated) await onCreated(data);
     } catch (err) {
       setError(err?.message || 'Could not post.');
     } finally {
@@ -119,6 +198,7 @@ export default function PostComposer({ spaceId, onCreated }) {
   if (!expanded) {
     return (
       <div className="post-composer">
+        {info && <div className="post-composer-info">{info}</div>}
         <button
           type="button"
           className="post-composer-prompt"
@@ -130,6 +210,14 @@ export default function PostComposer({ spaceId, onCreated }) {
       </div>
     );
   }
+
+  // Default the schedule input to ~1 hour from now the first time it's opened.
+  const ensureScheduleDefault = () => {
+    if (!scheduleLocal) {
+      const d = new Date(Date.now() + 60 * 60 * 1000);
+      setScheduleLocal(isoToLocalInput(d.toISOString()));
+    }
+  };
 
   return (
     <div className="post-composer">
@@ -159,6 +247,52 @@ export default function PostComposer({ spaceId, onCreated }) {
             <img src={previewUrl} alt="Preview" className="post-composer-preview" />
           </div>
         )}
+
+        {isAdmin && (
+          <div className="post-composer-admin">
+            <div className="post-composer-admin-row">
+              <label className="post-composer-toggle">
+                <input
+                  type="checkbox"
+                  checked={broadcast}
+                  onChange={(e) => setBroadcast(e.target.checked)}
+                  disabled={saving}
+                />
+                <span>📢 Broadcast to all members</span>
+              </label>
+              <span className="post-composer-admin-meta">
+                {lastBroadcast
+                  ? `Last broadcast: ${formatRelative(lastBroadcast)}`
+                  : 'No broadcasts sent yet'}
+              </span>
+            </div>
+            <div className="post-composer-admin-row">
+              <label className="post-composer-toggle">
+                <input
+                  type="checkbox"
+                  checked={scheduleOn}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setScheduleOn(next);
+                    if (next) ensureScheduleDefault();
+                  }}
+                  disabled={saving}
+                />
+                <span>🕒 Schedule for later</span>
+              </label>
+              {scheduleOn && (
+                <input
+                  type="datetime-local"
+                  className="post-composer-schedule-input"
+                  value={scheduleLocal}
+                  onChange={(e) => setScheduleLocal(e.target.value)}
+                  disabled={saving}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
         {error && <div className="form-error" style={{ marginTop: 'var(--space-3)' }}>{error}</div>}
         <div className="post-composer-actions">
           <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
@@ -193,7 +327,7 @@ export default function PostComposer({ spaceId, onCreated }) {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Posting…' : 'Post'}
+              {saving ? 'Posting…' : scheduleOn ? 'Schedule post' : 'Post'}
             </button>
           </div>
         </div>

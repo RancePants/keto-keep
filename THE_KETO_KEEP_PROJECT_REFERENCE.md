@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 18 — Phase 5B-2 frontend deployed v0.7.0)
+> **Canonical version date:** 2026-04-19 (Session 19 — Phase 5B-3 polish/a11y/dark-mode deployed v0.8.0)
 
 ---
 
@@ -80,9 +80,9 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.7.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 18 — Phase 5B-2 frontend (notifications, broadcasts, scheduled posts) |
-| Supabase schema | v5B2 (Phase 5B-2 applied + broadcast_notification p_type) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 18 — `broadcast_notification()` extended with p_type param (admin_broadcast / new_event) |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 18 — Phase 5B-2 frontend deployed v0.7.0 |
+| Frontend app | v0.8.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 19 — Phase 5B-3 polish / accessibility / dark-mode / background images |
+| Supabase schema | v5B3 (profiles.theme_preference column) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 19 — added `theme_preference text not null default 'system' check (theme_preference in ('light','dark','system'))` to profiles |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 19 — Phase 5B-3 deployed v0.8.0 |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 | Phase 5A schema draft | APPLIED (reference copy) | `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` | session 13 — matches applied migration (incl. FK cover indexes) |
@@ -345,14 +345,31 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] `broadcast_notification()` schema follow-on: extended signature with `p_type notification_type DEFAULT 'admin_broadcast'` so the same SECURITY DEFINER fan-out handles `admin_broadcast` AND `new_event`. Old 4-arg overload dropped to avoid PostgREST ambiguity — session 18
 - [x] Version bump to v0.7.0 on deploy — session 18
 
+**Phase 5B-3 — Polish / Accessibility / Dark Mode / Background Images** (deployed session 19, v0.8.0)
+- [x] Schema: `profiles.theme_preference` column with check constraint (`'light' | 'dark' | 'system'`, default `'system'`) — session 19
+- [x] CSS custom-property theme system in `variables.css` — light root + dark `[data-theme="dark"]` block + `@media (prefers-color-scheme: dark)` fallback — session 19
+- [x] Convert all 10 stylesheets to semantic tokens (base, layout, components, forums, events, courses, profiles, members, notifications) — session 19
+- [x] Castle background images (light + dark webp) on body + overlay on `.app-shell`, mobile `background-attachment: scroll` perf override — session 19
+- [x] Inline theme-flash prevention script in `index.html` reading `localStorage.kk-theme` — session 19
+- [x] `ThemeToggle` navbar component cycling system → light → dark with sun/moon/monitor glyph — session 19
+- [x] `AuthContext.setTheme(theme)` persisting to `profiles.theme_preference` + localStorage + `theme_preference` added to `updateProfile` allow-list — session 19
+- [x] Skip-to-main-content link in `Layout` — session 19
+- [x] Shared `Modal` focus trap + `aria-labelledby` — session 19
+- [x] `usePageTitle(title)` hook on all 19 pages — session 19
+- [x] `ScrollToTop` on route change — session 19
+- [x] Toast system (`ToastProvider` + `useToast`) with sr-only + live-region support — session 19
+- [x] Shared `LoadingSpinner` / `ErrorState` / `EmptyState` components — session 19
+- [x] Castle-themed `NotFound` page — session 19
+- [x] Version bump to v0.8.0 on deploy — session 19
+
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email)
-- [ ] Performance and UX polish
-- [ ] Accessibility review
+- [ ] Replace `window.confirm` / `window.alert` usage with Toast + Modal primitives
 - [ ] Supabase security + performance advisor audit (both types, run separately)
 - [ ] Final RLS policy review across all tables
 - [ ] Enable Supabase leaked-password protection (deferred from Phase 3)
 - [ ] Auth-level ban via Edge Function / `supabase.auth.admin.updateUserById` (hardening on top of Phase 5B-1 status column)
+- [ ] Notification preferences (opt-out per type)
 
 ---
 
@@ -446,6 +463,14 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Phase 5B-2 frontend: `broadcast_notification()` RPC signature extended with `p_type` to share fan-out for events | The original 4-arg signature only emitted `admin_broadcast`. New events also need to fan out one notification per active member — same query shape, different `notification_type` value. Adding `p_type notification_type DEFAULT 'admin_broadcast'` keeps the existing call sites working (the default preserves prior behavior) and lets `notifyNewEvent` reuse the function. The old 4-arg overload was dropped after adding the 5-arg version because PostgREST otherwise can't disambiguate. Trade-off accepted: any direct DB clients pinned to the 4-arg signature need to start passing the 5th arg. |
 | 2026-04-18 | Phase 5B-2 frontend: `notifyStatusChange` fires on `active` and `suspended` only — skips `ban` + `delete` | Banned users can't log in (auth-level ban is later hardening; today the AuthContext signs them out + redirects to /login?banned=1), so a notification row would be invisible. Deleted users have no profile to receive a notification. Both cases would be silently dropped at best; clearer to skip the call entirely than to insert a row that nobody can read. |
 | 2026-04-18 | Phase 5B-2 frontend: scheduled-indicator pill computed against mount-time, not live `Date.now()` | `react-hooks/purity` flags `Date.now()` calls during render. Capturing now via `useState(() => Date.now())` once at mount + comparing in `useMemo` keeps render pure. Trade-off: a scheduled-post badge won't auto-disappear the instant the clock crosses `scheduled_at` — it disappears on the next page load / parent refetch. Acceptable for an admin-only soft indicator. |
+| 2026-04-19 | Phase 5B-3: extended existing `--color-*` tokens with dark overrides, did NOT rename to `--kk-*` | The handoff suggested renaming the whole palette to a project-prefixed namespace. That's a cosmetic change that would touch ~1000 lines across 10 CSS files and many JSX inline styles, with no functional improvement — the actual goal is dark-mode support, achieved by layering `[data-theme="dark"]` overrides on top of the existing variable names. Every color now routes through a semantic, theme-aware token. The rename can still happen later if we ever integrate with a design system that standardizes prefixes. |
+| 2026-04-19 | Phase 5B-3: system preference gated by `:not([data-theme="light"]):not([data-theme="dark"])` | `@media (prefers-color-scheme: dark)` alone would override an explicit user choice on dark-OS machines. Scoping it to the no-explicit-attribute state means the OS pref is a default, not a veto. Matches how every serious theme picker behaves (VSCode, GitHub, etc.). |
+| 2026-04-19 | Phase 5B-3: overlay lives on `.app-shell`, not a new `.app-layout` wrapper | The project already has `.app-shell` as the top-level wrapper around nav/main/footer. Reusing it as the overlay host avoids introducing another DOM layer and keeps nav + footer with their natural styles. One less abstraction, same visual result. |
+| 2026-04-19 | Phase 5B-3: mobile `background-attachment: scroll` override under 768px | Fixed-attachment backgrounds cause scroll jitter on iOS Safari and trigger expensive GPU repaints on mid-range Android. `scroll` loses the parallax-ish "frame" effect on mobile but is what the vast majority of production sites use (web.dev recommends it). Desktop keeps `fixed` for the intended framing. |
+| 2026-04-19 | Phase 5B-3: inline theme-flash prevention script before React boots | Waiting for React to mount + AuthContext to load + profile fetch to complete before applying `data-theme` would flash light → dark for dark-mode users on every cold load. A 6-line inline `<script>` in `<head>` reading `localStorage.kk-theme` fixes this at zero cost (the only state that matters for the flash is the persisted preference, not the authoritative profile row). The profile fetch later reconciles if the user's stored theme on the server differs from localStorage (unlikely but handled). |
+| 2026-04-19 | Phase 5B-3: favicon stayed `favicon.svg` — no PNG logo exists in the repo | The handoff asked for a PNG derived from `ketokeeplogo.png`. That file doesn't exist in the repo and I'm not going to invent one. Kept the existing SVG, added a matching `apple-touch-icon` entry for iOS home-screen use. If a PNG version is later desired, drop it in `public/favicon.png` and swap the two links in `index.html`. |
+| 2026-04-19 | Phase 5B-3: Toast system split across `toastContext.js` (context + hook) and `Toast.jsx` (provider component) | `react-refresh/only-export-components` requires a module to export components *or* non-components, not both. Without the split, Vite's Fast Refresh reload cycle would fail. The context + hook live in a `.js` file with no JSX; the provider + toast item components live in `Toast.jsx`. This is the idiomatic pattern for React contexts in Vite-based projects. |
+| 2026-04-19 | Phase 5B-3: Modal focus trap uses `document.activeElement` capture + querySelector-based Tab wrapping, no library | Bringing in `focus-trap-react` or similar would be a 2 KB dep for ~20 lines of custom logic. A `setTimeout(0)` initial-focus + a Tab/Shift-Tab handler that queries focusables and wraps at the boundaries covers the WCAG 2.1 requirement. Return-focus-on-close restores `document.activeElement` captured at open-time. |
 
 ---
 
@@ -496,15 +521,65 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5B-2 — frontend deployed v0.7.0
-**Last Updated:** 2026-04-18 (Session 18)
-**Frontend Version:** v0.7.0 — Phase 5B-2 frontend deployed on Cloudflare Workers. Adds `NotificationBell` in the navbar (60s unread-count poll, dropdown with up to 20 most recent notifications, mark-all-read + click-to-navigate, per-type emoji icons, optimistic mark-read on click); `PostComposer` admin-only broadcast toggle (calls `broadcast_notification()` RPC with `p_type = 'admin_broadcast'` after insert and surfaces "Broadcast sent to {n} members") + schedule-for-later `datetime-local` picker (defaults to +1h, validates future-only); "Last broadcast: {relative}" indicator on the composer; `SpaceView` non-admin feed query gates `scheduled_at` futures; `PostCard` shows subtle 📢 broadcast and 🕒 scheduled indicators. Application-level notification inserts wired into ReplySection (post + comment replies), EmojiReactionBar via PostCard / ReplySection, AwardBadgeModal, ManageMemberModal (suspend / reinstate only), and EventFormModal (create only) — all fire-and-forget via `src/lib/notificationHelpers.js`.
-**Supabase Schema:** v5B2 — migration `phase5b2_notifications_broadcasts_scheduled` applied (session 17). Session 18 follow-on: `broadcast_notification()` signature extended to 5 args (added `p_type notification_type DEFAULT 'admin_broadcast'`); old 4-arg overload dropped to avoid PostgREST ambiguity. Notifications table + indexes + RLS unchanged from session 17.
-**Status:** Phase 5B-2 shipped end-to-end. Next: pick the next Phase 5B wave (member-to-member messaging, auth-level ban hardening, polish/a11y/advisor audit, or leaked-password protection).
+**Current Phase:** Phase 5B-3 — polish, accessibility, dark mode deployed v0.8.0
+**Last Updated:** 2026-04-19 (Session 19)
+**Frontend Version:** v0.8.0 — Phase 5B-3 polish/accessibility/dark-mode wave deployed on Cloudflare Workers. Theme system: full light/dark CSS custom-property palette in `variables.css` with `[data-theme="dark"]` override block plus `@media (prefers-color-scheme: dark)` fallback for system preference; every color across the 10 stylesheet files now routes through a semantic token. Castle background images (light + dark webp) rendered on `body` with `.app-shell` overlay tint; inline theme-flash prevention script in `index.html` reads `localStorage.kk-theme` before React boots. `ThemeToggle` in navbar cycles system → light → dark with sun/moon/monitor glyph and aria-label reflecting current state. `AuthContext` extended with `setTheme(theme)` that persists to `profiles.theme_preference` + `localStorage`, and the allow-list in `updateProfile` grew to include `theme_preference`. Accessibility: skip-to-main-content link in `Layout`, focus trap + `aria-labelledby` in shared `Modal`, `sr-only` utility class. UX polish: `usePageTitle(title)` hook applied to all 19 pages (format: "Title · The Keto Keep"), `ScrollToTop` component on route change, `Toast` system (`ToastProvider` + `useToast` hook), shared `LoadingSpinner` / `ErrorState` / `EmptyState` components, castle-themed `NotFound` page.
+**Supabase Schema:** v5B3 — `profiles.theme_preference text not null default 'system' check (theme_preference in ('light','dark','system'))` column added via Supabase MCP execute_sql. Advisors clean (only pre-existing warnings: `auth_leaked_password_protection` WARN deferred by design; `unused_index` INFO entries). No migration file generated — change is additive and applied directly.
+**Status:** Phase 5B-3 shipped end-to-end at v0.8.0. Next: pick the next Phase 5B wave (member-to-member messaging, auth-level ban hardening, leaked-password protection, or jump to Phase 5C).
 
 ---
 
 ## SESSION LOG
+
+### Session 19 — 2026-04-19 (Claude Code — Phase 5B-3 polish / a11y / dark mode / background images deployed v0.8.0)
+**Goal:** Ship the polish, accessibility, and dark-mode pass as v0.8.0. No new features — refinement of everything built in Phases 1–5B-2. Apply a single schema change (`profiles.theme_preference`), build a CSS custom-property theme system with light/dark palettes, place castle background images with overlay, add a navbar theme toggle, do a systematic a11y pass (skip link, focus trap, ARIA), and layer UX polish (page titles, scroll-to-top, toast system, shared loading/error/empty states, castle-themed 404).
+
+**What was done:**
+- **Schema (Supabase MCP execute_sql):** `alter table public.profiles add column theme_preference text not null default 'system' check (theme_preference in ('light','dark','system'));` Ran `get_advisors` for both `security` and `performance`. Security advisors: only `auth_leaked_password_protection` WARN (pre-existing, deferred by design — dashboard toggle). Performance advisors: `unused_index` INFO entries for indexes that haven't been queried yet (expected — many partial indexes are only used when admin filters or scheduled posts are accessed). No new findings introduced. No migration file generated — change is additive and applied directly.
+- **Theme system (`src/styles/variables.css` rewritten):** extended the existing `:root` palette with a full parallel `[data-theme="dark"]` block + `@media (prefers-color-scheme: dark)` fallback gated by `:root:not([data-theme="light"]):not([data-theme="dark"])` so the OS preference only applies when the user hasn't explicitly chosen a theme. Added many new semantic tokens: `--bg-page`, `--bg-image`, `--bg-overlay`, `--nav-bg`, `--color-pinned-tint`, `--color-live-tint`, `--tint-{live-call,workshop,coaching,qa}-{bg,text,border}`, `--diet-{keto,carnivore,paleo,low-carb,ancestral,exploring}-{bg,text,border}`, `--status-{green,amber,red}-{bg,text}`, `--notif-unread-bg`, `--notif-scheduled-{bg,border,text}`, `--notif-info-bg`, `--composer-admin-{bg,border}`, `--focus-ring`, `--ghost-hover-bg`, `--ghost-hover-bg-soft`, `--avatar-overlay{,-strong,-stronger}`, `--video-placeholder`, `--tag-on-color-{text,shadow}`, `--tag-swatch-ring`, `--color-error-{hover,soft-bg}`, `--color-form-{error,success}-{bg,border}`, `--color-modal-backdrop`, `--color-ink-faint`, `--color-surface-alt`. Dark theme uses warm charcoal (`#1a1a2e` base, `#242440` cards) with preserved warm accents so the Keep vibe survives the mode swap.
+- **CSS conversion across 10 stylesheets:** `base.css`, `layout.css`, `components.css`, `forums.css`, `events.css`, `courses.css`, `profiles.css`, `members.css`, `notifications.css` — every hardcoded hex / rgba fallback converted to a semantic token. Key substitutions: `.post-card.pinned` → `--color-pinned-tint`; `.event-card-live` → `--color-live-tint`; all 4 `.event-type-*` classes → `--tint-{live_call,workshop,coaching,qa}-*`; `.youtube-embed-placeholder` → `--video-placeholder`; `.modal-backdrop` → `--color-modal-backdrop`; all 6 `.dietary-tag-*` → `--diet-*-*`; `.my-why-section` gradient uses `color-mix(in srgb, var(--color-parchment/sand) N%, transparent)` so it re-tints per theme; `.admin-tag-badge` → `--tag-on-color-{text,shadow}`; 3 status pills → `--status-{green,amber,red}-{bg,text}`; `.notif-bell-badge` → `--color-error` + `--color-cream`; `.scheduled-indicator` → `--notif-scheduled-{bg,border,text}`; `.post-composer-admin` → `--composer-admin-{bg,border}`; `.post-composer-info` → `--notif-info-bg`; every `var(--color-ink-faint, #xxx)` fallback → bare `var(--color-ink-faint)` (now always defined).
+- **Background images:** `bg-light-castle.webp` + `bg-dark-castle.webp` copied into `public/` so Vite serves them at `/bg-*.webp`. `base.css` body now uses `background-image: var(--bg-image); background-size: cover; background-attachment: fixed;` with a mobile override `@media (max-width: 768px) { body { background-attachment: scroll; } }` for iOS perf. `.app-shell` carries `background-color: var(--bg-overlay)` for the translucent parchment/charcoal tint over the image. `.lesson-view-wrapper` (courses) uses a clean `--color-cream` backdrop so video surfaces stay readable.
+- **Flash prevention:** inline `<script>` in `index.html` reads `localStorage.getItem('kk-theme')` and sets `document.documentElement.setAttribute('data-theme', t)` before React mounts. Prevents a light → dark flash for dark-mode users on cold load.
+- **ThemeToggle (`src/components/ui/ThemeToggle.jsx`):** circular icon button with sun/moon/monitor SVG per state. Cycles `system → light → dark → system`. `aria-label="Switch theme — current: {label}"`. Styled via `.theme-toggle` in `components.css` to match the notification bell (same 36px circle, same hover treatment). Mounted in `Navbar.jsx` both for authenticated (next to the bell) and unauthenticated (before the Join button) users.
+- **AuthContext (`src/contexts/AuthContext.jsx`):** added module-level `applyTheme(theme)` helper that sets/removes `data-theme` on `<html>` and persists `kk-theme` to localStorage (remove on `system`). `fetchProfile` calls `applyTheme(data.theme_preference)` on successful load so the user's stored preference wins over localStorage. `updateProfile` allow-list gained `theme_preference`. New `setTheme(theme)` callback validates the input, applies immediately (DOM + localStorage), and for authenticated users UPDATEs `profiles.theme_preference` and syncs the returned row back to state. Exposed in the context value.
+- **Accessibility:**
+  - `Layout.jsx` — first child is `<a href="#main-content" className="skip-link">Skip to main content</a>`; `<main>` gained `id="main-content"` and `tabIndex={-1}` so the skip target is programmatically focusable. Skip-link styled as position-absolute off-screen until `:focus` brings it in at top-left (parchment background, green outline).
+  - Shared `Modal.jsx` — full focus trap: remembers `document.activeElement` on open, focuses the first visible focusable after mount, wraps Tab/Shift+Tab inside the dialog, restores focus to the opener on close. Escape close preserved. `aria-modal="true"` + `aria-labelledby={titleId}` (via `useId()`) on the inner dialog; backdrop no longer carries the dialog role.
+  - `sr-only` utility class in `components.css` for screen-reader-only text.
+- **UX polish:**
+  - `usePageTitle(title)` hook in `src/lib/usePageTitle.js` — sets `document.title = '{title} · The Keto Keep'` (or just the base when called with no arg). Applied to all 19 page components.
+  - `ScrollToTop` component in `src/components/ScrollToTop.jsx` — scrolls to `(0,0)` on every `pathname` change. Mounted inside `<BrowserRouter>` in `App.jsx`.
+  - Toast system: `src/components/ui/toastContext.js` (context + `useToast()` hook) and `src/components/ui/Toast.jsx` (`ToastProvider` — split across two files to satisfy `react-refresh/only-export-components`). Provider holds a stack, `show(msg, {tone, duration})` + `success` / `error` / `info` / `dismiss` shortcuts, auto-dismiss after 4s by default. Renders a `.toast-stack` at the bottom-right with `role="region" aria-live="polite"` plus per-toast `role="alert"` for errors / `role="status"` otherwise. Escape dismisses the focused toast. Styled with per-tone left-border accents (`--color-green` / `--color-error` / `--color-amber`). Mounted via `<ToastProvider>` in `App.jsx` around `<Routes>`.
+  - Shared `LoadingSpinner` (role="status" + sr-only label), `ErrorState` (role="alert" + optional retry button), `EmptyState` (icon + title + message + action slot) components in `src/components/ui/`. Styles added to `components.css`.
+  - Castle-themed `NotFound` page with a shield/castle SVG, "This keep is empty" headline, and a "Return home" button. Uses `usePageTitle('Page not found')`.
+- **Lint:** clean after splitting `useToast` out of `Toast.jsx` (react-refresh/only-export-components) and collapsing `catch (e)` to `catch` in the localStorage try/catch (no-unused-vars).
+- **Build:** `npm run build` — 91.87 kB CSS gzipped 14.43 kB; 615.64 kB JS gzipped 170.82 kB. Zero errors.
+- **Version:** `package.json` 0.7.0 → 0.8.0.
+- **Commit:** `fe236b0` "Phase 5B-3: polish, accessibility, dark mode, background images (v0.8.0)" pushed to `main`. Cloudflare Workers auto-deploy picked up the build. Live HTML confirmed served at `https://keto-keep.rance-8c6.workers.dev/` with the inline theme-flash script + bg-castle images + v0.8.0 assets.
+
+**Decisions made:**
+- **Kept existing `--color-*` names; layered dark-theme overrides on top rather than renaming to `--kk-*`.** The handoff's rename was a nice-to-have; a sweeping rename across 10 CSS files and many JSX inline styles was pure risk with no functional delta. Every color now routes through a semantic token that respects the theme, which is the actual goal.
+- **Overlay sits on `.app-shell`, not a new `.app-layout`.** The codebase already had `.app-shell` as the top-level wrapper around nav/main/footer. Putting the overlay there lets nav + footer keep their natural translucent/solid styles without adding a container layer.
+- **System preference only applies when the user hasn't explicitly chosen.** The `@media (prefers-color-scheme: dark)` block is scoped to `:root:not([data-theme="light"]):not([data-theme="dark"])`. An explicit "Light" pick from a user on a dark-OS machine wins, as expected.
+- **Favicon remained `favicon.svg`, not `ketokeeplogo.png`.** The handoff suggested converting a PNG logo, but no PNG logo exists in the repo. Kept the existing SVG; added an `apple-touch-icon` entry pointing at the same SVG for iOS home-screen use.
+- **Mobile `background-attachment: scroll`.** Fixed backgrounds on iOS cause scroll jitter and, on some devices, force a GPU upscale that kills perf. Switching to `scroll` under 768px is the widely accepted fix and keeps the visual intent (castle in the background) on desktop.
+- **Toast system split across two files.** `react-refresh/only-export-components` forbids exporting both a component and a non-component (hook) from the same file. Keeping `ToastContext` + `useToast` in `toastContext.js` and the `ToastProvider` component in `Toast.jsx` lets Fast Refresh work cleanly during dev.
+
+**Next Session Handoff:**
+- Phase 5B-3 is shipped end-to-end at v0.8.0. Rance should smoke-test:
+  1. Land as an unauthenticated visitor → castle background visible; toggle theme in navbar → light/dark/system cycle works; reload → theme persists via localStorage (no flash).
+  2. Log in → if you previously picked a theme while signed-in, it's loaded from `profiles.theme_preference`; toggling now UPSERTs the row.
+  3. Open any modal (badge award, manage member, event form) → Escape closes; Tab cycles inside; focus returns to the opener on close; `aria-labelledby` reads the title.
+  4. Keyboard-only navigation: Tab from the top → "Skip to main content" appears → Enter skips past the nav.
+  5. Every page now shows a document title like "Dashboard · The Keto Keep"; route changes scroll to top.
+  6. Navigate to a bogus URL like `/fhqwhgads` → castle-themed NotFound page.
+- Pick the next Phase 5B wave or jump to Phase 5C in Chat before the next Code session. Candidates still on the board:
+  1. Member-to-member messaging (approach TBD — in-app DMs vs. email bridge).
+  2. Auth-level ban hardening via Edge Function calling `supabase.auth.admin.updateUserById({ ban_duration: '87600h' })`.
+  3. Enable Supabase leaked-password protection (single dashboard toggle; verify login UX unchanged).
+  4. Notification preferences (opt-out per type).
+  5. Replace `window.confirm` and `window.alert` usage with the new Toast / Modal primitives across the admin flows.
+- No blockers.
 
 ### Session 18 — 2026-04-18 (Claude Code — Phase 5B-2 frontend build + deploy v0.7.0)
 **Goal:** Build the Phase 5B-2 frontend — navbar bell + notification dropdown, admin broadcast toggle + scheduled-post picker in `PostComposer`, feed query gate for scheduled posts, application-level notification inserts across reply / reaction / badge / status-change / new-event handlers — and ship as v0.7.0.

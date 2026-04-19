@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-18 (Session 17 — Phase 5B-2 schema applied)
+> **Canonical version date:** 2026-04-18 (Session 18 — Phase 5B-2 frontend deployed v0.7.0)
 
 ---
 
@@ -80,9 +80,9 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.6.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 16 — Phase 5B-1 frontend (Directory + Admin Tags + Member Management) |
-| Supabase schema | v5B2 (Phase 5B-2 applied) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 17 — Phase 5B-2 schema applied: notifications, broadcasts, scheduled posts |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 17 — Phase 5B-2 schema applied |
+| Frontend app | v0.7.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 18 — Phase 5B-2 frontend (notifications, broadcasts, scheduled posts) |
+| Supabase schema | v5B2 (Phase 5B-2 applied + broadcast_notification p_type) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 18 — `broadcast_notification()` extended with p_type param (admin_broadcast / new_event) |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 18 — Phase 5B-2 frontend deployed v0.7.0 |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 | Phase 5A schema draft | APPLIED (reference copy) | `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` | session 13 — matches applied migration (incl. FK cover indexes) |
@@ -337,11 +337,13 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Draft schema: `notification_type` enum (7 values), `notifications` table (9 columns, RLS enabled), 3 indexes on notifications, 4 permissive + 1 restrictive RLS policies on notifications; `forum_posts` +`is_broadcast` + `scheduled_at` columns; 2 partial indexes on forum_posts; `broadcast_notification()` + `mark_all_notifications_read()` SECURITY DEFINER functions → `Project Reference/PHASE5B2_SCHEMA_DRAFT.sql`
 - [x] Applied migration `phase5b2_notifications_broadcasts_scheduled` (session 17, 2026-04-18)
 - [x] Ran security + performance advisors. Security: only pre-existing `auth_leaked_password_protection` WARN. Performance: zero `auth_rls_initplan`, zero `unindexed_foreign_keys` (actor_id FK cover index included in draft). Remaining `unused_index` INFOs all expected on fresh indexes.
-- [ ] Frontend: navbar bell icon + unread count badge + notification dropdown
-- [ ] Frontend: post composer admin broadcast toggle + scheduled datetime picker
-- [ ] Frontend: feed query update — filter out future scheduled posts for non-admins
-- [ ] Frontend: admin scheduled post indicator on feed cards
-- [ ] Version bump to v0.7.0 on deploy
+- [x] Frontend: navbar bell icon + unread count badge + notification dropdown — session 18 (`NotificationBell` mounted in `Navbar`, 60s `setInterval` poll on the partial unread index, click-outside + Escape dismiss, per-type icon glyphs from `notificationHelpers.NOTIFICATION_ICONS`, mark-all-read via `mark_all_notifications_read()` RPC, individual mark-read on click via UPDATE)
+- [x] Frontend: post composer admin broadcast toggle + scheduled datetime picker — session 18 (admin-only block under post body; broadcast toggle calls `broadcast_notification()` RPC after insert and surfaces "Broadcast sent to {n} members" inline; schedule toggle reveals `datetime-local` input that defaults to +1h and converts to ISO via `eventHelpers.localInputToIso`; "Last broadcast: {relative}" indicator queries the most recent `is_broadcast=true` row on expand)
+- [x] Frontend: feed query update — non-admin SpaceView appends `.or('scheduled_at.is.null,scheduled_at.lte.{now}')` on both `loadPage` and `refresh`; admins skip the filter — session 18
+- [x] Frontend: admin scheduled post indicator on feed cards — session 18 (`scheduled-indicator` pill with clock + locale timestamp; `broadcast-indicator` pill with megaphone for `is_broadcast` posts; future-scheduled check uses `useState(() => Date.now())` + `useMemo` to keep render pure under `react-hooks/purity`)
+- [x] Application-level notification inserts — session 18 (`src/lib/notificationHelpers.js`: `notifyReplyToPost`, `notifyReplyToComment`, `notifyReaction`, `notifyBadgeAwarded`, `notifyStatusChange`, `notifyNewEvent`. Wired into ReplySection (top-level + nested replies), EmojiReactionBar via PostCard / ReplySection, AwardBadgeModal, ManageMemberModal (suspend / reinstate only — skips ban + delete), EventFormModal (create only). Helpers are fire-and-forget, skip self-notifications, swallow errors)
+- [x] `broadcast_notification()` schema follow-on: extended signature with `p_type notification_type DEFAULT 'admin_broadcast'` so the same SECURITY DEFINER fan-out handles `admin_broadcast` AND `new_event`. Old 4-arg overload dropped to avoid PostgREST ambiguity — session 18
+- [x] Version bump to v0.7.0 on deploy — session 18
 
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email)
@@ -437,6 +439,13 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Phase 5B-2: `broadcast_notification()` is SECURITY DEFINER with internal admin guard | Broadcasting requires inserting one row per active member — crossing user ownership boundaries that normal RLS would block. SECURITY DEFINER is the established project pattern for this class of cross-user operation (same as `set_member_status`, `delete_member`). The function checks `is_admin()` internally and raises an exception for non-admins, so the privilege escalation is narrowly scoped. |
 | 2026-04-18 | Phase 5B-2: `mark_all_notifications_read()` is SECURITY DEFINER | The `notifications_update_own` RLS policy already allows users to update their own notifications, but the function takes a single-round-trip UPDATE for all unread rows instead of requiring the frontend to enumerate IDs. SECURITY DEFINER keeps the implementation simple and consistent with the helper-function pattern in this project. |
 | 2026-04-18 | Phase 5B-2: broadcast + scheduled as application-level gates, not RLS | Only admins should set `is_broadcast = true` or a future `scheduled_at`. The existing `forum_posts` INSERT policy already restricts to authenticated users. Admin-only broadcast is enforced at the UI layer (broadcast toggle only visible to admins) and by `broadcast_notification()` checking `is_admin()`. Adding an RLS constraint on `is_broadcast` would complicate the existing permissive policy without meaningful security gain — if someone crafts a direct API call to set `is_broadcast`, the worst outcome is a post flagged as a broadcast with no recipients (the function is what fans out the notifications). Same reasoning for `scheduled_at`. |
+| 2026-04-18 | Phase 5B-2 frontend: 60-second polling for unread notification count, no Realtime subscription | Realtime would require a Supabase channel per logged-in client and a corresponding pricing/connection-budget conversation. At small community scale a `setInterval(..., 60_000)` against the partial `notifications_user_unread_idx` is cheap (single COUNT, head-only request) and avoids the operational surface of WebSocket connections. Full notification list only fetches when the dropdown opens. Easy to swap for Realtime later if the bell becomes a focal point of the UX. |
+| 2026-04-18 | Phase 5B-2 frontend: notification helpers are fire-and-forget, no UI blocking on failure | A failed notification insert should never prevent the primary action (reply, reaction, badge award, status change, event create) from succeeding. `safeInsert()` wraps each insert in try/catch + console.error and returns nothing. Callers do not `await` the helper — they call it like a side-effect and continue. Cost of a missed notification is trivial; cost of blocking a user's reply on a notification failure is real. |
+| 2026-04-18 | Phase 5B-2 frontend: per-type icon glyph map (no per-row actor avatar) | Notifications surface in a 360-px dropdown. A 28-px emoji icon (`💬 ❤️ 🏅 📅 ⚠️ 📢`) communicates type at a glance without the layout cost of an avatar fetch and the privacy of a private-bucket image fetch. Reaction notifications show the actual reacted emoji when present in `body`. Avatars can be added later if member-ID is the more interesting signal than event-type. |
+| 2026-04-18 | Phase 5B-2 frontend: broadcast + schedule controls live inline in `PostComposer`, not a separate admin composer | Admins still need every regular composer affordance (title, body, image, preview). Forking `PostComposer` into a `BroadcastComposer` would duplicate ~80% of the file. Instead the existing component conditionally renders an admin-only block under the body that holds both the broadcast toggle and the schedule toggle/picker. Toggles default off so the admin's normal-post path is unchanged. |
+| 2026-04-18 | Phase 5B-2 frontend: `broadcast_notification()` RPC signature extended with `p_type` to share fan-out for events | The original 4-arg signature only emitted `admin_broadcast`. New events also need to fan out one notification per active member — same query shape, different `notification_type` value. Adding `p_type notification_type DEFAULT 'admin_broadcast'` keeps the existing call sites working (the default preserves prior behavior) and lets `notifyNewEvent` reuse the function. The old 4-arg overload was dropped after adding the 5-arg version because PostgREST otherwise can't disambiguate. Trade-off accepted: any direct DB clients pinned to the 4-arg signature need to start passing the 5th arg. |
+| 2026-04-18 | Phase 5B-2 frontend: `notifyStatusChange` fires on `active` and `suspended` only — skips `ban` + `delete` | Banned users can't log in (auth-level ban is later hardening; today the AuthContext signs them out + redirects to /login?banned=1), so a notification row would be invisible. Deleted users have no profile to receive a notification. Both cases would be silently dropped at best; clearer to skip the call entirely than to insert a row that nobody can read. |
+| 2026-04-18 | Phase 5B-2 frontend: scheduled-indicator pill computed against mount-time, not live `Date.now()` | `react-hooks/purity` flags `Date.now()` calls during render. Capturing now via `useState(() => Date.now())` once at mount + comparing in `useMemo` keeps render pure. Trade-off: a scheduled-post badge won't auto-disappear the instant the clock crosses `scheduled_at` — it disappears on the next page load / parent refetch. Acceptable for an admin-only soft indicator. |
 
 ---
 
@@ -487,15 +496,64 @@ The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5B-2 — schema applied; frontend next
-**Last Updated:** 2026-04-18 (Session 17)
-**Frontend Version:** v0.6.0 — Phase 5B-1 frontend deployed on Cloudflare Workers. Adds `/members` directory with search + dietary/journey/state/interest-tag filters; admin overlays for status + internal-tag filters and per-card admin-tag chips; `ManageMemberModal` (suspend/unsuspend/ban/unban/delete) + `AssignAdminTagModal` wired to `set_member_status` / `delete_member` RPCs; `/admin` hub + `/admin/admin-tags` internal-tag CRUD with color picker; Navbar admin dropdown replacing the static badge; SuspendedBanner + write-attempt guards on PostComposer, ReplyComposer, RsvpControls, LessonView Mark-Complete, and Profile edit route; AuthContext banned → signOut + `/login?banned=1`, suspended → `isSuspended` flag.
-**Supabase Schema:** v5B2 — migration `phase5b2_notifications_broadcasts_scheduled` applied. Adds `notification_type` enum (7 values); `notifications` table (9 columns) with RLS enabled (4 permissive + 1 restrictive policy); 3 indexes on notifications; `forum_posts.is_broadcast` + `forum_posts.scheduled_at` columns with 2 partial indexes; `broadcast_notification()` + `mark_all_notifications_read()` SECURITY DEFINER functions. Advisors clean: security — only pre-existing `auth_leaked_password_protection` WARN; performance — zero `auth_rls_initplan`, zero `unindexed_foreign_keys`.
-**Status:** Phase 5B-2 schema complete. Next: Phase 5B-2 frontend (navbar bell + notification dropdown, broadcast toggle in post composer, scheduled post picker, feed filter for non-admins).
+**Current Phase:** Phase 5B-2 — frontend deployed v0.7.0
+**Last Updated:** 2026-04-18 (Session 18)
+**Frontend Version:** v0.7.0 — Phase 5B-2 frontend deployed on Cloudflare Workers. Adds `NotificationBell` in the navbar (60s unread-count poll, dropdown with up to 20 most recent notifications, mark-all-read + click-to-navigate, per-type emoji icons, optimistic mark-read on click); `PostComposer` admin-only broadcast toggle (calls `broadcast_notification()` RPC with `p_type = 'admin_broadcast'` after insert and surfaces "Broadcast sent to {n} members") + schedule-for-later `datetime-local` picker (defaults to +1h, validates future-only); "Last broadcast: {relative}" indicator on the composer; `SpaceView` non-admin feed query gates `scheduled_at` futures; `PostCard` shows subtle 📢 broadcast and 🕒 scheduled indicators. Application-level notification inserts wired into ReplySection (post + comment replies), EmojiReactionBar via PostCard / ReplySection, AwardBadgeModal, ManageMemberModal (suspend / reinstate only), and EventFormModal (create only) — all fire-and-forget via `src/lib/notificationHelpers.js`.
+**Supabase Schema:** v5B2 — migration `phase5b2_notifications_broadcasts_scheduled` applied (session 17). Session 18 follow-on: `broadcast_notification()` signature extended to 5 args (added `p_type notification_type DEFAULT 'admin_broadcast'`); old 4-arg overload dropped to avoid PostgREST ambiguity. Notifications table + indexes + RLS unchanged from session 17.
+**Status:** Phase 5B-2 shipped end-to-end. Next: pick the next Phase 5B wave (member-to-member messaging, auth-level ban hardening, polish/a11y/advisor audit, or leaked-password protection).
 
 ---
 
 ## SESSION LOG
+
+### Session 18 — 2026-04-18 (Claude Code — Phase 5B-2 frontend build + deploy v0.7.0)
+**Goal:** Build the Phase 5B-2 frontend — navbar bell + notification dropdown, admin broadcast toggle + scheduled-post picker in `PostComposer`, feed query gate for scheduled posts, application-level notification inserts across reply / reaction / badge / status-change / new-event handlers — and ship as v0.7.0.
+
+**What was done:**
+- Schema follow-on via Supabase MCP `execute_sql`: re-created `public.broadcast_notification()` with a 5-arg signature (added `p_type notification_type DEFAULT 'admin_broadcast'`) so the same SECURITY DEFINER fan-out can emit `admin_broadcast` AND `new_event` notifications. Dropped the old 4-arg overload to avoid PostgREST ambiguity. Verified with `select proname, pronargs from pg_proc where proname = 'broadcast_notification';` → single row, pronargs = 5.
+- New `src/lib/notificationHelpers.js`: `safeInsert()` wrapper + six fire-and-forget helpers — `notifyReplyToPost`, `notifyReplyToComment`, `notifyReaction`, `notifyBadgeAwarded`, `notifyStatusChange`, `notifyNewEvent`. Each helper skips when `actorId === recipientId`, swallows errors with `console.error`, and is called WITHOUT `await` so the primary action never blocks. Plus `NOTIFICATION_ICONS` map + `notificationIcon(notification)` helper that returns the reaction emoji from `body` for `reaction` rows or the type-default glyph otherwise.
+- New `src/components/notifications/NotificationBell.jsx`: bell SVG button + red unread-count badge (hides at 0, caps at "99+"), 60s `setInterval` poll that calls a HEAD `count: 'exact'` query against `notifications WHERE read = false` (hits the `notifications_user_unread_idx` partial index). Click toggles a 360-px dropdown that fetches the 20 most recent notifications on open. Click-outside + Escape dismiss reuses the AdminDropdown pattern. Mark-all-read button calls `mark_all_notifications_read()` RPC. Individual rows mark-read optimistically + UPDATE on click + navigate to the row's `link`. Empty / loading states. Renders null when no `user.id`, so the polling effect never runs for unauthenticated visitors.
+- `Navbar.jsx`: imported + mounted `<NotificationBell />` between the nav links and the AdminDropdown for authenticated users.
+- `PostComposer.jsx` (substantial rewrite): added `useAuth().profile` for `isAdmin`. New admin-only block under the body — broadcast checkbox (with last-broadcast relative timestamp queried on expand) + schedule checkbox that reveals a `datetime-local` input. Schedule input defaults to +1h via `eventHelpers.isoToLocalInput`. Submit validates schedule > now, then INSERTs with `is_broadcast` + `scheduled_at` set. After a successful broadcast insert, calls `supabase.rpc('broadcast_notification', { p_post_id, p_title, p_body, p_link, p_type: 'admin_broadcast' })` and shows "Broadcast sent to {count} members" inline as `post-composer-info`. Submit button label switches to "Schedule post" when schedule toggle is on. Reset clears all admin-only state.
+- `SpaceView.jsx`: pulled in `useAuth` for `isAdmin`. Both `loadPage` and `refresh` add `q.or('scheduled_at.is.null,scheduled_at.lte.{nowIso}')` for non-admins; admins skip the filter and see all scheduled posts. `PostComposer` now receives `spaceSlug` so the broadcast notification's `link` field can deep-link to the post permalink.
+- `PostCard.jsx`: imported `notifyReaction` and added `useState(() => Date.now())` + `useMemo` to compute `scheduledFuture` (keeps render pure under `react-hooks/purity`). Added `📢 Broadcast` and `🕒 Scheduled for {locale}` pills in the meta row next to the existing `📌 Pinned` indicator. Wired `onReactionAdded` callback into `EmojiReactionBar` to fire `notifyReaction(supabase, post.author_id, user.id, emoji, permalink)` when a new reaction is added (toggles-off skip). Passed `postAuthorId`, `postTitle`, `permalink` down to `ReplySection`.
+- `EmojiReactionBar.jsx`: new `onReactionAdded(emoji)` prop fires only on insert (not delete). Cleanly threads through both PostCard (post reactions) and ReplyItem (reply reactions).
+- `ReplySection.jsx`: pulled in helpers, accepts `postAuthorId`, `postTitle`, `permalink` from PostCard. New `handleTopLevelReplyCreated` calls `notifyReplyToPost(supabase, postAuthorId, user.id, postTitle, permalink)`. New `handleNestedReplyCreated(parentAuthorId, ...)` calls `notifyReplyToComment(supabase, parentAuthorId, user.id, permalink)`. New `handleReplyReaction(replyAuthorId, emoji)` calls `notifyReaction` for reply reactions. Top-level `ReplyComposer` and `ReplyItem` `onChildReplyCreated` callbacks return the inserted row so the helpers have the data they need.
+- `ReplyItem.jsx`: new `onReactionAdded` + `onChildReplyCreated` props. Threads `onReactionAdded` to its `EmojiReactionBar`. Nested `ReplyComposer.onSubmitted` now calls `onChildReplyCreated(newReply)` if provided (else falls back to `onChanged`).
+- `AwardBadgeModal.jsx`: on successful award, looks up the badge's name from the catalog and calls `notifyBadgeAwarded(supabase, targetUserId, badgeMeta?.name, user?.id, '/profile/{targetUserId}')`.
+- `ManageMemberModal.jsx`: on `set_member_status` success with `new_status` of `active` or `suspended`, fetches the actor via `supabase.auth.getUser()` and calls `notifyStatusChange(supabase, targetUserId, newStatus, actor?.user?.id)`. Skips `banned` (user can't log in) and `delete` (account gone).
+- `EventFormModal.jsx`: on event create (not edit), calls `notifyNewEvent(supabase, data?.title, '/events/{data.id}')` which RPCs `broadcast_notification` with `p_type = 'new_event'`.
+- New `src/styles/notifications.css` imported from `styles/index.css`. Covers: bell trigger (circle button) + red badge with white outline + hover green border; 360-px dropdown with parchment header, scroll list (max 420px), per-row layout with icon column + title + relative timestamp + unread dot; bold title + green-tinted background for unread rows; broadcast/scheduled pills (subtle borders, parchment fill, amber tint for scheduled); admin composer block (dashed border, subtle background) with toggle labels and schedule input; broadcast info panel after submit.
+- Lint: zero errors after fixing two findings — `react-hooks/purity` on the `Date.now()` call in `PostCard` (refactored to `useState`/`useMemo`) and `react-hooks/set-state-in-effect` in `NotificationBell` (removed the unauthenticated reset block since the component returns null when `!user?.id`, so the effect never runs in that state).
+- Build: `npm run build` clean (610 KB JS gzipped 169 KB; CSS 79.8 KB gzipped 12.4 KB).
+- Version: `package.json` 0.6.0 → 0.7.0.
+- Committed as `6e896b0` and pushed to `main`. Cloudflare Workers auto-deploy picks up the build.
+
+**Decisions made:**
+- `broadcast_notification()` extended to 5 args with `p_type` default. Reuses the same fan-out for `admin_broadcast` (post-driven) and `new_event` (event-driven). Old 4-arg overload dropped because PostgREST can't disambiguate two functions with overlapping arg counts.
+- 60-second polling for unread count, no Realtime subscription. HEAD `count: 'exact'` against the partial unread index is cheap; no WebSocket pricing/connection budget needed at small scale. Easy to swap later.
+- Notification helpers fire-and-forget. A failed insert never blocks the primary action. Cost of a missed notification is trivial; cost of a blocked reply is real.
+- Per-type emoji icons in the dropdown, not actor avatars. 28-px glyph communicates type at a glance without a private-bucket avatar fetch per row. Reactions show the actual reacted emoji from `body` if present.
+- Broadcast + schedule controls inline in `PostComposer`, not a separate composer. Admins still need every regular composer affordance; forking would duplicate ~80% of the file. Toggles default off so the normal-post flow is unchanged.
+- `notifyStatusChange` fires only on `active` / `suspended`. Banned users can't log in and deleted users have no profile to receive notifications.
+- `scheduled_at`-future check uses mount-time `useState(() => Date.now())` + `useMemo`. Keeps render pure under `react-hooks/purity`. The badge won't auto-vanish the instant the clock crosses; refreshes on next page load. Acceptable for an admin-only soft indicator.
+
+**Next Session Handoff:**
+- Phase 5B-2 is shipped end-to-end. Rance should smoke-test:
+  1. Reply to your own post → no notification; reply as a different account → bell badge increments for the post author within 60s.
+  2. Toggle broadcast on a fresh post and submit → confirm "Broadcast sent to {n} members" appears and recipients see a 📢 entry in their bell.
+  3. Schedule a post for ~2 minutes in the future → confirm a non-admin account does not see it; wait 2 min and refresh → it appears. Admin sees it the whole time with a 🕒 pill.
+  4. Award a badge → recipient gets a 🏅 notification.
+  5. Suspend / reinstate a test account → the target gets a ⚠️ status notification.
+  6. Create a new event → all active members get a 📅 notification.
+  7. Click "Mark all read" in the dropdown → unread count drops to 0; badge hides.
+- Pick the next Phase 5B wave in Chat before the next Code session. Candidates (roughly in priority):
+  1. Member-to-member messaging (approach TBD — in-app DMs vs. email bridge).
+  2. Auth-level ban hardening via Edge Function calling `supabase.auth.admin.updateUserById({ ban_duration: '87600h' })`.
+  3. Performance / UX polish + accessibility review + Supabase advisor audit + enable leaked-password protection.
+  4. Notification preferences (opt-out per type) — natural follow-on to 5B-2 if any host wants finer control.
+- Open question still open (non-blocking): Co-Host #3 name.
+- No blockers.
 
 ### Session 17 — 2026-04-18 (Claude Code — Phase 5B-2 schema applied)
 **Goal:** Apply the Phase 5B-2 schema draft as migration `phase5b2_notifications_broadcasts_scheduled`, run both advisors, remediate any new findings, update reference file, commit + push.

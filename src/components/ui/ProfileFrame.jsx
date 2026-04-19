@@ -77,13 +77,9 @@ export default function ProfileFrame({
               width: overlaySize,
               height: overlaySize,
               maxWidth: 'none',
-              background: '#2a2a2a',
-              WebkitMaskImage: `url(/frames/frame-${slug}.png)`,
-              WebkitMaskSize: '100% 100%',
-              WebkitMaskRepeat: 'no-repeat',
-              maskImage: `url(/frames/frame-${slug}.png)`,
-              maskSize: '100% 100%',
-              maskRepeat: 'no-repeat',
+              background: 'var(--frame-backing-color, var(--color-surface))',
+              clipPath: 'polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, 16.67% 16.67%, 83.33% 16.67%, 83.33% 83.33%, 16.67% 83.33%, 16.67% 16.67%)',
+              borderRadius: '6px',
               pointerEvents: 'none',
             }}
           />

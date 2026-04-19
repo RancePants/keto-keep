@@ -223,8 +223,12 @@
   gap: var(--space-5);
   align-items: flex-start;
   margin-bottom: var(--space-5);
-  padding: var(--space-5) 0 0 var(--space-5);
+  padding: var(--space-5) 0 var(--space-4) var(--space-5);
 }
+
+.profile-top .avatar-wrap { margin-right: var(--space-4); }
+
+.profile-top + .profile-block { border-top: none; }
 
 .profile-meta {
   flex: 1;

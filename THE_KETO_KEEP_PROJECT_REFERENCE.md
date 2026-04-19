@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-19 (Session 24 — v0.11.10 deployed; custom frame PNGs baked-in backing + ProfileFrame simplification)
+> **Canonical version date:** 2026-04-19 (Session 25 — v0.12.0 deployed; landing page rewrite + forum reply count bugfix)
 
 ---
 
@@ -115,7 +115,7 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.11.10 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 24 — custom frame PNGs with baked-in backing + simplified ProfileFrame |
+| Frontend app | v0.12.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 25 — landing page rewrite (Phase 5F) + forum reply count bugfix |
 | Supabase schema | v5E (owner role, referral_codes, referrals, profiles+terms/deletion/streak/frame cols, frame_catalog, legal pages) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 22 — owner role (22a), referrals+legal+deletion (22b), streaks+frames (22c) |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
@@ -504,6 +504,19 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Removed all backing spans, clip-paths, masks, z-indexes from ProfileFrame.jsx — component is now two layers: avatar + frame overlay — session 24
 - [x] Version bump to v0.11.10 — session 24
 
+**Phase 5F — Landing Page Polish + Reply Count Bugfix** (deployed session 25, v0.12.0)
+- [x] Rewrote `src/pages/Landing.jsx` — full public landing page with 6 sections — session 25
+- [x] Created `src/styles/landing.css` — full responsive design system for landing page — session 25
+- [x] Hero: castle background + dark overlay + logo + eyebrow + title + tagline + dual CTA — session 25
+- [x] Slogan bar: amber accent "Keep Calm and Paleo / Keto / Carnivore On" — session 25
+- [x] 5 value propositions in 2×2+1 CSS grid with inline SVG icons — session 25
+- [x] Meet the Team: Justine Roberts first (coach preference), then Rance Edwards — full bios from content reference — session 25
+- [x] FAQ: 7-item accordion with useState expand/collapse, aria-expanded — session 25
+- [x] Final CTA: dark castle-tone section, signup + login links — session 25
+- [x] Fixed forum reply count "0" flash in SpaceView.jsx — hydrateMeta before setPosts/setLoading — session 25
+- [x] Added `@import './landing.css'` to `src/styles/index.css` — session 25
+- [x] Version bump to v0.12.0 — session 25
+
 **Phase 5B — Pre-launch Cleanup** (deployed session 21, v0.8.2)
 - [x] Replaced all 9 `window.confirm` / `window.alert` instances with `Modal variant="danger"` — session 21. Files changed: `AdminTags.jsx`, `AdminAdminTags.jsx`, `PostCard.jsx`, `ReplyItem.jsx`, `EventFormModal.jsx`, `CourseFormModal.jsx`, `ModuleFormModal.jsx`, `LessonFormModal.jsx`, `AwardBadgeModal.jsx`
 - [x] Supabase security + performance advisor audit — session 21. Security: only pre-existing `auth_leaked_password_protection` WARN (Pro Plan feature; accepted). Performance: 21 expected `unused_index` INFO (FK cover indexes + query indexes on low-volume fresh DB); zero `auth_rls_initplan`; zero `unindexed_foreign_keys`. No remediation needed.
@@ -692,12 +705,12 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5E complete — v0.11.10 deployed
-**Last Updated:** 2026-04-19 (Session 24)
-**Frontend Version:** v0.11.10 — All Phase 5E frame-rendering work complete. ProfileFrame is now two layers only: avatar `<span>` + frame `<img>` overlay. Nine custom frame PNGs in `public/frames/` have charcoal backing baked in (transparent center hole, decorative border with backing). No CSS masks, clip-paths, or z-index stacking anywhere in ProfileFrame. Frame overlay at 150% avatar size, offset -25% top/left, `maxWidth: 'none'` to override base.css reset. Profile page: frame aligns with name via `margin-top: 35px` on framed `.profile-frame`; avatar-wrap has `margin-right: var(--space-4)`; first `.profile-block` after `.profile-top` has no border-top. Frame picker tile gap 4px, frame-option-preview has 18px margin-bottom for overshoot clearance; large preview gets 30px margin-bottom.
-**Supabase Schema:** v5E — unchanged from session 23.
-**Session 24 — Next Session Handoff:**
-- Frame rendering is stable. No outstanding frame issues.
+**Current Phase:** Phase 5F complete — v0.12.0 deployed
+**Last Updated:** 2026-04-19 (Session 25)
+**Frontend Version:** v0.12.0 — Full landing page rewrite (Phase 5F): hero with castle background + dark overlay + logo, slogan bar, 5 value propositions in 2×2+1 grid with inline SVG icons, Justine Roberts bio card first then Rance Edwards (coach preference), 7-item FAQ accordion with useState expand/collapse, dark final CTA section. New `src/styles/landing.css` with full responsive system, mobile-first ≤768px breakpoints. Forum reply count bug fixed in SpaceView.jsx: `hydrateMeta` now awaited before `setPosts`/`setLoading` so reply counts render correctly on first load (no "0" flash). Updated logo (tkk-logo-transparent.png) and hero image (bg-full-castle.png) served from `public/`.
+**Supabase Schema:** v5E — unchanged from session 24.
+**Session 25 — Next Session Handoff:**
+- Landing page is live. Verify at keto-keep.rance-8c6.workers.dev while logged out.
 - Next candidates (decide in Chat before opening Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Supabase leaked-password toggle, Phase 5D coach listing.
 - No blockers or prerequisites for any of the above.
 
@@ -1155,6 +1168,39 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 - Domain planning (`theketokeep.com` currently on Mighty Networks)
 - Copy dated reference file: `THE_KETO_KEEP_PROJECT_REFERENCE_2026-04-19_S23.md` (first Code task — Chat can’t copy files on user filesystem)
 - No blockers. Ready to build.
+
+### Session 24 — 2026-04-19 (Claude Code — frame PNG update + ProfileFrame simplification)
+**Goal:** Replace all 9 Gemini-generated frame PNGs with custom hand-crafted versions (charcoal backing baked into PNG). Simplify ProfileFrame.jsx to two-layer component (avatar + frame overlay, no CSS hacks).
+
+**What was done:**
+- v0.11.7: clip-path evenodd backing + profile spacing fixes (avatar-wrap margin, first profile-block border-top removal, picker tile gap)
+- v0.11.8: charcoal (#2a2a2a) + evenodd clip-path + 5× stacked mask-image with maskComposite:add; profile-frame margin-top 35px for name alignment
+- v0.11.9: removed all mask properties; backing is pure #2a2a2a + evenodd clip-path; frame picker preview spacing
+- v0.11.10: replaced all 9 Gemini PNGs with Rance’s custom hand-crafted frame PNGs (charcoal backing baked in); ProfileFrame simplified to avatar span + frame img (no backing spans, clip-paths, masks, z-index). Updated logo + hero image in `public/`.
+
+**Decisions made:** Baking charcoal backing into PNG is the definitive solution — zero CSS hacks, frame artist controls exact backing shape. Two-layer ProfileFrame (avatar + overlay) is the final architecture.
+
+**Next Session Handoff:**
+- Frame rendering complete. No outstanding frame issues.
+- Next: Phase 5F landing page polish (Code session), then messaging or auth-ban.
+
+### Session 25 — 2026-04-19 (Claude Code — Phase 5F landing page + reply count bugfix)
+**Goal:** Rewrite public landing page (Phase 5F) + fix forum reply count showing "0" until clicked.
+
+**What was done:**
+- Fixed SpaceView.jsx reply count bug: moved `await hydrateMeta(rows)` before `setPosts(rows) + setLoading(false)` in the initial-load effect; added cancellation re-check after the await. Same fix in `loadMore` (hydrateMeta before setPosts). Reply counts now render correctly on first load.
+- Created `src/styles/landing.css` — full responsive design system: hero with castle bg + dark overlay, slogan bar, value prop grid (2×2+1), coach cards, FAQ accordion, final CTA section. Mobile-first ≤768px breakpoints. Dark mode aware via CSS variables.
+- Rewrote `src/pages/Landing.jsx` — 6 sections: hero (logo + tagline + dual CTA), "Keep Calm" slogan bar, 5 value props with inline SVG icons, Meet the Team (Justine first, then Rance — full 3-paragraph bios), 7-item FAQ accordion (useState), dark final CTA.
+- All copy sourced verbatim from `THE_KETO_KEEP_CONTENT_REFERENCE.md`.
+- Added `@import ‘./landing.css’` to `src/styles/index.css`.
+- Version bumped 0.11.10 → 0.12.0. Lint clean, build clean (448ms). Committed + pushed.
+
+**Decisions made:** Justine’s coach card renders first (Rance’s explicit preference — respect for co-host). Landing page sections use opaque backgrounds to cover body castle wallpaper. Hero and final CTA always dark regardless of theme mode. Inline SVG icons for value props (no emoji, no external icon lib). FAQ uses single-open accordion (null = all closed, index = open item).
+
+**Next Session Handoff:**
+- v0.12.0 is live. Verify at keto-keep.rance-8c6.workers.dev while logged out → new landing page renders.
+- Next candidates (decide in Chat): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences, Supabase leaked-password toggle.
+- No blockers.
 
 ### Session 2 — 2026-04-18
 **Goal:** Refine project reference file with lessons learned from MST project.

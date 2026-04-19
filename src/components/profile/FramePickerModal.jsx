@@ -112,6 +112,7 @@ export default function FramePickerModal({ open, onClose, profile, onChanged }) 
 
   const visibleFrames = useMemo(() => {
     return catalog.filter((f) => {
+      if (f.frame_type === 'none') return false; // hardcoded None button handles this
       if (f.unlock_method === 'admin_award') return isAdmin;
       return true;
     });

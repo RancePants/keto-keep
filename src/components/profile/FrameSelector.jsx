@@ -94,8 +94,8 @@ export default function FrameSelector({ profile, onChanged }) {
   }, []);
 
   const visibleFrames = useMemo(() => {
-    // Coach Seal only shows for admins/owners. Everyone else never sees it.
     return catalog.filter((f) => {
+      if (f.frame_type === 'none') return false;
       if (f.unlock_method === 'admin_award') return isAdmin;
       return true;
     });

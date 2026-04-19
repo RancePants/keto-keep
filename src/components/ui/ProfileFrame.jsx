@@ -56,20 +56,40 @@ export default function ProfileFrame({
       style={{ width: px, height: px, display: 'inline-block', position: 'relative', flexShrink: 0 }}
       aria-label={ariaLabel}
     >
-      {/* Avatar layer fills the container */}
+      {slug && (
+        /* Layer 1: Charcoal square behind avatar — 5% bigger than avatar,
+           centered. Fills rounded-corner gaps between photo and frame inner edge. */
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: -Math.round(px * 0.025),
+            left: -Math.round(px * 0.025),
+            width: Math.round(px * 1.05),
+            height: Math.round(px * 1.05),
+            background: '#2a2a2a',
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        />
+      )}
+
+      {/* Layer 2: Avatar — above the behind-avatar backer */}
       <span
         className="profile-frame-avatar"
-        style={{ display: 'block', width: '100%', height: '100%' }}
+        style={{ display: 'block', width: '100%', height: '100%', position: 'relative', zIndex: 1 }}
       >
         {children}
       </span>
+
       {slug && (
         <>
-          {/* Charcoal backing — masked by the frame PNG so it only fills where
-              the frame has pixels, preventing background bleed through gaps */}
-          <span
+          {/* Layer 3: Backing PNG — frame-shaped charcoal silhouette.
+              Clip-path cuts out the avatar area so photo shows through. */}
+          <img
+            src={`/frames/frame-${slug}-backing.png`}
+            alt=""
             aria-hidden="true"
-            className="frame-backing"
             style={{
               position: 'absolute',
               top: overlayOffset,
@@ -77,11 +97,13 @@ export default function ProfileFrame({
               width: overlaySize,
               height: overlaySize,
               maxWidth: 'none',
-              background: '#2a2a2a',
               clipPath: 'polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, 16.67% 16.67%, 83.33% 16.67%, 83.33% 83.33%, 16.67% 83.33%, 16.67% 16.67%)',
               pointerEvents: 'none',
+              zIndex: 2,
             }}
           />
+
+          {/* Layer 4: Frame PNG — decorative artwork on top */}
           <img
             src={`/frames/frame-${slug}.png`}
             alt=""
@@ -95,6 +117,7 @@ export default function ProfileFrame({
               height: overlaySize,
               maxWidth: 'none',
               pointerEvents: 'none',
+              zIndex: 3,
             }}
           />
         </>

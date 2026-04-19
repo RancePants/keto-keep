@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-19 (Session 19 — Phase 5B-3 polish/a11y/dark-mode deployed v0.8.0)
+> **Canonical version date:** 2026-04-19 (Session 20 — Dark mode stone palette fix deployed v0.8.1)
 
 ---
 
@@ -52,6 +52,41 @@ cd "D:\The Keto Keep"
 Include: recommended model (Opus 4.7 / Sonnet 4.6 / Haiku 4.5) + effort level (low–max).
 Separate design discussions from build sessions.
 
+### Build Plan Files (mandatory for Code sessions)
+
+**Problem this solves:** Large Code sessions hit context limits and trigger compaction. When that happens, Claude Code loses earlier context and may forget what's done, re-do work, or skip tasks. The build plan file is the safety net.
+
+**How it works:**
+
+1. **Chat creates the build plan.** Before every Code handoff, Chat writes a `CURRENT_BUILD_PLAN.md` file to `D:\The Keto Keep\`. This file contains every task for the session as a granular checkbox list, organized by section, with enough detail that Code can pick up any task cold — without needing to remember earlier context.
+
+2. **Code reads it first.** The Code handoff instructions must tell Code to read `CURRENT_BUILD_PLAN.md` at the very start of the session, before doing anything else.
+
+3. **Code checks off tasks as it goes.** After completing each task (or small group of related tasks), Code updates the checkbox from `[ ]` to `[x]` and adds any inline notes (filenames created, decisions made, issues encountered).
+
+4. **Code re-reads after compaction.** The Code handoff instructions must explicitly state: "After ANY compaction event, immediately re-read `CURRENT_BUILD_PLAN.md` to know exactly where you left off. Do NOT rely on memory."
+
+5. **Completed items stay.** Never delete checked-off items — they serve as a record of what's done and prevent re-doing work.
+
+6. **Session end.** At session end, the build plan should be fully checked off. It gets archived alongside the dated reference file copy (rename to `PHASE{X}_BUILD_PLAN_COMPLETED.md` in `Project Reference/`).
+
+**Build plan format rules:**
+- Every task is a checkbox: `- [ ] Task description`
+- Group tasks under clear `##` section headers matching the handoff structure
+- Include enough context per task that Code can execute it without the handoff text (file paths, function names, SQL statements, expected outcomes)
+- Add dependency notes where order matters: `(depends on 1A)` or `(after theme.css is created)`
+- Pre-build steps (schema changes, asset copies) come first
+- Verification/testing steps come last
+
+**Code handoff template addition:**
+Every Code handoff must now include this block:
+```
+COMPACTION SAFETY: Read `CURRENT_BUILD_PLAN.md` at session start.
+Check off tasks as you complete them. After ANY compaction, re-read
+the file immediately — it is your source of truth for what's done
+vs. what remains.
+```
+
 ---
 
 ## PROJECT OVERVIEW
@@ -80,9 +115,9 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.8.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 19 — Phase 5B-3 polish / accessibility / dark-mode / background images |
+| Frontend app | v0.8.1 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 20 — dark mode stone palette fix (replaced purple/indigo surfaces with warm charcoal/stone) |
 | Supabase schema | v5B3 (profiles.theme_preference column) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 19 — added `theme_preference text not null default 'system' check (theme_preference in ('light','dark','system'))` to profiles |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 19 — Phase 5B-3 deployed v0.8.0 |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 20 — v0.8.1 dark mode palette fix |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 | Phase 5A schema draft | APPLIED (reference copy) | `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` | session 13 — matches applied migration (incl. FK cover indexes) |
@@ -362,6 +397,11 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Castle-themed `NotFound` page — session 19
 - [x] Version bump to v0.8.0 on deploy — session 19
 
+**Phase 5B-3 patch — Dark Mode Stone Palette** (deployed session 20, v0.8.1)
+- [x] Replaced all purple/blue-undertone dark surface colors with warm charcoal/stone equivalents in `src/styles/variables.css` — session 20 (both `[data-theme="dark"]` and `@media prefers-color-scheme: dark` blocks updated identically)
+- [x] Q&A event type tint shifted from purple (`#2f2440` bg) to cool blue-grey stone (`#262a2e`) — session 20
+- [x] Version bump to v0.8.1 on deploy — session 20
+
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email)
 - [ ] Replace `window.confirm` / `window.alert` usage with Toast + Modal primitives
@@ -471,6 +511,7 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-19 | Phase 5B-3: favicon stayed `favicon.svg` — no PNG logo exists in the repo | The handoff asked for a PNG derived from `ketokeeplogo.png`. That file doesn't exist in the repo and I'm not going to invent one. Kept the existing SVG, added a matching `apple-touch-icon` entry for iOS home-screen use. If a PNG version is later desired, drop it in `public/favicon.png` and swap the two links in `index.html`. |
 | 2026-04-19 | Phase 5B-3: Toast system split across `toastContext.js` (context + hook) and `Toast.jsx` (provider component) | `react-refresh/only-export-components` requires a module to export components *or* non-components, not both. Without the split, Vite's Fast Refresh reload cycle would fail. The context + hook live in a `.js` file with no JSX; the provider + toast item components live in `Toast.jsx`. This is the idiomatic pattern for React contexts in Vite-based projects. |
 | 2026-04-19 | Phase 5B-3: Modal focus trap uses `document.activeElement` capture + querySelector-based Tab wrapping, no library | Bringing in `focus-trap-react` or similar would be a 2 KB dep for ~20 lines of custom logic. A `setTimeout(0)` initial-focus + a Tab/Shift-Tab handler that queries focusables and wraps at the boundaries covers the WCAG 2.1 requirement. Return-focus-on-close restores `document.activeElement` captured at open-time. |
+| 2026-04-19 | Session 20: dark mode surfaces shifted from blue/purple undertone to warm charcoal/stone | Every dark-mode surface color in v0.8.0 had a blue channel 15–30 points higher than R/G (e.g. `#1a1a2e`, `#252540`, `#0e0e1c`), giving a sci-fi purple look inconsistent with the castle theme. All 13 surface/background tokens were remapped so blue ≤ R/G with a slight warm (brown/amber) undertone. Q&A tint shifted to cool blue-grey stone to stay differentiated. Both `[data-theme="dark"]` and the `@media (prefers-color-scheme: dark)` fallback blocks updated identically. CSS-only change; no component or schema changes. |
 
 ---
 
@@ -516,6 +557,9 @@ Every async operation in the auth context must have error handling that guarante
 
 ### Wrap auth.uid() in (select ...) in RLS policies
 The Supabase performance advisor flags `auth_rls_initplan` when `auth.uid()` is used directly in RLS policies — it gets evaluated per-row instead of once per query. Wrapping it as `(select auth.uid())` turns it into a subselect that's evaluated once. Apply this pattern to all RLS policies from the start.
+
+### Build plan files prevent context-compaction data loss
+Large Claude Code sessions hit context limits and trigger compaction, which can cause Code to forget completed work, re-do tasks, or skip items. Solution: Chat writes a `CURRENT_BUILD_PLAN.md` checklist file before every Code handoff. Code reads it first, checks off tasks as it goes, and re-reads it after any compaction. The file is the source of truth for session progress — not Code's memory.
 
 ---
 

@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-19 (Session 25 — v0.12.0 deployed; landing page rewrite + forum reply count bugfix)
+> **Canonical version date:** 2026-04-19 (Session 25b — v0.12.1 deployed; landing page contrast fix — pinned warm light palette, fixed CSS variable names)
 
 ---
 
@@ -115,7 +115,7 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.12.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 25 — landing page rewrite (Phase 5F) + forum reply count bugfix |
+| Frontend app | v0.12.1 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 25b — landing page contrast fix: pin warm light palette on `.landing`, fix CSS variable names |
 | Supabase schema | v5E (owner role, referral_codes, referrals, profiles+terms/deletion/streak/frame cols, frame_catalog, legal pages) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 22 — owner role (22a), referrals+legal+deletion (22b), streaks+frames (22c) |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
@@ -710,9 +710,9 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5F complete — v0.12.0 deployed
-**Last Updated:** 2026-04-19 (Session 25)
-**Frontend Version:** v0.12.0 — Full landing page rewrite (Phase 5F): hero with castle background + dark overlay + logo, slogan bar, 5 value propositions in 2×2+1 grid with inline SVG icons, Justine Roberts bio card first then Rance Edwards (coach preference), 7-item FAQ accordion with useState expand/collapse, dark final CTA section. New `src/styles/landing.css` with full responsive system, mobile-first ≤768px breakpoints. Forum reply count bug fixed in SpaceView.jsx: `hydrateMeta` now awaited before `setPosts`/`setLoading` so reply counts render correctly on first load (no "0" flash). Updated logo (tkk-logo-transparent.png) and hero image (bg-full-castle.png) served from `public/`.
+**Current Phase:** Phase 5F complete — v0.12.1 deployed
+**Last Updated:** 2026-04-19 (Session 25b)
+**Frontend Version:** v0.12.1 — Landing page contrast hotfix: pinned warm cream palette on `.landing` so content sections always render light/readable regardless of system dark mode. Removed 8 `[data-theme='dark']` override blocks. Fixed nonexistent `--color-text-primary`/`--color-text-secondary` references → `--color-ink`/`--color-ink-soft`. Hero and final CTA remain hardcoded dark. _(v0.12.0: Full landing page rewrite Phase 5F — hero, slogan bar, value grid, coach cards, FAQ accordion, dark final CTA. Forum reply count bugfix in SpaceView.jsx.)_
 **Supabase Schema:** v5E — unchanged from session 24.
 **Session 25 — Next Session Handoff:**
 - Landing page is live. Verify at keto-keep.rance-8c6.workers.dev while logged out.

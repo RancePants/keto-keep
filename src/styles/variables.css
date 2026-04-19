@@ -171,13 +171,13 @@
    ---------------------------------------------------------------------- */
 
 [data-theme="dark"] {
-  --color-cream: #1a1a2e;
-  --color-parchment: #252540;
-  --color-sand: #2f2f4a;
+  --color-cream: #1c1b18;
+  --color-parchment: #262420;
+  --color-sand: #302d28;
   --color-ink: #e8e6e0;
   --color-ink-soft: #c8c4ba;
-  --color-ink-faint: #8a8494;
-  --color-muted: #9a93a5;
+  --color-ink-faint: #8a8580;
+  --color-muted: #9a9590;
 
   --color-green: #6a9a78;
   --color-green-dark: #8abf98;
@@ -193,22 +193,22 @@
   --color-error-soft-bg: rgba(232, 93, 79, 0.12);
   --color-success: #72c18d;
 
-  --color-surface: #242440;
-  --color-surface-alt: #2a2a48;
-  --color-border: #393956;
-  --color-border-strong: #4f4f6e;
+  --color-surface: #252320;
+  --color-surface-alt: #2c2a26;
+  --color-border: #3a3834;
+  --color-border-strong: #504c46;
 
-  --bg-page: #0e0e1c;
+  --bg-page: #121110;
   --bg-image: url('/bg-dark-castle.webp');
-  --bg-overlay: rgba(15, 15, 28, 0.72);
+  --bg-overlay: rgba(18, 17, 16, 0.72);
 
   --color-form-error-bg: #3a2020;
   --color-form-error-border: #5a3030;
   --color-form-success-bg: #1e3828;
   --color-form-success-border: #2e5540;
-  --color-modal-backdrop: rgba(5, 5, 12, 0.72);
+  --color-modal-backdrop: rgba(5, 5, 4, 0.72);
 
-  --nav-bg: rgba(26, 26, 46, 0.92);
+  --nav-bg: rgba(28, 27, 24, 0.92);
 
   --color-pinned-tint: #3a3524;
   --color-live-tint: #3a3220;
@@ -222,9 +222,9 @@
   --tint-coaching-bg: #3d2a22;
   --tint-coaching-border: #5a3d30;
   --tint-coaching-text: #e4a890;
-  --tint-qa-bg: #2f2440;
-  --tint-qa-border: #4a3d5e;
-  --tint-qa-text: #c0a8d8;
+  --tint-qa-bg: #262a2e;
+  --tint-qa-border: #3e4448;
+  --tint-qa-text: #a8c0c8;
 
   --diet-keto-bg: #1e3a28;
   --diet-keto-border: #3a5a42;
@@ -263,11 +263,11 @@
   --focus-ring: rgba(106, 154, 120, 0.28);
   --ghost-hover-bg: rgba(255, 255, 255, 0.08);
   --ghost-hover-bg-soft: rgba(255, 255, 255, 0.05);
-  --avatar-overlay: rgba(10, 10, 20, 0.65);
-  --avatar-overlay-strong: rgba(10, 10, 20, 0.80);
-  --avatar-overlay-stronger: rgba(10, 10, 20, 0.92);
+  --avatar-overlay: rgba(10, 10, 8, 0.65);
+  --avatar-overlay-strong: rgba(10, 10, 8, 0.80);
+  --avatar-overlay-stronger: rgba(10, 10, 8, 0.92);
 
-  --video-placeholder: linear-gradient(135deg, #0a0a14, #1a1a2e);
+  --video-placeholder: linear-gradient(135deg, #0a0a08, #1c1b18);
 
   --tag-on-color-text: #ffffff;
   --tag-on-color-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
@@ -282,13 +282,13 @@
    explicitly chosen a theme (no data-theme attribute set). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
-    --color-cream: #1a1a2e;
-    --color-parchment: #252540;
-    --color-sand: #2f2f4a;
+    --color-cream: #1c1b18;
+    --color-parchment: #262420;
+    --color-sand: #302d28;
     --color-ink: #e8e6e0;
     --color-ink-soft: #c8c4ba;
-    --color-ink-faint: #8a8494;
-    --color-muted: #9a93a5;
+    --color-ink-faint: #8a8580;
+    --color-muted: #9a9590;
 
     --color-green: #6a9a78;
     --color-green-dark: #8abf98;
@@ -304,22 +304,22 @@
     --color-error-soft-bg: rgba(232, 93, 79, 0.12);
     --color-success: #72c18d;
 
-    --color-surface: #242440;
-    --color-surface-alt: #2a2a48;
-    --color-border: #393956;
-    --color-border-strong: #4f4f6e;
+    --color-surface: #252320;
+    --color-surface-alt: #2c2a26;
+    --color-border: #3a3834;
+    --color-border-strong: #504c46;
 
-    --bg-page: #0e0e1c;
+    --bg-page: #121110;
     --bg-image: url('/bg-dark-castle.webp');
-    --bg-overlay: rgba(15, 15, 28, 0.72);
+    --bg-overlay: rgba(18, 17, 16, 0.72);
 
     --color-form-error-bg: #3a2020;
     --color-form-error-border: #5a3030;
     --color-form-success-bg: #1e3828;
     --color-form-success-border: #2e5540;
-    --color-modal-backdrop: rgba(5, 5, 12, 0.72);
+    --color-modal-backdrop: rgba(5, 5, 4, 0.72);
 
-    --nav-bg: rgba(26, 26, 46, 0.92);
+    --nav-bg: rgba(28, 27, 24, 0.92);
 
     --color-pinned-tint: #3a3524;
     --color-live-tint: #3a3220;
@@ -333,9 +333,9 @@
     --tint-coaching-bg: #3d2a22;
     --tint-coaching-border: #5a3d30;
     --tint-coaching-text: #e4a890;
-    --tint-qa-bg: #2f2440;
-    --tint-qa-border: #4a3d5e;
-    --tint-qa-text: #c0a8d8;
+    --tint-qa-bg: #262a2e;
+    --tint-qa-border: #3e4448;
+    --tint-qa-text: #a8c0c8;
 
     --diet-keto-bg: #1e3a28;
     --diet-keto-border: #3a5a42;
@@ -378,7 +378,7 @@
     --avatar-overlay-strong: rgba(10, 10, 20, 0.80);
     --avatar-overlay-stronger: rgba(10, 10, 20, 0.92);
 
-    --video-placeholder: linear-gradient(135deg, #0a0a14, #1a1a2e);
+    --video-placeholder: linear-gradient(135deg, #0a0a08, #1c1b18);
 
     --tag-on-color-text: #ffffff;
     --tag-on-color-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);

@@ -1,7 +1,19 @@
 /* ===== Landing Page ===== */
 
+/* Force warm light palette for the landing page — visitors are pre-auth,
+   no theme preference to honor. Hero and final CTA stay hardcoded dark. */
 .landing {
-  background: var(--color-cream, #f5f0e6);
+  --color-ink: #2a241c;
+  --color-ink-soft: #4c4338;
+  --color-ink-faint: #6e6454;
+  --color-muted: #7a6f60;
+  --color-cream: #fdfaf2;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f5efe3;
+  --color-border: #e3d9c1;
+  --color-border-strong: #c9bc9c;
+
+  background: var(--color-cream);
   min-height: 100vh;
 }
 
@@ -135,11 +147,7 @@
 }
 
 .landing-section--alt {
-  background: var(--color-surface-raised, #ede6d4);
-}
-
-[data-theme='dark'] .landing-section--alt {
-  background: var(--color-surface-raised, #2a2016);
+  background: var(--color-surface-raised);
 }
 
 .landing-section-eyebrow {
@@ -147,7 +155,7 @@
   font-weight: 600;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--color-amber, #c08b30);
+  color: #c08b30;
   text-align: center;
   margin: 0 0 0.5rem;
 }
@@ -155,14 +163,10 @@
 .landing-section-title {
   font-size: 1.75rem;
   font-weight: 500;
-  color: var(--color-text-primary, #1a0f00);
+  color: var(--color-ink);
   text-align: center;
   margin: 0 0 2rem;
   line-height: 1.25;
-}
-
-[data-theme='dark'] .landing-section-title {
-  color: var(--color-text-primary, #f5e6c8);
 }
 
 /* ── Value Grid ── */
@@ -179,17 +183,13 @@
 }
 
 .landing-value-card {
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border, rgba(0,0,0,0.1));
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-[data-theme='dark'] .landing-value-card {
-  background: var(--color-surface, #2a1f0e);
 }
 
 .landing-value-icon {
@@ -212,23 +212,15 @@
 .landing-value-card h3 {
   font-size: 1rem;
   font-weight: 500;
-  color: var(--color-text-primary, #1a0f00);
+  color: var(--color-ink);
   margin: 0;
-}
-
-[data-theme='dark'] .landing-value-card h3 {
-  color: var(--color-text-primary, #f5e6c8);
 }
 
 .landing-value-card p {
   font-size: 0.9rem;
   line-height: 1.6;
-  color: var(--color-text-secondary, #5a4a35);
+  color: var(--color-ink-soft);
   margin: 0;
-}
-
-[data-theme='dark'] .landing-value-card p {
-  color: var(--color-text-secondary, #a89070);
 }
 
 /* ── Coach Cards ── */
@@ -239,17 +231,13 @@
 }
 
 .landing-coach-card {
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border, rgba(0,0,0,0.1));
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 1.5rem;
   display: flex;
   gap: 1.25rem;
   align-items: flex-start;
-}
-
-[data-theme='dark'] .landing-coach-card {
-  background: var(--color-surface, #2a1f0e);
 }
 
 .landing-coach-initials {
@@ -275,12 +263,8 @@
 .landing-coach-name {
   font-size: 1.1rem;
   font-weight: 500;
-  color: var(--color-text-primary, #1a0f00);
+  color: var(--color-ink);
   margin: 0 0 0.15rem;
-}
-
-[data-theme='dark'] .landing-coach-name {
-  color: var(--color-text-primary, #f5e6c8);
 }
 
 .landing-coach-role {
@@ -295,12 +279,8 @@
 .landing-coach-bio {
   font-size: 0.9rem;
   line-height: 1.65;
-  color: var(--color-text-secondary, #5a4a35);
+  color: var(--color-ink-soft);
   margin: 0;
-}
-
-[data-theme='dark'] .landing-coach-bio {
-  color: var(--color-text-secondary, #a89070);
 }
 
 .landing-coach-bio p {
@@ -318,14 +298,10 @@
 }
 
 .landing-faq-item {
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border, rgba(0,0,0,0.1));
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
-}
-
-[data-theme='dark'] .landing-faq-item {
-  background: var(--color-surface, #2a1f0e);
 }
 
 .landing-faq-question {
@@ -335,17 +311,13 @@
   padding: 1rem 1.25rem;
   font-size: 0.95rem;
   font-weight: 500;
-  color: var(--color-text-primary, #1a0f00);
+  color: var(--color-ink);
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
   text-align: left;
-}
-
-[data-theme='dark'] .landing-faq-question {
-  color: var(--color-text-primary, #f5e6c8);
 }
 
 .landing-faq-question:hover {
@@ -366,11 +338,7 @@
   padding: 0 1.25rem 1rem;
   font-size: 0.9rem;
   line-height: 1.65;
-  color: var(--color-text-secondary, #5a4a35);
-}
-
-[data-theme='dark'] .landing-faq-answer {
-  color: var(--color-text-secondary, #a89070);
+  color: var(--color-ink-soft);
 }
 
 /* ── Final CTA ── */

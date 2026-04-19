@@ -63,45 +63,23 @@ export default function ProfileFrame({
       >
         {children}
       </span>
-      {/* PNG frame overlay — slightly larger than avatar so border extends beyond */}
+      {/* PNG frame overlay — stacked drop-shadows back semi-transparent pixels */}
       {slug && (
-        <>
-          {/* Black backing — masked by the frame PNG so backing only appears where
-              the frame has pixels, preventing background bleed without black rectangles */}
-          <span
-            aria-hidden="true"
-            className="frame-backing"
-            style={{
-              position: 'absolute',
-              top: overlayOffset,
-              left: overlayOffset,
-              width: overlaySize,
-              height: overlaySize,
-              background: '#000',
-              WebkitMaskImage: `url(/frames/frame-${slug}.png)`,
-              WebkitMaskSize: '100% 100%',
-              WebkitMaskRepeat: 'no-repeat',
-              maskImage: `url(/frames/frame-${slug}.png)`,
-              maskSize: '100% 100%',
-              maskRepeat: 'no-repeat',
-              pointerEvents: 'none',
-            }}
-          />
-          <img
-            src={`/frames/frame-${slug}.png`}
-            alt=""
-            aria-hidden="true"
-            className="frame-overlay"
-            style={{
-              position: 'absolute',
-              top: overlayOffset,
-              left: overlayOffset,
-              width: overlaySize,
-              height: overlaySize,
-              pointerEvents: 'none',
-            }}
-          />
-        </>
+        <img
+          src={`/frames/frame-${slug}.png`}
+          alt=""
+          aria-hidden="true"
+          className="frame-overlay"
+          style={{
+            position: 'absolute',
+            top: overlayOffset,
+            left: overlayOffset,
+            width: overlaySize,
+            height: overlaySize,
+            pointerEvents: 'none',
+            filter: 'drop-shadow(0 0 0 #000) drop-shadow(0 0 0 #000) drop-shadow(0 0 0 #000)',
+          }}
+        />
       )}
     </span>
   );

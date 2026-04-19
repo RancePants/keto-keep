@@ -22,8 +22,7 @@ const DEFAULT_FILTERS = {
 
 export default function MembersDirectory() {
   usePageTitle('Members');
-  const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { isAdmin } = useAuth();
 
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);

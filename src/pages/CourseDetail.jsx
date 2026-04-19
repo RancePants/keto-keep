@@ -19,8 +19,7 @@ import usePageTitle from '../lib/usePageTitle.js';
 export default function CourseDetail() {
   usePageTitle('Course');
   const { slug } = useParams();
-  const { user, profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { user, isAdmin } = useAuth();
 
   const [course, setCourse] = useState(null);
   const [modules, setModules] = useState([]);

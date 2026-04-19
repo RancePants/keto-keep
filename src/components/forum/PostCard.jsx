@@ -29,8 +29,7 @@ export default function PostCard({
   onChanged,
   initiallyExpanded = false,
 }) {
-  const { user, profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { user, isAdmin } = useAuth();
   const isAuthor = user?.id === post.author_id;
 
   const [expanded, setExpanded] = useState(initiallyExpanded);

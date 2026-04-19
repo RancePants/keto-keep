@@ -10,8 +10,7 @@ export default function LessonView() {
   usePageTitle('Lesson');
   const { slug, lessonId } = useParams();
   const navigate = useNavigate();
-  const { user, profile, isSuspended } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { user, isAdmin, isSuspended } = useAuth();
 
   const [course, setCourse] = useState(null);
   const [modules, setModules] = useState([]);

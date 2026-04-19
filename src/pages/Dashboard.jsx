@@ -9,9 +9,8 @@ import usePageTitle from '../lib/usePageTitle.js';
 
 export default function Dashboard() {
   usePageTitle('Dashboard');
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const name = profile?.display_name || 'friend';
-  const isAdmin = profile?.role === 'admin';
   const userIds = user?.id ? [user.id] : [];
   const badgeMap = useMemberBadges(userIds);
   const myBadges = user?.id ? badgeMap[user.id] || [] : [];

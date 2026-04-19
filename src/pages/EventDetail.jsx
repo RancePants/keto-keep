@@ -17,8 +17,7 @@ import usePageTitle from '../lib/usePageTitle.js';
 export default function EventDetail() {
   usePageTitle('Event');
   const { id } = useParams();
-  const { user, profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { user, isAdmin } = useAuth();
 
   const [event, setEvent] = useState(null);
   const [rsvps, setRsvps] = useState([]);

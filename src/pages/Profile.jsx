@@ -19,6 +19,7 @@ import InterestTagChip from '../components/profile/InterestTagChip.jsx';
 import AwardBadgeModal from '../components/profile/AwardBadgeModal.jsx';
 import AssignAdminTagModal from '../components/members/AssignAdminTagModal.jsx';
 import ManageMemberModal from '../components/members/ManageMemberModal.jsx';
+import Modal from '../components/ui/Modal.jsx';
 import usePageTitle from '../lib/usePageTitle.js';
 
 // ---------------- Avatar ----------------
@@ -467,9 +468,11 @@ function ProfileView({
   profile,
   isOwnProfile,
   isAdmin,
+  isOwner,
   onAwardBadge,
   onManageAdminTags,
   onManageMember,
+  onChangeRole,
   adminTagsVersion,
 }) {
   const [badges, setBadges] = useState([]);
@@ -511,8 +514,13 @@ function ProfileView({
 
   const location = formatLocation({ city: profile.city, state: profile.state });
   const isTargetAdmin = profile.role === 'admin';
+  const isTargetOwner = profile.role === 'owner';
+  // Admins cannot take manage actions on other admins or the owner. The owner
+  // can take manage actions on admins (but never on themselves or the owner).
   const showManageSection =
-    isAdmin && !isOwnProfile && !isTargetAdmin;
+    !isOwnProfile && !isTargetOwner && (isOwner || (isAdmin && !isTargetAdmin));
+  // Role-management UI is owner-only and never targets self or another owner.
+  const showRoleSection = isOwner && !isOwnProfile && !isTargetOwner;
 
   return (
     <>
@@ -656,6 +664,34 @@ function ProfileView({
         </section>
       )}
 
+      {showRoleSection && (
+        <section className="profile-block profile-admin-block">
+          <h3 className="profile-block-title">Role</h3>
+          <p className="muted profile-block-sub">
+            Only the owner can change another member's role.
+          </p>
+          <div className="manage-member-actions">
+            {isTargetAdmin ? (
+              <button
+                type="button"
+                className="btn btn-warning"
+                onClick={() => onChangeRole?.('demote')}
+              >
+                Demote to Member
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => onChangeRole?.('promote')}
+              >
+                Promote to Admin
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
       {showManageSection && (
         <section className="profile-block profile-admin-block">
           <h3 className="profile-block-title">Manage member</h3>
@@ -752,8 +788,16 @@ export default function Profile() {
   usePageTitle('Profile');
   const { id } = useParams();
   const location = useLocation();
-  const { user, profile: ownProfile, updateProfile, uploadAvatar, refreshProfile, isSuspended } = useAuth();
-  const isAdmin = ownProfile?.role === 'admin';
+  const {
+    user,
+    profile: ownProfile,
+    updateProfile,
+    uploadAvatar,
+    refreshProfile,
+    isSuspended,
+    isAdmin,
+    isOwner,
+  } = useAuth();
   const isEditRoute = location.pathname.replace(/\/+$/, '').endsWith('/profile/edit');
 
   const isOwn = !id || id === user?.id;
@@ -815,16 +859,17 @@ export default function Profile() {
         </div>
       );
     }
-    return <ProfilePage profile={ownProfile} isOwnProfile isAdmin={isAdmin} refresh={refreshProfile} />;
+    return <ProfilePage profile={ownProfile} isOwnProfile isAdmin={isAdmin} isOwner={isOwner} refresh={refreshProfile} />;
   }
 
-  return <OtherProfile key={id} id={id} isAdmin={isAdmin} />;
+  return <OtherProfile key={id} id={id} isAdmin={isAdmin} isOwner={isOwner} />;
 }
 
-function ProfilePage({ profile, isOwnProfile, isAdmin, refresh }) {
+function ProfilePage({ profile, isOwnProfile, isAdmin, isOwner, refresh }) {
   const [awardOpen, setAwardOpen] = useState(false);
   const [tagModalOpen, setTagModalOpen] = useState(false);
   const [manageAction, setManageAction] = useState(null);
+  const [roleAction, setRoleAction] = useState(null);
   const [adminTagsVersion, setAdminTagsVersion] = useState(0);
 
   const bumpAdminTags = () => setAdminTagsVersion((v) => v + 1);
@@ -839,9 +884,11 @@ function ProfilePage({ profile, isOwnProfile, isAdmin, refresh }) {
           profile={profile}
           isOwnProfile={isOwnProfile}
           isAdmin={isAdmin}
+          isOwner={isOwner}
           onAwardBadge={() => setAwardOpen(true)}
           onManageAdminTags={() => setTagModalOpen(true)}
           onManageMember={(action) => setManageAction(action)}
+          onChangeRole={(action) => setRoleAction(action)}
           adminTagsVersion={adminTagsVersion}
         />
       </section>
@@ -867,15 +914,24 @@ function ProfilePage({ profile, isOwnProfile, isAdmin, refresh }) {
         targetName={profile.display_name}
         onChanged={refresh}
       />
+      <RoleChangeModal
+        open={!!roleAction}
+        onClose={() => setRoleAction(null)}
+        action={roleAction}
+        targetUserId={profile.id}
+        targetName={profile.display_name}
+        onChanged={refresh}
+      />
     </div>
   );
 }
 
-function OtherProfile({ id, isAdmin }) {
+function OtherProfile({ id, isAdmin, isOwner }) {
   const { data: fetched, error, loading, refresh } = useFetchedProfile(id, false);
   const [awardOpen, setAwardOpen] = useState(false);
   const [tagModalOpen, setTagModalOpen] = useState(false);
   const [manageAction, setManageAction] = useState(null);
+  const [roleAction, setRoleAction] = useState(null);
   const [adminTagsVersion, setAdminTagsVersion] = useState(0);
 
   const bumpAdminTags = () => setAdminTagsVersion((v) => v + 1);
@@ -918,9 +974,11 @@ function OtherProfile({ id, isAdmin }) {
           profile={fetched}
           isOwnProfile={false}
           isAdmin={isAdmin}
+          isOwner={isOwner}
           onAwardBadge={() => setAwardOpen(true)}
           onManageAdminTags={() => setTagModalOpen(true)}
           onManageMember={(action) => setManageAction(action)}
+          onChangeRole={(action) => setRoleAction(action)}
           adminTagsVersion={adminTagsVersion}
         />
       </section>
@@ -946,6 +1004,90 @@ function OtherProfile({ id, isAdmin }) {
         targetName={fetched.display_name}
         onChanged={refresh}
       />
+      <RoleChangeModal
+        open={!!roleAction}
+        onClose={() => setRoleAction(null)}
+        action={roleAction}
+        targetUserId={fetched.id}
+        targetName={fetched.display_name}
+        onChanged={refresh}
+      />
     </div>
+  );
+}
+
+// ---------------- Role change modal (owner only) ----------------
+
+function RoleChangeModal({ open, onClose, action, targetUserId, targetName, onChanged }) {
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    if (!open) return undefined;
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setSaving(false);
+      setErr('');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, action]);
+
+  if (!action) return null;
+
+  const isPromote = action === 'promote';
+  const title = isPromote ? 'Promote to Admin' : 'Demote to Member';
+  const lead = isPromote
+    ? `Make ${targetName || 'this member'} an admin? Admins can moderate content and manage members.`
+    : `Remove admin rights from ${targetName || 'this admin'}? They will become a regular member.`;
+
+  const submit = async () => {
+    if (saving || !targetUserId) return;
+    setSaving(true);
+    setErr('');
+    try {
+      const newRole = isPromote ? 'admin' : 'member';
+      const { error } = await supabase.rpc('set_member_role', {
+        target_id: targetUserId,
+        new_role: newRole,
+      });
+      if (error) {
+        setErr(error.message);
+        return;
+      }
+      if (onChanged) await onChanged(action);
+      onClose?.();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={title} size="sm" variant={isPromote ? '' : 'warning'}>
+      <div className="manage-member-body">
+        <p className="manage-member-lead">{lead}</p>
+        {err && (
+          <div className="form-error" role="alert">
+            {err}
+          </div>
+        )}
+        <div className="manage-member-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={`btn ${isPromote ? 'btn-primary' : 'btn-warning'}`}
+            onClick={submit}
+            disabled={saving}
+          >
+            {saving ? 'Working…' : isPromote ? 'Promote' : 'Demote'}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }

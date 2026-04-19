@@ -14,8 +14,7 @@ const BLANK_FORM = {
 
 export default function AdminAdminTags() {
   usePageTitle('Admin tags · Admin');
-  const { user, profile, loading: authLoading } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { user, isAdmin, loading: authLoading } = useAuth();
 
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);

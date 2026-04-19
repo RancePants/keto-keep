@@ -7,8 +7,7 @@ import usePageTitle from '../lib/usePageTitle.js';
 
 export default function CoursesHome() {
   usePageTitle('Courses');
-  const { user, profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { user, isAdmin } = useAuth();
 
   const [courses, setCourses] = useState([]);
   const [progressByCourse, setProgressByCourse] = useState({});

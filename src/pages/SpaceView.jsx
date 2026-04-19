@@ -10,8 +10,7 @@ const PAGE_SIZE = 20;
 
 export default function SpaceView() {
   usePageTitle('Forums');
-  const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { isAdmin } = useAuth();
   const { slug } = useParams();
   const [space, setSpace] = useState(null);
   const [spaceError, setSpaceError] = useState(null);

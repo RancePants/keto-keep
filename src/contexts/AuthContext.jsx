@@ -327,6 +327,10 @@ export function AuthProvider({ children }) {
     [session]
   );
 
+  const role = profile?.role;
+  const isOwner = role === 'owner';
+  const isAdmin = role === 'admin' || role === 'owner';
+
   const value = useMemo(
     () => ({
       session,
@@ -334,6 +338,8 @@ export function AuthProvider({ children }) {
       profile,
       loading,
       isSuspended,
+      isAdmin,
+      isOwner,
       signUp,
       signIn,
       signOut,
@@ -344,7 +350,7 @@ export function AuthProvider({ children }) {
       setTheme,
       refreshProfile: () => fetchProfile(session?.user?.id),
     }),
-    [session, profile, loading, isSuspended, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, setTheme, fetchProfile]
+    [session, profile, loading, isSuspended, isAdmin, isOwner, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, setTheme, fetchProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

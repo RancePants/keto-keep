@@ -5,8 +5,7 @@ import { isoToLocalInput, localInputToIso } from '../../lib/eventHelpers.js';
 import { formatRelative } from '../../lib/forumHelpers.js';
 
 export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
-  const { user, profile, isSuspended } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { user, isAdmin, isSuspended } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');

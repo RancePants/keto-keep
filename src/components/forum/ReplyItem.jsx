@@ -20,8 +20,7 @@ export default function ReplyItem({
   onReactionAdded,
   onChildReplyCreated,
 }) {
-  const { user, profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { user, isAdmin } = useAuth();
   const isOwn = user?.id === reply.author_id;
   const canEdit = isOwn || isAdmin;
 

@@ -164,6 +164,22 @@
   --nav-height: 64px;
   --content-max: 1120px;
   --content-narrow: 720px;
+  --sidebar-width: 260px;
+
+  /* Sidebar — warm stone interior of the keep (light) */
+  --sidebar-bg: #3a322a;
+  --sidebar-footer-bg: #342d26;
+  --sidebar-user-bg: rgba(255, 255, 255, 0.04);
+  --sidebar-text: #f0e6d2;
+  --sidebar-muted: #b5a58c;
+  --sidebar-section-title: #c2a773;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-hover: rgba(255, 200, 120, 0.08);
+  --sidebar-active-border: var(--color-amber);
+  --sidebar-active-text: #fce5b8;
+  --sidebar-brand-text: #f4e3bd;
+  --sidebar-glow: rgba(225, 166, 88, 0.28);
+  --sidebar-shadow: 2px 0 12px rgba(0, 0, 0, 0.12);
 }
 
 /* ----------------------------------------------------------------------
@@ -276,6 +292,21 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.35);
+
+  /* Sidebar (dark) — deeper stone with warmer glow */
+  --sidebar-bg: #1d1a17;
+  --sidebar-footer-bg: #16130f;
+  --sidebar-user-bg: rgba(255, 255, 255, 0.04);
+  --sidebar-text: #e8dec4;
+  --sidebar-muted: #998c74;
+  --sidebar-section-title: #d5b47a;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-hover: rgba(255, 200, 120, 0.10);
+  --sidebar-active-border: var(--color-amber);
+  --sidebar-active-text: #ffd894;
+  --sidebar-brand-text: #f0d9a0;
+  --sidebar-glow: rgba(240, 195, 128, 0.32);
+  --sidebar-shadow: 2px 0 18px rgba(0, 0, 0, 0.5);
 }
 
 /* System preference fallback — applies only when the user has not
@@ -387,5 +418,19 @@
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.25);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.35);
+
+    --sidebar-bg: #1d1a17;
+    --sidebar-footer-bg: #16130f;
+    --sidebar-user-bg: rgba(255, 255, 255, 0.04);
+    --sidebar-text: #e8dec4;
+    --sidebar-muted: #998c74;
+    --sidebar-section-title: #d5b47a;
+    --sidebar-border: rgba(255, 255, 255, 0.07);
+    --sidebar-hover: rgba(255, 200, 120, 0.10);
+    --sidebar-active-border: var(--color-amber);
+    --sidebar-active-text: #ffd894;
+    --sidebar-brand-text: #f0d9a0;
+    --sidebar-glow: rgba(240, 195, 128, 0.32);
+    --sidebar-shadow: 2px 0 18px rgba(0, 0, 0, 0.5);
   }
 }

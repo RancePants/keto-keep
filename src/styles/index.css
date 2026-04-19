@@ -1,6 +1,7 @@
 @import './variables.css';
 @import './base.css';
 @import './layout.css';
+@import './sidebar.css';
 @import './components.css';
 @import './pages.css';
 @import './forums.css';

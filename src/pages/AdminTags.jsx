@@ -7,8 +7,7 @@ import Modal from '../components/ui/Modal.jsx';
 
 export default function AdminTags() {
   usePageTitle('Interest tags · Admin');
-  const { user, profile, loading: authLoading } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { user, isAdmin, loading: authLoading } = useAuth();
 
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);

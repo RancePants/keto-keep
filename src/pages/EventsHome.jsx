@@ -11,8 +11,7 @@ import usePageTitle from '../lib/usePageTitle.js';
 
 export default function EventsHome() {
   usePageTitle('Events');
-  const { user, profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { user, isAdmin } = useAuth();
 
   const [upcoming, setUpcoming] = useState([]);
   const [past, setPast] = useState([]);

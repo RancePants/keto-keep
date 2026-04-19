@@ -4,8 +4,7 @@ import usePageTitle from '../lib/usePageTitle.js';
 
 export default function AdminHub() {
   usePageTitle('Admin');
-  const { profile, loading } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { isAdmin, loading } = useAuth();
 
   if (loading) {
     return (

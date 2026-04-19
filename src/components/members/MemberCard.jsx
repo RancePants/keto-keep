@@ -121,7 +121,7 @@ export default function MemberCard({
         )}
       </Link>
 
-      {isAdmin && (
+      {isAdmin && profile.role !== 'owner' && (
         <div className="member-card-menu-wrap">
           <button
             type="button"

@@ -76,6 +76,7 @@ export default function ProfileFrame({
             left: overlayOffset,
             width: overlaySize,
             height: overlaySize,
+            maxWidth: 'none',
             pointerEvents: 'none',
             filter: 'drop-shadow(0 0 0 #000) drop-shadow(0 0 0 #000) drop-shadow(0 0 0 #000)',
           }}

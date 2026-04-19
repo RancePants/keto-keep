@@ -23,7 +23,7 @@ import ManageMemberModal from '../components/members/ManageMemberModal.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import StreakBadge from '../components/ui/StreakBadge.jsx';
 import ProfileFrame from '../components/ui/ProfileFrame.jsx';
-import VacationModeSection from '../components/profile/VacationModeSection.jsx';
+import VacationModeModal from '../components/profile/VacationModeModal.jsx';
 import FramePickerModal from '../components/profile/FramePickerModal.jsx';
 import { progressToNext } from '../lib/streakHelpers.js';
 import usePageTitle from '../lib/usePageTitle.js';
@@ -150,6 +150,7 @@ async function loadMemberAdminTags(userId) {
 // ---------------- Editor ----------------
 
 function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     display_name: profile.display_name || '',
     bio: profile.bio || '',
@@ -254,8 +255,8 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
       }
 
       setInitialTagIds(new Set(selectedTagIds));
-      setMessage({ type: 'success', text: 'Saved.' });
       if (onSaved) onSaved();
+      navigate('/profile');
     } catch (err) {
       setMessage({ type: 'error', text: err?.message || 'Could not save.' });
     } finally {
@@ -495,23 +496,13 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
 
       <div className="profile-edit-actions">
         <button type="submit" className="btn btn-primary btn-large" disabled={saving}>
-          {saving ? 'Saving…' : 'Save profile'}
+          {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
     </form>
   );
 }
 
-// ProfileEditor owns the main form. The vacation + frame sections are
-// self-contained and live outside the form — they save via their own RPCs /
-// updateProfile calls.
-function ProfileEditorExtras({ profile, onSaved }) {
-  return (
-    <>
-      <VacationModeSection profile={profile} onChanged={onSaved} />
-    </>
-  );
-}
 
 // ---------------- Delete own account (danger zone) ----------------
 
@@ -624,6 +615,7 @@ function ProfileView({
   onManageMember,
   onChangeRole,
   adminTagsVersion,
+  onChanged,
 }) {
   const [badges, setBadges] = useState([]);
   const [memberTags, setMemberTags] = useState([]);
@@ -727,7 +719,7 @@ function ProfileView({
         </div>
       </div>
 
-      <ProfileStreakBlock profile={profile} />
+      <ProfileStreakBlock profile={profile} isOwn={isOwnProfile} onChanged={onChanged} />
 
       {profile.about_me && (
         <section className="profile-block">
@@ -999,7 +991,6 @@ export default function Profile() {
             uploadAvatar={uploadAvatar}
             onSaved={refreshProfile}
           />
-          <ProfileEditorExtras profile={ownProfile} onSaved={refreshProfile} />
           <DeleteAccountSection isOwner={isOwner} />
         </section>
       </div>
@@ -1045,6 +1036,7 @@ function ProfilePage({ profile, isOwnProfile, isAdmin, isOwner, refresh }) {
           onManageMember={(action) => setManageAction(action)}
           onChangeRole={(action) => setRoleAction(action)}
           adminTagsVersion={adminTagsVersion}
+          onChanged={refresh}
         />
       </section>
       <AwardBadgeModal
@@ -1249,10 +1241,11 @@ function RoleChangeModal({ open, onClose, action, targetUserId, targetName, onCh
 
 // ---------------- Streak view block ----------------
 
-function ProfileStreakBlock({ profile }) {
+function ProfileStreakBlock({ profile, isOwn = false, onChanged }) {
   const current = Number(profile?.current_streak) || 0;
   const longest = Number(profile?.longest_streak) || 0;
   const hasAny = current > 0 || longest > 0;
+  const [vacationOpen, setVacationOpen] = useState(false);
 
   // If this member has never logged a streak day, skip the block entirely.
   if (!hasAny) return null;
@@ -1288,6 +1281,23 @@ function ProfileStreakBlock({ profile }) {
             <span style={{ width: `${progress.pct}%` }} />
           </div>
         </div>
+      )}
+      {isOwn && (
+        <button
+          type="button"
+          className="btn btn-ghost btn-small"
+          onClick={() => setVacationOpen(true)}
+        >
+          {frozen ? '❄️ Manage vacation' : '❄️ Vacation mode'}
+        </button>
+      )}
+      {isOwn && (
+        <VacationModeModal
+          open={vacationOpen}
+          onClose={() => setVacationOpen(false)}
+          profile={profile}
+          onChanged={onChanged}
+        />
       )}
     </section>
   );

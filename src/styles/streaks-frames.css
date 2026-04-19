@@ -187,7 +187,27 @@
   font-weight: 600;
 }
 
-/* ---------- Vacation mode section ---------- */
+/* ---------- Vacation mode modal ---------- */
+
+.vacation-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.vacation-modal-desc {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.vacation-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* ---------- Vacation mode section (legacy, kept for edit-page fallback) ---------- */
 
 .vacation-mode-section {
   display: flex;

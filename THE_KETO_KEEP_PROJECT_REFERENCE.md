@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-19 (Session 22 — Owner role + sidebar navigation deployed v0.9.0)
+> **Canonical version date:** 2026-04-19 (Session 23 — v0.11.2 deployed; modal centering + frame backing patch)
 
 ---
 
@@ -115,8 +115,8 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.9.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 22 — owner role tier + sidebar navigation replaces top navbar |
-| Supabase schema | v5C (app_role enum includes 'owner'; is_owner() + set_member_role() RPCs; is_admin(uuid) treats owner as admin) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 22 — added owner role enum value, helper RPCs, promoted rance@fsh-coach.com to owner |
+| Frontend app | v0.11.3 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 23 — frame mask-image backing + remove duplicate none option |
+| Supabase schema | v5E (owner role, referral_codes, referrals, profiles+terms/deletion/streak/frame cols, frame_catalog, legal pages) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 22 — owner role (22a), referrals+legal+deletion (22b), streaks+frames (22c) |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
@@ -420,6 +420,50 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Lint + build clean (0 problems; 340ms build) — session 22
 - [x] Version bump to v0.9.0 — session 22
 
+**Phase 5D — Referrals + Legal + Account Deletion** (deployed session 22, v0.10.0)
+- [x] Schema: `referral_codes` table (code, created_by, max_uses, expires_at) + `referrals` table (referrer_id, referred_id, referral_code_id, joined_at) — session 22
+- [x] RLS: referral_codes admin-write + authenticated-read; referrals admin-only — session 22
+- [x] `?ref=` query param capture on signup flow + referral_code validation + referral row insert — session 22
+- [x] Referral code format: TKK-prefixed 8-char alphanumeric — session 22
+- [x] `/invite` page for admins to generate and manage referral codes — session 22
+- [x] Self-service account deletion via `delete_own_account()` RPC with typed "DELETE" confirmation — session 22
+- [x] Profiles + `terms_accepted` timestamp column + `deleted_at` soft-delete column — session 22
+- [x] Legal pages: Terms of Use (`/terms`), Privacy Policy (`/privacy`), Health Disclaimer (`/disclaimer`) — session 22
+- [x] Footer legal links + signup terms checkbox — session 22
+- [x] Contact email: `rance.fullspectrumhuman@gmail.com` in legal docs — session 22
+- [x] Version bump to v0.10.0 — session 22
+
+**Phase 5E — Login Streaks + Profile Frames** (deployed session 22, v0.11.0)
+- [x] Schema: profiles + `current_streak`, `longest_streak`, `last_login_date`, `streak_frozen_until`, `selected_frame` columns — session 22
+- [x] Schema: `frame_catalog` table with frame_type, name, description, unlock_method, streak_days_required — session 22
+- [x] Streak logic: daily tracking with 1-day grace period, longest_streak never decreases — session 22
+- [x] 7-tier milestone badges (inline SVG): bronze/silver/gold torch → bronze/silver/gold shield → crown — session 22
+- [x] Vacation freeze mode: up to 30 days, streak frozen but not lost — session 22
+- [x] VacationModeSection on profile edit page — session 22
+- [x] 9 frame types: 3 free (Stone, Iron Band, Wooden) + 6 streak-earned + 1 admin-only (Coach’s Seal) — session 22
+- [x] FrameSelector on profile edit page + ProfileFrame shared component — session 22
+- [x] StreakBadge inline on sidebar user block, dashboard, forum posts, member cards — session 22
+- [x] Streak progress bar toward next milestone on profile page — session 22
+- [x] Version bump to v0.11.0 — session 22
+
+**Phase 5E patch — PNG Frames + Square Avatars + Frame Picker Modal** (deployed session 22→23, v0.11.1)
+- [x] Replaced inline SVG profile frames with 9 Gemini-generated PNG image frames — session 22/23
+- [x] Changed avatars from round to square (6px border-radius) — session 22/23
+- [x] Moved frame picker from profile edit page bottom to avatar-click modal with live preview (FramePickerModal) — session 22/23
+- [x] Processed all frame PNGs to transparent backgrounds + transparent centers — session 22
+- [x] Version bump to v0.11.1 — session 22/23
+
+**Phase 5E patch — Modal Centering + Frame Backing** (deployed session 23, v0.11.2)
+- [x] `.modal-backdrop` offset by `left: var(--sidebar-width, 260px)` so modals center in content area, not full viewport — session 23
+- [x] Mobile override (`≤768px`) resets `left: 0` when sidebar is a drawer — session 23
+- [x] Black backing `<span>` with `clip-path: polygon(evenodd, ...)` behind frame PNG overlays — prevents castle wallpaper bleed through semi-transparent frame pixels — session 23
+- [x] Version bump to v0.11.2 — session 23
+
+**Phase 5E patch — Frame Mask-Image Backing + Deduplicate None** (deployed session 23, v0.11.3)
+- [x] Replaced clip-path polygon backing with `mask-image` using the frame PNG itself — frame’s alpha channel shapes the black backing exactly, no rectangles beyond artwork edges — session 23
+- [x] Filtered `frame_type === 'none'` from catalog in FramePickerModal + FrameSelector — hardcoded None button is the single no-frame option — session 23
+- [x] Version bump to v0.11.3 — session 23
+
 **Phase 5B — Pre-launch Cleanup** (deployed session 21, v0.8.2)
 - [x] Replaced all 9 `window.confirm` / `window.alert` instances with `Modal variant="danger"` — session 21. Files changed: `AdminTags.jsx`, `AdminAdminTags.jsx`, `PostCard.jsx`, `ReplyItem.jsx`, `EventFormModal.jsx`, `CourseFormModal.jsx`, `ModuleFormModal.jsx`, `LessonFormModal.jsx`, `AwardBadgeModal.jsx`
 - [x] Supabase security + performance advisor audit — session 21. Security: only pre-existing `auth_leaked_password_protection` WARN (Pro Plan feature; accepted). Performance: 21 expected `unused_index` INFO (FK cover indexes + query indexes on low-volume fresh DB); zero `auth_rls_initplan`; zero `unindexed_foreign_keys`. No remediation needed.
@@ -484,6 +528,18 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-18 | Phase 4 frontend: "Continue where I left off" resolves at read time | Scan modules → lessons ordered by `display_order`, find first row not present in `lesson_progress` for the user. If all complete → "Review Course" + link to first lesson. If none started → "Start Course" + link to first lesson. No resume-cursor column; the progress set is the source of truth. |
 | 2026-04-18 | Phase 4 frontend: accordion module list with one-time auto-expand of first incomplete module | Book-style table of contents feel. Auto-expand is gated by a single `expandedInitialized` flag inside `load()` so re-fetches after admin edits don't clobber the user's manual toggles (also satisfies `react-hooks/set-state-in-effect`). |
 | 2026-04-18 | Phase 4 frontend: lesson viewer uses a 720px reading column + sticky module sidebar | Optimizes for long-form reading comfort (line length ≈ 65 characters). Sidebar stacks below main at 960px, hides entirely at 640px. Breadcrumbs sit above title so the learner always knows where they are in the course. |
+| 2026-04-19 | Owner role via enum value (not boolean column) | `owner` added to `app_role` enum. `is_owner()` + `is_admin()` treats owner as admin superset. Enum approach avoids schema migration for future role tiers. |
+| 2026-04-19 | Sidebar navigation replaces top navbar | Option C — immersive castle interior feel. Fixed 260px left panel on desktop, slide-in drawer on mobile (≤768px). Warm stone gradient + amber torchlight glow + 3px amber active-state accent. |
+| 2026-04-19 | Referral codes: TKK-prefixed 8-char alphanumeric | Human-readable prefix identifies source. Short enough to text/email. Admin-generated, not self-service. |
+| 2026-04-19 | Streak grace period: 1 day (yesterday OR day-before = continue) | Prevents losing long streaks due to timezone edge cases or single missed days. Generous enough for real life, strict enough to mean something. |
+| 2026-04-19 | Vacation freeze: max 30 days, streak frozen but not lost | Longest streak never decreases → frame unlocks are permanent. Respects members’ real lives (travel, illness) without gaming potential. |
+| 2026-04-19 | Profile frames: square avatars with Gemini-generated PNG overlays | Square (6px border-radius) gives more frame real estate than circles. PNG overlays scale cleanly at any size. 130% scale with -15% offset lets decorative border extend beyond avatar. |
+| 2026-04-19 | Frame picker: avatar-click modal (not inline on profile edit page) | Keeps profile edit page clean. Modal provides focused selection experience with live preview at 120px. |
+| 2026-04-19 | 3 free frames + 6 streak-earned + 1 admin-only (Coach’s Seal) | Free frames ensure every member can customize. Streak-earned frames reward engagement. Admin-only frame is a coaching badge of honor. |
+| 2026-04-19 | Legal pages as public routes without sidebar | Terms, Privacy, Health Disclaimer must be accessible pre-login and from footer links. No sidebar keeps them clean and accessible. |
+| 2026-04-19 | Self-service account deletion with typed "DELETE" confirmation | GDPR-friendly, reduces admin burden. Typed confirmation prevents accidental deletion. Soft-delete via `deleted_at` preserves data for audit. |
+| 2026-04-19 | Modal backdrop offset for sidebar-aware centering | `left: var(--sidebar-width, 260px)` on `.modal-backdrop` instead of `inset: 0`. All modals now center in the visible content area. Mobile (≤768px) resets to `left: 0`. |
+| 2026-04-19 | Frame backing via mask-image (replaces clip-path polygon) | Uses the frame PNG itself as CSS `mask-image` on the black backing span. Frame’s own alpha channel controls exactly where backing appears — no manual inset math, adapts to every frame’s unique decorative shape. Replaced the v0.11.2 clip-path approach which created visible black rectangles beyond frame edges. |
 | 2026-04-18 | Phase 5A: split Phase 5 into waves; 5A = enhanced profiles + badges + interest tags | Phase 5 carries many loosely-related items (messaging, badges, tags, directory, notifications, polish). Shipping them as one wave would balloon scope. 5A is a cohesive "who is this person?" wave that unlocks profile display and later directory/search. Messaging and internal admin tags come in later 5B+ waves. |
 | 2026-04-18 | Phase 5A: new profile fields stay on `profiles` table (no side table) | The six new fields (dietary_approach, journey_duration, state, city, about_me, my_why) are 1:1 with a member and always read alongside display_name/avatar/bio. Keeping them on `profiles` avoids an extra join on every profile render and reuses existing RLS policies unchanged. |
 | 2026-04-18 | Phase 5A: dietary_approach and journey_duration as enums, not free text | Enables consistent directory filters later ("show me 'just starting' members"), keeps analytics sane, and prevents slug-like drift ("Keto" vs "keto" vs "ketogenic"). Nullable because disclosure is optional. Extensible via ALTER TYPE ADD VALUE. |
@@ -994,6 +1050,70 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 - Rance should bring this file into the next chat to trigger the start gate
 - No blockers. Ready to build.
 
+### Session 22 — 2026-04-19 (Chat + Claude Code — multi-phase)
+**Goal:** Owner role + sidebar navigation + referrals + legal + streaks + frames. Massive scope session spanning v0.9.0 through v0.11.1.
+
+**What was done:**
+
+*Chat (design + content + asset generation):*
+- Captured all bios + FAQs from Mighty Networks via Chrome MCP → `THE_KETO_KEEP_CONTENT_REFERENCE.md`
+- Generated castle hero image + heraldic TKK logo + 9 profile frame images via Gemini prompts
+- Processed all frame PNGs to transparent backgrounds + centers
+- Designed owner role system, sidebar navigation spec, referral tracking schema, streak system, frame system
+- Drafted 3 legal documents (Terms of Use, Privacy Policy, Health Disclaimer)
+- Domain strategy: keep `theketokeep.com` on Mighty until cutover
+
+*Code session 22a (v0.9.0):*
+- Owner role: `owner` enum value, `is_owner()`, `set_member_role()` RPCs, Rance promoted to owner
+- Sidebar navigation: replaced top navbar with collapsible left sidebar (castle stone theme, mobile drawer)
+
+*Code session 22b (v0.10.0):*
+- Referral system: `referral_codes` + `referrals` tables, `?ref=` capture on signup, `/invite` admin page
+- Self-service account deletion via `delete_own_account()` RPC
+- Legal pages at `/terms`, `/privacy`, `/disclaimer` + footer links + signup checkbox
+
+*Code session 22c (v0.11.0):*
+- Login streaks: daily tracking with 1-day grace, 7-tier milestone badges (inline SVG), vacation freeze
+- Profile frames: `frame_catalog` table, 9 frame types, `FrameSelector`, `ProfileFrame` shared component
+- `StreakBadge` inline on sidebar, dashboard, forum posts, member cards
+
+*Code session (v0.11.1 — handed off, completed in Code):*
+- Replaced inline SVG frames with Gemini-generated PNG overlays
+- Changed avatars from round to square (6px border-radius)
+- Moved frame picker to avatar-click modal (FramePickerModal)
+
+**Decisions made:** Owner role via enum, sidebar Option C (immersive castle), TKK-prefixed referral codes, 1-day streak grace, 30-day vacation freeze max, square avatars with PNG frames, avatar-click frame picker modal, 3 free + 6 streak + 1 admin frames, legal pages as public routes, self-service deletion with typed confirmation, contact email `rance.fullspectrumhuman@gmail.com`.
+
+**Next Session Handoff:**
+- Verify v0.11.1 deploy (done in Session 23)
+- Complete deferred end gate items (done in Session 23)
+- Begin Phase 5F: Landing page polish
+
+### Session 23 — 2026-04-19 (Chat + Claude Code — patch)
+**Goal:** Fix modal centering + frame transparency issues from v0.11.1. Complete deferred Session 22 end gate.
+
+**What was done:**
+- Start gate: read reference file + Session 22 handoff, confirmed v0.11.1 deployed successfully
+- Identified 2 UI bugs from screenshot: (1) modal centering behind sidebar, (2) frame transparency bleed-through
+- Designed fixes: sidebar-aware modal backdrop offset + black clip-path backing behind frame PNGs
+- Wrote `CURRENT_BUILD_PLAN.md` for v0.11.2 patch
+- Code completed v0.11.2: both fixes applied, built, committed, pushed, auto-deployed
+- Identified follow-up issue: clip-path polygon created black rectangles beyond decorative frame edges + duplicate None/No Frame options
+- Redesigned frame backing: mask-image approach using the frame PNG itself as the mask — far more elegant, zero math
+- Code completed v0.11.3: mask-image backing + deduplicated none option, built, committed, pushed, auto-deployed
+- Completed deferred Session 22 end gate: canonical versions updated to v0.11.3, roadmap updated with Phase 5D/5E items, architecture decisions logged, session logs written
+
+**Decisions made:** Modal backdrop offset via CSS var (`left: var(--sidebar-width, 260px)`), frame backing via `mask-image` using frame PNG’s own alpha channel (replaced clip-path polygon from v0.11.2), deduplicate none option by filtering `frame_type === 'none'` from catalog.
+
+**Next Session Handoff:**
+- Begin **Phase 5F: Landing page polish**
+- Content source: `THE_KETO_KEEP_CONTENT_REFERENCE.md` (bios, FAQs, value props)
+- Assets: `bgfullcastle.png` (hero), `tkklogotransparent.png` (logo), light/dark castle backgrounds
+- Scope: hero section, value propositions, team bios, FAQ section, brand CTAs
+- Justine admin seed (email: `jvrbrts@gmail.com`) — check if she’s signed up
+- Domain planning (`theketokeep.com` currently on Mighty Networks)
+- No blockers. Ready to build.
+
 ### Session 2 — 2026-04-18
 **Goal:** Refine project reference file with lessons learned from MST project.
 **What was done:**
@@ -1180,10 +1300,9 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## OPEN QUESTIONS & DECISIONS NEEDED
 
-- Name of Co-Host #3 (for admin seeding; Co-Host #2 confirmed: Justine Roberts)
-- Community branding: logo, color palette, typography (can be decided later, but needed before public launch)
-- Custom domain name (if desired — Cloudflare provides a free `*.workers.dev` subdomain to start)
-- Messaging approach in Phase 5: in-app DMs vs. email-based communication
+- Name of Co-Host #3 (for admin seeding; Co-Host #2 confirmed: Justine Roberts, email: jvrbrts@gmail.com)
+- Custom domain cutover timing (`theketokeep.com` owned, currently pointing to Mighty Networks — switch after landing page ready + members notified)
+- Messaging approach: in-app DMs vs. email-based communication (deferred post-launch)
 
 ---
 

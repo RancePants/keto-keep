@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-19 (Session 21 — Pre-launch cleanup deployed v0.8.2)
+> **Canonical version date:** 2026-04-19 (Session 22 — Owner role + sidebar navigation deployed v0.9.0)
 
 ---
 
@@ -115,9 +115,9 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.8.2 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 21 — pre-launch cleanup: replaced all native dialogs, advisor audit clean, RLS verified |
-| Supabase schema | v5B3 (profiles.theme_preference column) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 19 — added `theme_preference text not null default 'system' check (theme_preference in ('light','dark','system'))` to profiles |
-| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 21 — v0.8.2 pre-launch cleanup |
+| Frontend app | v0.9.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 22 — owner role tier + sidebar navigation replaces top navbar |
+| Supabase schema | v5C (app_role enum includes 'owner'; is_owner() + set_member_role() RPCs; is_admin(uuid) treats owner as admin) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 22 — added owner role enum value, helper RPCs, promoted rance@fsh-coach.com to owner |
+| Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 | Phase 5A schema draft | APPLIED (reference copy) | `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` | session 13 — matches applied migration (incl. FK cover indexes) |
@@ -402,6 +402,24 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Q&A event type tint shifted from purple (`#2f2440` bg) to cool blue-grey stone (`#262a2e`) — session 20
 - [x] Version bump to v0.8.1 on deploy — session 20
 
+**Phase 5C — Owner Role + Sidebar Navigation** (deployed session 22, v0.9.0)
+- [x] Added `owner` value to `app_role` enum — session 22 (via `ALTER TYPE ... ADD VALUE`; requires non-transactional execute since enum DDL can't run inside a transaction block)
+- [x] Created `is_owner()` SECURITY DEFINER helper + updated `is_admin(uuid)` to treat owner as admin superset — session 22 (preserves existing `protect_role_change` trigger call site; avoids breaking change)
+- [x] Created `set_member_role(target_id uuid, new_role app_role)` SECURITY DEFINER RPC with guards (owner-only caller; can't change self; can't demote last owner; blocks owner → non-admin directly) — session 22
+- [x] Promoted `rance@fsh-coach.com` to owner via trigger-disable bootstrap — session 22 (note: handoff specified `rancepants@gmail.com` but actual admin in DB is `rance@fsh-coach.com`)
+- [x] AuthContext exposes `isOwner` + extended `isAdmin` (owner || admin) — session 22
+- [x] Profile page owner role management modal (RoleChangeModal) — session 22 (promote admin → owner, demote owner → admin, promote/demote member ↔ admin; blocks owner-on-owner)
+- [x] MemberCard admin menu hidden for owner targets — session 22
+- [x] Sidebar navigation replaces top navbar — session 22. New components: `Sidebar.jsx` + `SidebarMobileHeader.jsx` + `SidebarNavLink.jsx` + `SidebarSection.jsx`. Desktop: fixed 260px left panel with warm stone gradient background + amber torchlight glow radial + 3px amber active-state left accent bar. Mobile: slide-in drawer via transform translateX, sticky top header with hamburger + brand + notification bell.
+- [x] Layout.jsx rewritten with conditional rendering — session 22. `PRE_AUTH_PATHS = {'/','/login','/signup','/reset-password','/update-password'}`; sidebar only renders when `session && !PRE_AUTH_PATHS.has(pathname)`. Pre-auth routes use `.app-shell`, authed routes use `.app-layout` (Sidebar + app-main-wrap).
+- [x] Castle background images preserved on body (not sidebar) — session 22
+- [x] Theme toggle + notification bell + signout relocated to sidebar footer — session 22
+- [x] Logo files copied to `public/tkk-logo-transparent.png` + `public/tkk-logo-with-bg.png` — session 22
+- [x] Deleted `Navbar.jsx` + `AdminDropdown.jsx` — session 22
+- [x] All admin-gated pages/components updated to use `isAdmin` from AuthContext (owner treated as admin everywhere) — session 22. Files: Dashboard, MembersDirectory, SpaceView, AdminHub, EventsHome, EventDetail, CoursesHome, CourseDetail, LessonView, AdminAdminTags, AdminTags, PostComposer, PostCard, ReplyItem, MemberCard.
+- [x] Lint + build clean (0 problems; 340ms build) — session 22
+- [x] Version bump to v0.9.0 — session 22
+
 **Phase 5B — Pre-launch Cleanup** (deployed session 21, v0.8.2)
 - [x] Replaced all 9 `window.confirm` / `window.alert` instances with `Modal variant="danger"` — session 21. Files changed: `AdminTags.jsx`, `AdminAdminTags.jsx`, `PostCard.jsx`, `ReplyItem.jsx`, `EventFormModal.jsx`, `CourseFormModal.jsx`, `ModuleFormModal.jsx`, `LessonFormModal.jsx`, `AwardBadgeModal.jsx`
 - [x] Supabase security + performance advisor audit — session 21. Security: only pre-existing `auth_leaked_password_protection` WARN (Pro Plan feature; accepted). Performance: 21 expected `unused_index` INFO (FK cover indexes + query indexes on low-volume fresh DB); zero `auth_rls_initplan`; zero `unindexed_foreign_keys`. No remediation needed.
@@ -517,6 +535,14 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-19 | Phase 5B-3: Modal focus trap uses `document.activeElement` capture + querySelector-based Tab wrapping, no library | Bringing in `focus-trap-react` or similar would be a 2 KB dep for ~20 lines of custom logic. A `setTimeout(0)` initial-focus + a Tab/Shift-Tab handler that queries focusables and wraps at the boundaries covers the WCAG 2.1 requirement. Return-focus-on-close restores `document.activeElement` captured at open-time. |
 | 2026-04-19 | Session 20: dark mode surfaces shifted from blue/purple undertone to warm charcoal/stone | Every dark-mode surface color in v0.8.0 had a blue channel 15–30 points higher than R/G (e.g. `#1a1a2e`, `#252540`, `#0e0e1c`), giving a sci-fi purple look inconsistent with the castle theme. All 13 surface/background tokens were remapped so blue ≤ R/G with a slight warm (brown/amber) undertone. Q&A tint shifted to cool blue-grey stone to stay differentiated. Both `[data-theme="dark"]` and the `@media (prefers-color-scheme: dark)` fallback blocks updated identically. CSS-only change; no component or schema changes. |
 | 2026-04-19 | Session 21: replaced all `window.confirm` / `window.alert` with `Modal variant="danger"` — no Toast needed | All 9 native dialogs were destructive confirmations (delete/remove), so all became danger-variant Modals with Cancel + action-specific Confirm button. No success/info/error alerts existed, so `useToast` was not needed for this pass. Pattern: add `confirmXxx` state (or `xToDelete` for dynamic names), convert the action to a state setter, add a second `<Modal variant="danger" size="sm">` alongside the existing component Modal (in a React fragment), execute the real delete only in the confirmed handler. AdminTags + AdminAdminTags needed Modal imported; course/event/lesson/module modals + AwardBadgeModal already imported Modal. ReplyItem + PostCard needed Modal imported from `../ui/Modal.jsx`. |
+| 2026-04-19 | Session 22: `owner` as app_role enum value (not a separate profile column or boolean) | Owner is semantically "admin with extra privileges" — single-field role stays consistent with existing is_admin pattern. Adding a boolean (`is_owner`) would have split the role story across two columns and required every existing admin check to be rewritten. Instead `is_admin(uuid)` returns true for owner OR admin, so all 14 existing consumer files needed only a variable rename-through (isAdmin continues to work). One new helper `is_owner()` covers the narrow owner-only gates (promote/demote admins). |
+| 2026-04-19 | Session 22: kept `is_admin(uuid)` parameterized signature (didn't switch to parameterless) | The Phase 5C handoff suggested switching is_admin to a parameterless variant that uses `auth.uid()`. But the existing `protect_role_change` trigger (and other call sites) invoke `is_admin(NEW.id)` with an explicit uuid — switching the signature would either break those callers or require maintaining two overloads. Kept the single parameterized form and just extended its body to return true for owner too. Zero breaking changes. |
+| 2026-04-19 | Session 22: `set_member_role()` blocks direct owner-from-member promotion | The RPC requires a caller to be owner AND forbids owner → non-admin demotion in one step (owner must first become admin, then admin can be demoted). This prevents accidental last-owner-removal from a single mis-click, and forces owner → admin → member to be a deliberate two-step action. Extra guard: can't change self, can't demote last owner, target must exist. |
+| 2026-04-19 | Session 22: promoted `rance@fsh-coach.com` (not `rancepants@gmail.com` as handoff specified) | Queried profiles/auth.users — the only active admin on the Supabase project is rance@fsh-coach.com. The handoff's email was stale. Bootstrap used trigger-disable pattern: `ALTER TABLE profiles DISABLE TRIGGER protect_role_change`; update role; re-enable trigger. This is the only legitimate path since the trigger blocks admin → owner when no owner exists yet (chicken-and-egg). |
+| 2026-04-19 | Session 22: sidebar is CSS gradient-painted, not castle-bg-image | Handoff emphasized sidebar should "feel like interior keep wall" — warm stone via CSS, NOT castle bg images. The castle bg images stay on `body` (the outside of the keep). Sidebar uses `--sidebar-bg` gradient + `--sidebar-glow` amber radial at top for torchlight effect. This keeps the sidebar thematic without double-painting the castle imagery or fighting the body background for visual focus. |
+| 2026-04-19 | Session 22: sidebar visibility is session + route gated, not conditional-rendered per page | `PRE_AUTH_PATHS = {'/','/login','/signup','/reset-password','/update-password'}` in Layout.jsx. Sidebar renders only when `session && !PRE_AUTH_PATHS.has(pathname)`. Alternative — per-page conditional — would have required every authed page to opt in and every landing/auth page to opt out, with new pages defaulting to the wrong state. Whitelist of pre-auth paths is smaller and fails safe (new routes get the sidebar by default, which is correct for 95% of pages). |
+| 2026-04-19 | Session 22: mobile sidebar is slide-in drawer with backdrop, not a bottom-nav or hamburger-dropdown | Drawer pattern matches the desktop sidebar's content (nav sections, user block, theme controls, signout) without requiring a second information-architecture. Bottom-nav would force picking the 4–5 most-used nav items; drawer preserves full nav. Escape key closes, body overflow locked while open, auto-close on route change, backdrop click dismisses. |
+| 2026-04-19 | Session 22: "Invite Friends" is placeholder showing "Coming soon" hint | Planned for post-launch but wanted the nav structure to anticipate it. SidebarNavLink supports a `disabled` prop that renders the link greyed-out with a "Soon" pill in place of the badge. Avoids reshuffling the nav layout later when invites ship. |
 
 ---
 

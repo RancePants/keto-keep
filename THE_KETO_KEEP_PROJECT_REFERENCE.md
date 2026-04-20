@@ -714,14 +714,37 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 **Last Updated:** 2026-04-19 (Session 25b)
 **Frontend Version:** v0.12.1 — Landing page contrast hotfix: pinned warm cream palette on `.landing` so content sections always render light/readable regardless of system dark mode. Removed 8 `[data-theme='dark']` override blocks. Fixed nonexistent `--color-text-primary`/`--color-text-secondary` references → `--color-ink`/`--color-ink-soft`. Hero and final CTA remain hardcoded dark. _(v0.12.0: Full landing page rewrite Phase 5F — hero, slogan bar, value grid, coach cards, FAQ accordion, dark final CTA. Forum reply count bugfix in SpaceView.jsx.)_
 **Supabase Schema:** v5E — unchanged from session 24.
-**Session 25 — Next Session Handoff:**
-- Landing page is live. Verify at keto-keep.rance-8c6.workers.dev while logged out.
+**Session 25b — Next Session Handoff:**
+- v0.12.1 is live. Verify at keto-keep.rance-8c6.workers.dev while logged out — landing page content sections should be warm cream regardless of system dark mode.
 - Next candidates (decide in Chat before opening Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Supabase leaked-password toggle, Phase 5D coach listing.
 - No blockers or prerequisites for any of the above.
 
 ---
 
 ## SESSION LOG
+
+### Session 25b — 2026-04-19 (Claude Code — Landing page contrast hotfix v0.12.1)
+**Goal:** Fix landing page readability bug — CSS variable names were wrong, dark-mode fallbacks made content unreadable.
+
+**What was done:**
+- Identified root cause: `landing.css` used `--color-text-primary` and `--color-text-secondary` (vars that don't exist in this project). Dark fallback values (`#1a0f00`, `#5a4a35`) rendered as near-black on dark-mode surfaces.
+- Added scoped CSS variable block on `.landing` that pins the full warm cream palette (`--color-ink`, `--color-ink-soft`, `--color-cream`, `--color-surface`, `--color-surface-raised`, `--color-border`, `--color-border-strong`) to their light/warm values. Landing page content sections now always render light regardless of system theme.
+- Replaced all `var(--color-text-primary, ...)` → `var(--color-ink)` and `var(--color-text-secondary, ...)` → `var(--color-ink-soft)` throughout the file.
+- Stripped now-redundant fallback values from `--color-surface`, `--color-border`, `--color-surface-raised`.
+- Removed all 8 `[data-theme='dark']` override blocks — no longer needed.
+- Replaced `var(--color-amber, #c08b30)` → `#c08b30` (brand accent, not a theme variable).
+- Hero and final CTA remain hardcoded dark — untouched.
+- Bumped to v0.12.1, committed, pushed. Cloudflare auto-deploy triggered.
+
+**Decisions made:**
+- Landing page is permanently light/warm (not theme-adaptive). Visitors are pre-auth with no stored theme preference to honor. Consistency of the marketing presentation matters more than dark-mode adaptation here.
+
+**Next Session Handoff:**
+- v0.12.1 deployed. Verify warm cream palette at keto-keep.rance-8c6.workers.dev while logged out; toggle system dark mode and confirm content sections don't change.
+- Next feature candidates (decide in Chat): member-to-member messaging, auth-level ban hardening via Edge Function, notification opt-out preferences, Phase 5D coach listing.
+- No blockers.
+
+---
 
 ### Session 19 — 2026-04-19 (Claude Code — Phase 5B-3 polish / a11y / dark mode / background images deployed v0.8.0)
 **Goal:** Ship the polish, accessibility, and dark-mode pass as v0.8.0. No new features — refinement of everything built in Phases 1–5B-2. Apply a single schema change (`profiles.theme_preference`), build a CSS custom-property theme system with light/dark palettes, place castle background images with overlay, add a navbar theme toggle, do a systematic a11y pass (skip link, focus trap, ARIA), and layer UX polish (page titles, scroll-to-top, toast system, shared loading/error/empty states, castle-themed 404).

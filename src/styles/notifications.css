@@ -174,8 +174,8 @@
 
 @media (max-width: 720px) {
   .notif-dropdown {
-    right: auto;
-    left: 0;
+    right: 0;
+    width: calc(100vw - 16px);
   }
 }
 

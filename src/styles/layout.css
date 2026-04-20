@@ -42,6 +42,14 @@
   font-feature-settings: 'tnum' 1;
 }
 
+.footer-trademark {
+  display: block;
+  text-align: center;
+  margin-top: var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+}
+
 /* Page containers */
 .page {
   max-width: var(--content-max);
@@ -86,5 +94,16 @@
 
   .page-title {
     font-size: var(--fs-xl);
+  }
+
+  .app-main-footer,
+  .app-footer {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .app-main-footer .footer-inner,
+  .app-footer .footer-inner {
+    flex-direction: column;
+    gap: var(--space-2);
   }
 }

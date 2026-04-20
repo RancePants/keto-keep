@@ -354,6 +354,9 @@
   padding: 8px 10px;
   cursor: pointer;
   color: var(--color-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-mobile-burger:hover {

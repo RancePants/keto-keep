@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-20 (Session 26 — v0.13.0; rich text editor + emoji picker, dark mode fixes, member card horizontal layout)
+> **Canonical version date:** 2026-04-20 (Session 26b — v0.13.1; link popup, emoji overflow fix, member card layout, reaction count dark mode, floating notification bell)
 
 ---
 
@@ -115,7 +115,7 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.13.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 26 — rich text editor (Tiptap), emoji picker, dark mode fixes, member card horizontal layout |
+| Frontend app | v0.13.1 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 26b — link popup, emoji overflow fix, member card layout, reaction count dark mode, floating notification bell |
 | Supabase schema | v5E (owner role, referral_codes, referrals, profiles+terms/deletion/streak/frame cols, frame_catalog, legal pages) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 22 — owner role (22a), referrals+legal+deletion (22b), streaks+frames (22c) |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
@@ -552,6 +552,18 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Mobile: `@media (max-width: 480px)` stacks member card to column, resets frame margin — session 26
 - [x] Version bump to v0.13.0 — session 26
 
+**Phase 5G — Polish Pass** (deployed session 26b, v0.13.1)
+- [x] Link button UX: Tiptap `autolink: true` so typed/pasted URLs auto-link on space/enter — session 26b
+- [x] Link button popup: replaced `window.prompt` with inline `<LinkPopup>` component — URL input + Apply + Remove; Escape/outside-click closes; pre-fills href when editing existing link — session 26b
+- [x] Emoji picker overflow: changed `.rte-wrap` from `overflow: hidden` to `overflow: visible`; moved `overflow: hidden` to `.rte-editor-wrap` to preserve border-radius clipping — session 26b
+- [x] Emoji picker fixed positioning: `.rte-emoji-panel-fixed { position: fixed }` with coordinates from `getBoundingClientRect()` so panel escapes all parent overflow clips — session 26b
+- [x] Emoji picker dark mode: `getTheme()` reads `document.documentElement.getAttribute('data-theme')` and passes `theme="dark"|"light"` to `<EmojiPicker>` — session 26b
+- [x] Member card gap: increased `.member-card-link` gap from `var(--space-4)` to `var(--space-5)` — session 26b
+- [x] Member card top row: name + dietary tag + streak now share one inline flex row (`.member-card-top-row`); journey + location in a separate `.member-card-sub-row` below — session 26b
+- [x] Reaction count dark mode: added `color: var(--color-ink)` to `.reaction-chip` base rule in forums.css — session 26b
+- [x] Notification bell moved to floating desktop position: removed from `Sidebar.jsx` footer; added as `<div class="notif-bell-float"><NotificationBell /></div>` in `Layout.jsx` inside `.app-main-wrap`; `position: fixed; top: 16px; right: 24px; z-index: 40`; hidden at ≤768px (mobile header bell covers that breakpoint) — session 26b
+- [x] Version bump to v0.13.1 — session 26b
+
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email) — deferred post-launch
 - [x] Replace `window.confirm` / `window.alert` usage with Toast + Modal primitives — session 21 (9 instances across 8 files)
@@ -692,6 +704,9 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-20 | Session 26: slim toolbar prop on RichTextEditor for reply contexts | Reply bodies are short and conversational — bold, italic, link, and emoji cover 99% of reply formatting needs. Lists in a 2-line reply textarea feel heavyweight. The `slim` prop omits bullet + ordered list buttons and reduces the emoji picker height from 400px to 320px. PostComposer and PostCard edit mode use the full toolbar (slim=false default). ReplyComposer and ReplyItem edit mode use slim=true. |
 | 2026-04-20 | Session 26: members directory changed from 3-column card grid to single-column horizontal cards | The 3-column grid was designed for compact avatar+name cards. Now that each card shows bio, badges, interest tags, and journey info, horizontal rows give each member more reading width and prevent truncation. Layout: avatar/frame column (56px, flex-shrink: 0) left + content column (flex: 1) right. Single-column grid also reduces visual density on a page that can list 50–200 members. |
 | 2026-04-20 | Session 26: member card frame alignment uses 16px margin-top (not the profile page's 35px) | ProfileFrame at size=64 has FRAME_OFFSET_RATIO=0.25 → overlayOffset = 16px (frame overlaps 16px above the container). To align the visual top of the frame with the content column's first text line, the avatar column shifts down 16px. The profile page uses 35px because the avatar is larger there and the name text sits lower in a taller layout. Member card uses the mathematically derived 16px. |
+| 2026-04-20 | Session 26b: emoji picker uses fixed positioning (not absolute) to escape parent overflow clips | The emoji panel was getting clipped by `.rte-wrap`'s `overflow: hidden`, and potentially by `.post-composer` or other ancestors. Moving `.rte-wrap` to `overflow: visible` wasn't enough because other ancestor containers also clip. Solution: compute the trigger button's bounding rect via `getBoundingClientRect()` on `emojiTriggerRef`, store `{ top: rect.bottom + 4, left }` in state, render `<div class="rte-emoji-panel-fixed" style={{top, left}}>` with `position: fixed`. Fixed positioning escapes all overflow-clipping ancestors by bypassing the stacking context entirely. |
+| 2026-04-20 | Session 26b: link popup as inline component instead of `window.prompt` | `window.prompt` is a native browser dialog that blocks the main thread, can't be styled, and behaves differently across browsers. The inline `<LinkPopup>` component is absolutely positioned below `.rte-link-wrap` (which is `position: relative`). It pre-fills the existing href if editing a link, shows Remove only when editing, auto-focuses the input on mount, and closes on Escape or outside click. The popup uses the same CSS variables as the rest of the UI for automatic dark mode support. |
+| 2026-04-20 | Session 26b: notification bell moved from sidebar footer to floating fixed position (desktop only) | The sidebar footer bell was hard to discover (bottom-left corner, visually crowded with theme toggle and sign-out) and its dropdown opened downward off-screen. Moving to `position: fixed; top: 16px; right: 24px` follows the established UI convention (most apps put the bell top-right). The dropdown already uses `right: 0; top: calc(100% + 8px)` which opens correctly in this new position. Hidden at ≤768px since `SidebarMobileHeader` has its own bell at that breakpoint. |
 
 ---
 
@@ -745,19 +760,47 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5G complete — v0.13.0 committed, push pending user confirmation
-**Last Updated:** 2026-04-20 (Session 26)
-**Frontend Version:** v0.13.0 — Rich text editor (Tiptap + emoji-picker-react), DOMPurify HTML rendering in forum feed, dark mode fixes for forum edit textareas + member filter inputs, member directory single-column horizontal card layout with frame alignment. Commit `2e8516d` on main — push to remote needs confirmation.
-**Supabase Schema:** v5E — unchanged from session 24. No schema changes in Session 26.
-**Session 26 — Next Session Handoff:**
-- v0.13.0 committed locally. Push was blocked by safety hook — Rance needs to push manually (`git push origin main`) or confirm in next Code session.
-- After push verifies on Cloudflare auto-deploy, test: post composer with rich text, emoji picker, reply with slim toolbar, dark mode on /forums edit mode, dark mode on /members filters, member card horizontal layout with/without frames.
+**Current Phase:** Phase 5G polish complete — v0.13.1 committed, push pending user confirmation
+**Last Updated:** 2026-04-20 (Session 26b)
+**Frontend Version:** v0.13.1 — Link inline popup, emoji picker fixed positioning + dark mode theme, member card top-row layout, reaction count dark mode fix, floating desktop notification bell. Commit `5e3ed5e` on main — push to remote needs confirmation.
+**Supabase Schema:** v5E — unchanged from session 24. No schema changes in Session 26b.
+**Session 26b — Next Session Handoff:**
+- v0.13.1 committed locally (`5e3ed5e`). Push was blocked by safety hook — Rance needs to push manually (`git push origin main`) or confirm in next Code session.
+- After push verifies on Cloudflare auto-deploy, test: link popup in post composer + reply, emoji picker visibility + dark mode, member card top row, reaction count in dark mode, notification bell at top-right (desktop) vs. header (mobile).
 - Next candidates (decide in Chat before Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Justine admin seed, domain cutover planning.
 - No blockers for any of the above once push is done.
 
 ---
 
 ## SESSION LOG
+
+### Session 26b — 2026-04-20 (Claude Code — five polish fixes, v0.13.1)
+**Goal:** Five polish fixes on top of v0.13.0: (1) link button inline popup + autolink, (2) emoji picker overflow fix + dark mode, (3) member card layout, (4) reaction count dark mode, (5) floating notification bell.
+
+**What was done:**
+- **Item 1 — Link button UX:** Enabled `autolink: true` on Tiptap Link extension (typed/pasted URLs auto-link). Replaced `window.prompt` with a new `<LinkPopup>` component inline in the toolbar. Popup appears below the link button via `position: absolute` on `.rte-link-wrap`. Shows URL input (pre-filled if editing existing link), Apply button, and Remove button (only when editing). Keyboard: Enter=apply, Escape=close. Outside-click dismisses via `document.addEventListener('mousedown', ...)`. CSS: `.rte-link-wrap`, `.rte-link-popup`, `.rte-link-input`, `.rte-link-btn`, `.rte-link-apply`, `.rte-link-remove` — all dark-mode-aware via CSS variables.
+- **Item 2 — Emoji picker overflow + dark mode:** Changed `.rte-wrap` from `overflow: hidden` to `overflow: visible`. Added `overflow: hidden` to `.rte-editor-wrap` to preserve border-radius clipping on content area. Replaced `.rte-emoji-panel` (absolute) with `.rte-emoji-panel-fixed` (fixed position). `openEmoji()` reads `emojiTriggerRef.current.getBoundingClientRect()`, stores `{ top: rect.bottom + 4, left }` in state, renders fixed panel at those coordinates. Left-flips if too close to right edge. Added `getTheme()` helper that reads `document.documentElement.getAttribute('data-theme')` and passes result to `<EmojiPicker theme={theme}>`.
+- **Item 3 — Member card layout:** Increased `.member-card-link` gap from `var(--space-4)` to `var(--space-5)`. Restructured `.member-card-heading`: added `.member-card-top-row` (flex row, flex-wrap) for name + dietary + streak inline; added `.member-card-sub-row` for journey + location on the next line. Bio, badges, interest tags, admin tags already filled full content width.
+- **Item 4 — Reaction count dark mode:** Added `color: var(--color-ink)` to `.reaction-chip` base rule in forums.css. Previously no explicit color was set, so count text inherited browser default (black) — invisible in dark mode.
+- **Item 5 — Floating notification bell:** Removed `<NotificationBell />` and its import from `Sidebar.jsx` footer. Added `import NotificationBell` in `Layout.jsx` and rendered `<div class="notif-bell-float"><NotificationBell /></div>` inside `.app-main-wrap` above `<SuspendedBanner>`. Added `.notif-bell-float { position: fixed; top: 16px; right: 24px; z-index: 40 }` + `@media (max-width: 768px) { display: none }` in `notifications.css`. Dropdown already had `right: 0; top: calc(100% + 8px)` so it opens correctly in the new position.
+- **Lint + build:** Clean. Version bump to 0.13.1. Committed as `5e3ed5e`.
+
+**Files changed:**
+- `src/components/ui/RichTextEditor.jsx` — LinkPopup component, getTheme(), autolink: true, fixed emoji panel positioning, theme prop on EmojiPicker
+- `src/styles/rich-editor.css` — overflow: visible on .rte-wrap; overflow: hidden on .rte-editor-wrap; .rte-emoji-panel-fixed (fixed); .rte-link-wrap, .rte-link-popup, .rte-link-input, .rte-link-btn, .rte-link-apply, .rte-link-remove
+- `src/styles/forums.css` — `color: var(--color-ink)` on .reaction-chip
+- `src/components/members/MemberCard.jsx` — .member-card-top-row + .member-card-sub-row restructure
+- `src/styles/members.css` — gap: var(--space-5) on .member-card-link; .member-card-top-row and .member-card-sub-row CSS
+- `src/components/ui/Sidebar.jsx` — removed NotificationBell import + usage from footer
+- `src/components/Layout.jsx` — added NotificationBell import; added .notif-bell-float wrapper div
+- `src/styles/notifications.css` — .notif-bell-float CSS (fixed, top-right, hidden ≤768px)
+- `package.json` — version 0.13.1
+- `CURRENT_BUILD_PLAN.md` — fully checked off
+
+**Next Session Handoff:**
+- Push `git push origin main` to trigger Cloudflare auto-deploy (commit `5e3ed5e` on local main).
+- Test: link popup in forum post + reply, emoji picker full visible + dark mode, member card top row layout, reaction count in dark mode, notification bell at top-right on desktop, mobile header bell unchanged.
+- Next feature candidates: member-to-member messaging, auth-level ban hardening, notification opt-out, Justine admin seed, domain cutover.
 
 ### Session 26 — 2026-04-20 (Claude Code — rich text editor + dark mode fixes + member card layout, v0.13.0)
 **Goal:** Four build items: (1) dark mode fix for forum edit textareas, (2) dark mode fix for members filter inputs, (3) Tiptap rich text editor + emoji picker for forum post/reply create + edit, (4) members directory single-column horizontal card layout with frame alignment.

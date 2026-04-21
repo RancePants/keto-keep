@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-20 (Session 26b — v0.13.1; link popup, emoji overflow fix, member card layout, reaction count dark mode, floating notification bell)
+> **Canonical version date:** 2026-04-21 (Session 27 — v0.13.2; admin menu clipping, frame spacing, card content density)
 
 ---
 
@@ -115,7 +115,7 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.13.1 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 26b — link popup, emoji overflow fix, member card layout, reaction count dark mode, floating notification bell |
+| Frontend app | v0.13.2 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 27 — admin menu clipping, frame spacing, card content density |
 | Supabase schema | v5E (owner role, referral_codes, referrals, profiles+terms/deletion/streak/frame cols, frame_catalog, legal pages) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 22 — owner role (22a), referrals+legal+deletion (22b), streaks+frames (22c) |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
@@ -564,6 +564,15 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Notification bell moved to floating desktop position: removed from `Sidebar.jsx` footer; added as `<div class="notif-bell-float"><NotificationBell /></div>` in `Layout.jsx` inside `.app-main-wrap`; `position: fixed; top: 16px; right: 24px; z-index: 40`; hidden at ≤768px (mobile header bell covers that breakpoint) — session 26b
 - [x] Version bump to v0.13.1 — session 26b
 
+**Phase 5G — Bug Fixes** (deployed session 27, v0.13.2)
+- [x] Admin dropdown menu clipping: removed `overflow: hidden` from `.member-card` — bio clamp handles its own overflow; card border-radius unaffected — session 27
+- [x] Frame-to-text spacing (profile mobile): added `margin-bottom: 24px` to `.profile-top .profile-frame:not(.profile-frame-none)` in mobile media query so frame bottom has breathing room before name text — session 27
+- [x] Frame-to-text spacing (member cards desktop): added `margin-bottom: 8px` to `.member-card-avatar-col-framed` — session 27
+- [x] Frame-to-text spacing (member cards mobile): added `margin-bottom: 12px` to `.member-card-avatar-col-framed` in mobile override — session 27
+- [x] Member card content density: added `about_me` excerpt below bio (3-line clamp, only shown if `profile.about_me` exists and differs from `profile.bio`); added `.member-card-about` CSS — session 27
+- [x] Member card interest tags: increased display limit from 4 to 8 (`interestTags.slice(0, 8)`) — session 27
+- [x] Version bump to v0.13.2 — session 27
+
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email) — deferred post-launch
 - [x] Replace `window.confirm` / `window.alert` usage with Toast + Modal primitives — session 21 (9 instances across 8 files)
@@ -760,19 +769,38 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5G polish complete — v0.13.1 committed, push pending user confirmation
-**Last Updated:** 2026-04-20 (Session 26b)
-**Frontend Version:** v0.13.1 — Link inline popup, emoji picker fixed positioning + dark mode theme, member card top-row layout, reaction count dark mode fix, floating desktop notification bell. Commit `5e3ed5e` on main — push to remote needs confirmation.
-**Supabase Schema:** v5E — unchanged from session 24. No schema changes in Session 26b.
-**Session 26b — Next Session Handoff:**
-- v0.13.1 committed locally (`5e3ed5e`). Push was blocked by safety hook — Rance needs to push manually (`git push origin main`) or confirm in next Code session.
-- After push verifies on Cloudflare auto-deploy, test: link popup in post composer + reply, emoji picker visibility + dark mode, member card top row, reaction count in dark mode, notification bell at top-right (desktop) vs. header (mobile).
+**Current Phase:** Phase 5G bug fix pass complete — v0.13.2 pushed to main
+**Last Updated:** 2026-04-21 (Session 27)
+**Frontend Version:** v0.13.2 — Admin dropdown menu unclipped, frame-to-text spacing fixed (profile mobile + member cards), member cards show about_me excerpt + up to 8 interest tags. Commit `191f432` pushed to main.
+**Supabase Schema:** v5E — unchanged. No schema changes in Session 27.
+**Session 27 — Next Session Handoff:**
+- v0.13.2 deployed to Cloudflare. Test: admin menu dropdown fully visible on member cards, frame-bottom spacing on mobile profile + member cards, about_me field showing on cards, 8 interest tags visible.
 - Next candidates (decide in Chat before Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Justine admin seed, domain cutover planning.
-- No blockers for any of the above once push is done.
+- No blockers.
 
 ---
 
 ## SESSION LOG
+
+### Session 27 — 2026-04-21 (Claude Code — three UI bug fixes, v0.13.2)
+**Goal:** Three CSS + minor JSX bug fixes: (1) admin dropdown clipped by member card overflow, (2) frame-to-text spacing on mobile profile + member cards, (3) member card content density (about_me excerpt + more interest tags).
+
+**What was done:**
+- **Bug 1 — Admin menu clipping:** Removed `overflow: hidden` from `.member-card`. The dropdown was rendering inside the card but getting clipped. The bio already uses `-webkit-line-clamp: 2` + `overflow: hidden` for its own truncation, and the card's `border-radius` doesn't require `overflow: hidden` since no child element bleeds beyond the card edges in normal flow.
+- **Bug 2 — Frame-to-text spacing:** Three targeted fixes: (a) `profiles.css` mobile query: added `margin-bottom: 24px` to `.profile-top .profile-frame:not(.profile-frame-none)` so the frame bottom clears the name text on narrow screens. (b) `members.css` desktop: added `margin-bottom: 8px` to `.member-card-avatar-col-framed`. (c) `members.css` mobile override: added `margin-bottom: 12px` to `.member-card-avatar-col-framed` in the `@media (max-width: 480px)` block (mobile gets slightly more clearance since content is stacked vertically directly below the frame).
+- **Bug 3 — Content density:** Added `about_me` excerpt to `MemberCard.jsx` — rendered as `<p className="member-card-about">` below the bio, only when `profile.about_me` is non-empty and different from `profile.bio`, 3-line clamp. Added `.member-card-about` CSS class in `members.css`. Increased interest tag display limit from 4 → 8 (`interestTags.slice(0, 8)`).
+- **Lint + build:** Clean. Version bumped to 0.13.2. Committed `191f432`, pushed to main.
+
+**Files changed:**
+- `src/styles/members.css` — removed `overflow: hidden` from `.member-card`; `margin-bottom: 8px` on `.member-card-avatar-col-framed`; `margin-bottom: 12px` in mobile override; `.member-card-about` class
+- `src/styles/profiles.css` — `margin-bottom: 24px` on framed avatar in mobile media query
+- `src/components/members/MemberCard.jsx` — `about_me` excerpt paragraph; slice(0, 8) for interest tags
+- `package.json` — version 0.13.2
+- `CURRENT_BUILD_PLAN.md` — fully checked off
+
+**Next Session Handoff:**
+- v0.13.2 live on Cloudflare. Test: admin 3-dot menu fully visible on member cards, frame-to-name spacing on mobile profile + member cards, about_me field on cards, 8 interest tags.
+- Next feature candidates: member-to-member messaging, auth-level ban hardening, notification opt-out, Justine admin seed, domain cutover.
 
 ### Session 26b — 2026-04-20 (Claude Code — five polish fixes, v0.13.1)
 **Goal:** Five polish fixes on top of v0.13.0: (1) link button inline popup + autolink, (2) emoji picker overflow fix + dark mode, (3) member card layout, (4) reaction count dark mode, (5) floating notification bell.

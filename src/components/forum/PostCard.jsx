@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import UserAvatar from './UserAvatar.jsx';
 import EmojiReactionBar from './EmojiReactionBar.jsx';
 import ReplySection from './ReplySection.jsx';
@@ -8,11 +9,19 @@ import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
 import BadgesInline from '../profile/BadgesInline.jsx';
 import StreakBadge from '../ui/StreakBadge.jsx';
 import Modal from '../ui/Modal.jsx';
+import RichTextEditor from '../ui/RichTextEditor.jsx';
 import { usePrivateImage } from './usePrivateImage.js';
 import { formatRelative, isEdited } from '../../lib/forumHelpers.js';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
 import { notifyReaction } from '../../lib/notificationHelpers.js';
+
+const ALLOWED_TAGS = ['b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'p', 'br'];
+const ALLOWED_ATTR = { a: ['href', 'target', 'rel'] };
+
+function sanitize(html) {
+  return DOMPurify.sanitize(html, { ALLOWED_TAGS, ALLOWED_ATTR });
+}
 
 function PostImage({ path }) {
   const url = usePrivateImage('forum-images', path);
@@ -75,8 +84,10 @@ export default function PostCard({
     if (onChanged) await onChanged();
   };
 
+  const editBodyText = editBody.replace(/<[^>]*>/g, '').trim();
+
   const saveEdit = async () => {
-    if (!editTitle.trim() || !editBody.trim() || saving) return;
+    if (!editTitle.trim() || !editBodyText || saving) return;
     setSaving(true);
     try {
       const { error } = await supabase
@@ -143,16 +154,16 @@ export default function PostCard({
             type="text"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
+            className="post-edit-field"
             style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border-strong)' }}
           />
-          <textarea
-            value={editBody}
-            onChange={(e) => setEditBody(e.target.value)}
-            rows={5}
-            style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border-strong)' }}
+          <RichTextEditor
+            content={editBody}
+            onChange={setEditBody}
+            placeholder="Post body…"
           />
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="button" className="btn btn-primary" onClick={saveEdit} disabled={saving}>
+            <button type="button" className="btn btn-primary" onClick={saveEdit} disabled={saving || !editBodyText}>
               {saving ? 'Saving…' : 'Save'}
             </button>
             <button
@@ -176,7 +187,10 @@ export default function PostCard({
               post.title
             )}
           </h3>
-          <p className="post-body">{post.body}</p>
+          <div
+            className="post-rich-body"
+            dangerouslySetInnerHTML={{ __html: sanitize(post.body) }}
+          />
           {post.image_path && <PostImage path={post.image_path} />}
         </>
       )}

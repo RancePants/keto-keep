@@ -123,6 +123,26 @@
   justify-content: flex-end;
 }
 
+/* Filter inputs + selects — dark mode aware */
+.member-filter-field input,
+.member-filter-field select {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: 0.45rem 0.65rem;
+  font: inherit;
+  font-size: var(--fs-sm);
+  width: 100%;
+  box-sizing: border-box;
+}
+.member-filter-field input:focus,
+.member-filter-field select:focus {
+  outline: none;
+  border-color: var(--color-green);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
 .member-count {
   margin-bottom: var(--space-3);
   font-size: var(--fs-sm);
@@ -132,7 +152,7 @@
 .member-grid {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .member-card {
@@ -149,18 +169,29 @@
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
+
+/* Horizontal card layout — avatar left, content right */
 .member-card-link {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  flex-direction: row;
+  gap: var(--space-4);
+  align-items: flex-start;
   text-decoration: none;
   color: inherit;
 }
-.member-card-header {
-  display: flex;
-  gap: var(--space-3);
-  align-items: flex-start;
+
+/* Avatar column — fixed width, does not shrink */
+.member-card-avatar-col {
+  flex-shrink: 0;
 }
+/* When a decorative frame is in use, shift the column down so the visual
+   top of the frame (which overflows 16 px above the container) aligns
+   with the top of the member name text. FRAME_OFFSET_RATIO = 0.25,
+   size = 64 → overlayOffset = 16 px. */
+.member-card-avatar-col-framed {
+  margin-top: 16px;
+}
+
 .member-card-avatar {
   width: 56px;
   height: 56px;
@@ -168,6 +199,7 @@
   object-fit: cover;
   flex-shrink: 0;
   background: var(--color-sand);
+  display: block;
 }
 .member-card-avatar-fallback {
   width: 56px;
@@ -183,16 +215,27 @@
   font-weight: 600;
   flex-shrink: 0;
 }
-.member-card-heading {
+
+/* Content column — all text info */
+.member-card-content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.member-card-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .member-card-name {
   font-family: var(--font-serif);
   font-size: var(--fs-md);
   font-weight: 600;
   color: var(--color-ink);
-  margin: 0 0 var(--space-1) 0;
+  margin: 0;
   line-height: 1.2;
 }
 .member-card-meta-row {
@@ -200,7 +243,6 @@
   flex-wrap: wrap;
   gap: var(--space-1);
   align-items: center;
-  margin-bottom: var(--space-1);
 }
 .member-card-sub {
   font-size: var(--fs-xs);
@@ -236,6 +278,17 @@
   gap: var(--space-1);
   border-top: 1px dashed var(--color-border);
   padding-top: var(--space-2);
+}
+
+/* Mobile: stack avatar above content at narrow widths */
+@media (max-width: 480px) {
+  .member-card-link {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .member-card-avatar-col-framed {
+    margin-top: 0;
+  }
 }
 .admin-tag-badge {
   display: inline-flex;

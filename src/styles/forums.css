@@ -152,6 +152,20 @@
   background: var(--color-parchment);
 }
 
+/* Edit-mode inputs (post title + body, reply body) — dark mode aware */
+.post-edit-field {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.post-edit-field:focus {
+  outline: none;
+  border-color: var(--color-green) !important;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
 .icon-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -519,6 +533,17 @@
   flex-shrink: 0;
   min-height: 44px;
   padding: 0.5rem 1rem;
+}
+
+/* RTE variant of reply composer — editor takes full width, buttons beside */
+.reply-composer-rte {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.reply-composer-editor {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* ------- Feed footer / load more ------- */

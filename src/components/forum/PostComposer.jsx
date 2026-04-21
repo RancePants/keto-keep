@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
 import { isoToLocalInput, localInputToIso } from '../../lib/eventHelpers.js';
 import { formatRelative } from '../../lib/forumHelpers.js';
+import RichTextEditor from '../ui/RichTextEditor.jsx';
 
 export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
   const { user, isAdmin, isSuspended } = useAuth();
@@ -93,10 +94,12 @@ export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
     setImageFile(file);
   };
 
+  const bodyText = body.replace(/<[^>]*>/g, '').trim();
+
   const submit = async (e) => {
     e.preventDefault();
     if (!user?.id || saving) return;
-    if (!title.trim() || !body.trim()) {
+    if (!title.trim() || !bodyText) {
       setError('Title and body are required.');
       return;
     }
@@ -162,7 +165,7 @@ export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
         const { data: count, error: bErr } = await supabase.rpc('broadcast_notification', {
           p_post_id: data.id,
           p_title: `📢 ${title.trim()}`,
-          p_body: body.trim().slice(0, 280),
+          p_body: bodyText.slice(0, 280),
           p_link: link,
           p_type: 'admin_broadcast',
         });
@@ -232,15 +235,15 @@ export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
             maxLength={200}
           />
         </label>
-        <label className="field" style={{ marginTop: 'var(--space-3)' }}>
+        <div className="field" style={{ marginTop: 'var(--space-3)' }}>
           <span className="field-label">Body</span>
-          <textarea
-            rows={4}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            required
+          <RichTextEditor
+            content={body}
+            onChange={setBody}
+            placeholder="What's on your mind?"
+            autoFocus={false}
           />
-        </label>
+        </div>
         {previewUrl && (
           <div style={{ marginTop: 'var(--space-3)' }}>
             <img src={previewUrl} alt="Preview" className="post-composer-preview" />

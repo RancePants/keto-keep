@@ -44,6 +44,7 @@ export default function MemberCard({
   const location = formatLocation({ city: profile.city, state: profile.state });
   const showInterests = interestTags.slice(0, 4);
   const hiddenInterests = interestTags.length - showInterests.length;
+  const hasFrame = profile.selected_frame && profile.selected_frame !== 'none';
 
   const toggleMenu = (e) => {
     e.preventDefault();
@@ -63,12 +64,17 @@ export default function MemberCard({
         className="member-card-link"
         aria-label={`View ${profile.display_name || 'member'}'s profile`}
       >
-        <div className="member-card-header">
+        {/* Avatar / frame column */}
+        <div className={`member-card-avatar-col${hasFrame ? ' member-card-avatar-col-framed' : ''}`}>
           <Avatar
             path={profile.avatar_url}
             displayName={profile.display_name}
             frameType={profile.selected_frame}
           />
+        </div>
+
+        {/* All text content */}
+        <div className="member-card-content">
           <div className="member-card-heading">
             <h3 className="member-card-name">
               {profile.display_name || 'Member'}
@@ -95,46 +101,46 @@ export default function MemberCard({
               <div className="member-card-sub">{location}</div>
             )}
           </div>
+
+          {profile.bio && (
+            <p className="member-card-bio">{profile.bio}</p>
+          )}
+
+          {badges.length > 0 && (
+            <div className="member-card-badges">
+              <BadgesInline badges={badges} limit={4} size={16} />
+            </div>
+          )}
+
+          {showInterests.length > 0 && (
+            <div className="member-card-tags">
+              {showInterests.map((t) => (
+                <InterestTagChip key={t.id} tag={t} readOnly />
+              ))}
+              {hiddenInterests > 0 && (
+                <span className="member-card-overflow">+{hiddenInterests}</span>
+              )}
+            </div>
+          )}
+
+          {isAdmin && adminTags.length > 0 && (
+            <div className="member-card-admin-tags">
+              {adminTags.map((t) => {
+                const color = safeTagColor(t.color);
+                return (
+                  <span
+                    key={t.id}
+                    className="admin-tag-badge"
+                    style={{ background: color }}
+                    title={t.description || t.name}
+                  >
+                    {t.name}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
-
-        {profile.bio && (
-          <p className="member-card-bio">{profile.bio}</p>
-        )}
-
-        {badges.length > 0 && (
-          <div className="member-card-badges">
-            <BadgesInline badges={badges} limit={4} size={16} />
-          </div>
-        )}
-
-        {showInterests.length > 0 && (
-          <div className="member-card-tags">
-            {showInterests.map((t) => (
-              <InterestTagChip key={t.id} tag={t} readOnly />
-            ))}
-            {hiddenInterests > 0 && (
-              <span className="member-card-overflow">+{hiddenInterests}</span>
-            )}
-          </div>
-        )}
-
-        {isAdmin && adminTags.length > 0 && (
-          <div className="member-card-admin-tags">
-            {adminTags.map((t) => {
-              const color = safeTagColor(t.color);
-              return (
-                <span
-                  key={t.id}
-                  className="admin-tag-badge"
-                  style={{ background: color }}
-                  title={t.description || t.name}
-                >
-                  {t.name}
-                </span>
-              );
-            })}
-          </div>
-        )}
       </Link>
 
       {isAdmin && profile.role !== 'owner' && (

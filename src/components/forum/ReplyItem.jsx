@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import UserAvatar from './UserAvatar.jsx';
 import EmojiReactionBar from './EmojiReactionBar.jsx';
 import ReplyComposer from './ReplyComposer.jsx';
@@ -7,9 +8,17 @@ import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
 import BadgesInline from '../profile/BadgesInline.jsx';
 import StreakBadge from '../ui/StreakBadge.jsx';
 import Modal from '../ui/Modal.jsx';
+import RichTextEditor from '../ui/RichTextEditor.jsx';
 import { formatRelative, isEdited } from '../../lib/forumHelpers.js';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
+
+const ALLOWED_TAGS = ['b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'p', 'br'];
+const ALLOWED_ATTR = { a: ['href', 'target', 'rel'] };
+
+function sanitize(html) {
+  return DOMPurify.sanitize(html, { ALLOWED_TAGS, ALLOWED_ATTR });
+}
 
 export default function ReplyItem({
   reply,
@@ -31,8 +40,10 @@ export default function ReplyItem({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const editBodyText = editBody.replace(/<[^>]*>/g, '').trim();
+
   const saveEdit = async () => {
-    if (!editBody.trim() || saving) return;
+    if (!editBodyText || saving) return;
     setSaving(true);
     try {
       const { error } = await supabase
@@ -107,14 +118,14 @@ export default function ReplyItem({
           </div>
           {editing ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <textarea
-                value={editBody}
-                onChange={(e) => setEditBody(e.target.value)}
-                rows={3}
-                style={{ width: '100%', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--color-border-strong)' }}
+              <RichTextEditor
+                content={editBody}
+                onChange={setEditBody}
+                placeholder="Reply body…"
+                slim
               />
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="button" className="btn btn-primary" onClick={saveEdit} disabled={saving}>
+                <button type="button" className="btn btn-primary" onClick={saveEdit} disabled={saving || !editBodyText}>
                   {saving ? 'Saving…' : 'Save'}
                 </button>
                 <button
@@ -128,7 +139,10 @@ export default function ReplyItem({
               </div>
             </div>
           ) : (
-            <p className="reply-text">{reply.body}</p>
+            <div
+              className="reply-rich-body"
+              dangerouslySetInnerHTML={{ __html: sanitize(reply.body) }}
+            />
           )}
         </div>
         <EmojiReactionBar

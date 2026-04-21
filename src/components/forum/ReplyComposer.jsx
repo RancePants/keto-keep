@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
+import RichTextEditor from '../ui/RichTextEditor.jsx';
 
 export default function ReplyComposer({ postId, parentReplyId = null, placeholder = 'Write a reply…', onSubmitted, onCancel }) {
   const { user, isSuspended } = useAuth();
@@ -16,9 +17,11 @@ export default function ReplyComposer({ postId, parentReplyId = null, placeholde
     );
   }
 
+  const bodyText = body.replace(/<[^>]*>/g, '').trim();
+
   const submit = async (e) => {
     e.preventDefault();
-    if (!user?.id || !body.trim() || saving) return;
+    if (!user?.id || !bodyText || saving) return;
     setSaving(true);
     setError(null);
     try {
@@ -46,16 +49,17 @@ export default function ReplyComposer({ postId, parentReplyId = null, placeholde
   };
 
   return (
-    <form onSubmit={submit} className="reply-composer">
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder={placeholder}
-        rows={2}
-        disabled={saving}
-      />
+    <form onSubmit={submit} className="reply-composer reply-composer-rte">
+      <div className="reply-composer-editor">
+        <RichTextEditor
+          content={body}
+          onChange={setBody}
+          placeholder={placeholder}
+          slim
+        />
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <button type="submit" className="btn btn-primary" disabled={saving || !body.trim()}>
+        <button type="submit" className="btn btn-primary" disabled={saving || !bodyText}>
           {saving ? '…' : 'Reply'}
         </button>
         {onCancel && (

@@ -158,10 +158,14 @@ export const BADGE_TYPE_LABEL = {
   champions_honor:      "Champion's Honor",
 };
 
+// Some badge_types have filenames that don't match the type slug directly.
+const SLUG_OVERRIDES = { course_complete: 'sage' };
+
 // Convert a badge_type enum to its hyphenated slug for image filenames
 // (e.g. 'loyal_knight_30' → 'loyal-knight-30' → /honors/honor-loyal-knight-30.png).
 export function badgeTypeSlug(badgeType) {
   if (!badgeType) return '';
+  if (SLUG_OVERRIDES[badgeType]) return SLUG_OVERRIDES[badgeType];
   return String(badgeType).replace(/_/g, '-');
 }
 

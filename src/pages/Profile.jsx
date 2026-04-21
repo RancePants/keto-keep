@@ -634,7 +634,17 @@ function formatEarnedDate(iso) {
 }
 
 function HallOfHonors({ catalog, earned, showEmptyState }) {
+  const [expanded, setExpanded] = useState(new Set());
   const earnedByType = new Map(earned.map((b) => [b.badge_type, b]));
+
+  const toggle = (key) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   return (
     <div className="hall-of-honors">
@@ -650,44 +660,53 @@ function HallOfHonors({ catalog, earned, showEmptyState }) {
           .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
         if (inCat.length === 0) return null;
         const earnedCount = inCat.filter((h) => earnedByType.has(h.badge_type)).length;
+        const isOpen = expanded.has(cat.key);
         return (
           <div key={cat.key} className="honors-category">
-            <h4 className="honors-category-title">
-              {cat.label}
+            <button
+              type="button"
+              className="honors-category-toggle"
+              onClick={() => toggle(cat.key)}
+              aria-expanded={isOpen}
+            >
+              <span className={`honors-category-chevron${isOpen ? ' honors-category-chevron-open' : ''}`} aria-hidden="true">▶</span>
+              <span className="honors-category-label">{cat.label}</span>
               <span className="honors-category-count">
                 {earnedCount} / {inCat.length}
               </span>
-            </h4>
-            <div className="honors-grid">
-              {inCat.map((honor) => {
-                const got = earnedByType.get(honor.badge_type);
-                const isEarned = Boolean(got);
-                return (
-                  <div
-                    key={honor.badge_type}
-                    className={`honor-item${isEarned ? '' : ' honor-item-locked'}`}
-                  >
-                    <HonorIcon
-                      badgeType={honor.badge_type}
-                      size={64}
-                      title={honor.name}
-                      locked={!isEarned}
-                    />
-                    <div className="honor-item-meta">
-                      <div className="honor-item-name">{honor.name}</div>
-                      {honor.description && (
-                        <div className="honor-item-desc">{honor.description}</div>
-                      )}
-                      {isEarned && got.awarded_at && (
-                        <div className="honor-item-earned">
-                          Earned {formatEarnedDate(got.awarded_at)}
-                        </div>
-                      )}
+            </button>
+            {isOpen && (
+              <div className="honors-grid">
+                {inCat.map((honor) => {
+                  const got = earnedByType.get(honor.badge_type);
+                  const isEarned = Boolean(got);
+                  return (
+                    <div
+                      key={honor.badge_type}
+                      className={`honor-item${isEarned ? '' : ' honor-item-locked'}`}
+                    >
+                      <HonorIcon
+                        badgeType={honor.badge_type}
+                        size={64}
+                        title={honor.name}
+                        locked={!isEarned}
+                      />
+                      <div className="honor-item-meta">
+                        <div className="honor-item-name">{honor.name}</div>
+                        {honor.description && (
+                          <div className="honor-item-desc">{honor.description}</div>
+                        )}
+                        {isEarned && got.awarded_at && (
+                          <div className="honor-item-earned">
+                            Earned {formatEarnedDate(got.awarded_at)}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })}
@@ -831,6 +850,21 @@ function ProfileView({
       )}
 
       <section className="profile-block">
+        <h3 className="profile-block-title">Interests</h3>
+        {loadingMeta ? (
+          <div className="muted">Loading interests…</div>
+        ) : memberTags.length === 0 ? (
+          <p className="muted">No interests selected.</p>
+        ) : (
+          <div className="interest-chip-row">
+            {memberTags.map((t) => (
+              <InterestTagChip key={t.id} tag={t} readOnly />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="profile-block">
         <div className="hall-of-honors-header">
           <h3 className="profile-block-title">
             <span className="hall-of-honors-shield" aria-hidden="true">🛡️</span>
@@ -852,21 +886,6 @@ function ProfileView({
             earned={badges}
             showEmptyState={badges.length === 0}
           />
-        )}
-      </section>
-
-      <section className="profile-block">
-        <h3 className="profile-block-title">Interests</h3>
-        {loadingMeta ? (
-          <div className="muted">Loading interests…</div>
-        ) : memberTags.length === 0 ? (
-          <p className="muted">No interests selected.</p>
-        ) : (
-          <div className="interest-chip-row">
-            {memberTags.map((t) => (
-              <InterestTagChip key={t.id} tag={t} readOnly />
-            ))}
-          </div>
         )}
       </section>
 

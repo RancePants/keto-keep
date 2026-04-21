@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/useAuth.js';
 import Sidebar from './ui/Sidebar.jsx';
 import SidebarMobileHeader from './ui/SidebarMobileHeader.jsx';
 import SuspendedBanner from './SuspendedBanner.jsx';
+import NotificationBell from './notifications/NotificationBell.jsx';
 import pkg from '../../package.json';
 
 // Paths that render with no sidebar — public marketing + legal pages, and
@@ -76,6 +77,7 @@ export default function Layout() {
       <Sidebar mobileOpen={mobileOpen} onMobileClose={closeMobile} />
       <div className="app-main-wrap">
         <SidebarMobileHeader onOpenSidebar={openMobile} mobileOpen={mobileOpen} />
+        <div className="notif-bell-float"><NotificationBell /></div>
         <SuspendedBanner />
         <main id="main-content" className="app-main" tabIndex={-1}>
           <Outlet />

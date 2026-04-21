@@ -4,7 +4,12 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import EmojiPicker from 'emoji-picker-react';
 
-const SLIM_TOOLBAR = false; // full toolbar by default; pass slim={true} for replies
+function getTheme() {
+  const attr = document.documentElement.getAttribute('data-theme');
+  if (attr === 'dark') return 'dark';
+  if (attr === 'light') return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 function ToolbarBtn({ onClick, active, title, children }) {
   return (
@@ -21,6 +26,57 @@ function ToolbarBtn({ onClick, active, title, children }) {
   );
 }
 
+function LinkPopup({ href, onApply, onRemove, onClose }) {
+  const [url, setUrl] = useState(href || '');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    // Small delay so mousedown event that opened us doesn't immediately close
+    const t = setTimeout(() => inputRef.current?.focus(), 30);
+    return () => clearTimeout(t);
+  }, []);
+
+  const apply = () => {
+    const trimmed = url.trim();
+    if (!trimmed) { onRemove(); return; }
+    const href = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+    onApply(href);
+  };
+
+  return (
+    <div className="rte-link-popup">
+      <input
+        ref={inputRef}
+        type="url"
+        className="rte-link-input"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="https://example.com"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); apply(); }
+          if (e.key === 'Escape') { e.stopPropagation(); onClose(); }
+        }}
+      />
+      <button
+        type="button"
+        className="rte-link-btn rte-link-apply"
+        onMouseDown={(e) => { e.preventDefault(); apply(); }}
+      >
+        Apply
+      </button>
+      {href && (
+        <button
+          type="button"
+          className="rte-link-btn rte-link-remove"
+          onMouseDown={(e) => { e.preventDefault(); onRemove(); }}
+        >
+          Remove
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function RichTextEditor({
   content = '',
   onChange,
@@ -29,12 +85,15 @@ export default function RichTextEditor({
   autoFocus = false,
 }) {
   const [emojiOpen, setEmojiOpen] = useState(false);
-  const emojiRef = useRef(null);
+  const [emojiPos, setEmojiPos] = useState(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const emojiTriggerRef = useRef(null);
+  const emojiPanelRef = useRef(null);
+  const linkWrapRef = useRef(null);
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // Disable extensions we don't use to keep it lean
         blockquote: false,
         code: false,
         codeBlock: false,
@@ -45,6 +104,7 @@ export default function RichTextEditor({
       }),
       Link.configure({
         openOnClick: false,
+        autolink: true,
         HTMLAttributes: {
           rel: 'noopener noreferrer',
           target: '_blank',
@@ -74,29 +134,61 @@ export default function RichTextEditor({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content]);
 
-  // Close emoji picker on outside click
+  // Close emoji picker on outside click (fixed panel + trigger button)
   useEffect(() => {
     if (!emojiOpen) return;
     const handler = (e) => {
-      if (emojiRef.current && !emojiRef.current.contains(e.target)) {
-        setEmojiOpen(false);
-      }
+      const inTrigger = emojiTriggerRef.current?.contains(e.target);
+      const inPanel = emojiPanelRef.current?.contains(e.target);
+      if (!inTrigger && !inPanel) setEmojiOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [emojiOpen]);
 
-  const setLink = useCallback(() => {
-    if (!editor) return;
-    const prev = editor.getAttributes('link').href || '';
-    const url = window.prompt('Enter URL', prev);
-    if (url === null) return;
-    if (!url) {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
+  // Close link popup on outside click
+  useEffect(() => {
+    if (!linkOpen) return;
+    const handler = (e) => {
+      if (linkWrapRef.current && !linkWrapRef.current.contains(e.target)) {
+        setLinkOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [linkOpen]);
+
+  const openEmoji = () => {
+    if (!emojiOpen) {
+      const rect = emojiTriggerRef.current?.getBoundingClientRect();
+      if (rect) {
+        // Default: open below-left of trigger. If too close to right edge, flip left.
+        const panelWidth = 300;
+        const spaceRight = window.innerWidth - rect.left;
+        const left = spaceRight < panelWidth + 8 ? rect.right - panelWidth : rect.left;
+        setEmojiPos({ top: rect.bottom + 4, left });
+      }
     }
-    const href = url.startsWith('http') ? url : `https://${url}`;
+    setEmojiOpen((v) => !v);
+    setLinkOpen(false);
+  };
+
+  const openLink = useCallback(() => {
+    if (!editor) return;
+    setLinkOpen((v) => !v);
+    setEmojiOpen(false);
+  }, [editor]);
+
+  const applyLink = useCallback((href) => {
+    if (!editor) return;
     editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
+    setLinkOpen(false);
+  }, [editor]);
+
+  const removeLink = useCallback(() => {
+    if (!editor) return;
+    editor.chain().focus().extendMarkRange('link').unsetLink().run();
+    setLinkOpen(false);
   }, [editor]);
 
   const onEmojiClick = (emojiData) => {
@@ -107,8 +199,11 @@ export default function RichTextEditor({
 
   if (!editor) return null;
 
+  const currentHref = editor.getAttributes('link').href || '';
+  const theme = getTheme();
+
   return (
-    <div className="rte-wrap">
+    <div className={`rte-wrap${slim ? ' rte-slim' : ''}`}>
       <div className="rte-toolbar">
         <ToolbarBtn
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -142,35 +237,61 @@ export default function RichTextEditor({
             </ToolbarBtn>
           </>
         )}
-        <ToolbarBtn
-          onClick={setLink}
-          active={editor.isActive('link')}
-          title="Insert link"
-        >
-          🔗
-        </ToolbarBtn>
-        <div className="rte-emoji-wrap" ref={emojiRef}>
+
+        {/* Link button + inline popup */}
+        <div className="rte-link-wrap" ref={linkWrapRef}>
           <ToolbarBtn
-            onClick={() => setEmojiOpen((v) => !v)}
-            active={emojiOpen}
-            title="Insert emoji"
+            onClick={openLink}
+            active={editor.isActive('link') || linkOpen}
+            title="Insert link"
           >
-            😊
+            🔗
           </ToolbarBtn>
-          {emojiOpen && (
-            <div className="rte-emoji-panel">
-              <EmojiPicker
-                onEmojiClick={onEmojiClick}
-                skinTonesDisabled
-                searchDisabled={slim}
-                height={slim ? 320 : 400}
-                width={300}
-              />
-            </div>
+          {linkOpen && (
+            <LinkPopup
+              href={currentHref}
+              onApply={applyLink}
+              onRemove={removeLink}
+              onClose={() => setLinkOpen(false)}
+            />
           )}
         </div>
+
+        {/* Emoji button — panel uses fixed positioning to escape overflow clips */}
+        <div className="rte-emoji-wrap">
+          <button
+            ref={emojiTriggerRef}
+            type="button"
+            className={`rte-btn${emojiOpen ? ' rte-btn-active' : ''}`}
+            onMouseDown={(e) => { e.preventDefault(); openEmoji(); }}
+            title="Insert emoji"
+            aria-label="Insert emoji"
+            aria-pressed={emojiOpen}
+          >
+            😊
+          </button>
+        </div>
       </div>
+
       <EditorContent editor={editor} className="rte-editor-wrap" />
+
+      {/* Emoji panel rendered at document body level via fixed position */}
+      {emojiOpen && emojiPos && (
+        <div
+          ref={emojiPanelRef}
+          className="rte-emoji-panel-fixed"
+          style={{ top: emojiPos.top, left: emojiPos.left }}
+        >
+          <EmojiPicker
+            onEmojiClick={onEmojiClick}
+            skinTonesDisabled
+            searchDisabled={slim}
+            height={slim ? 320 : 400}
+            width={300}
+            theme={theme}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -76,29 +76,31 @@ export default function MemberCard({
         {/* All text content */}
         <div className="member-card-content">
           <div className="member-card-heading">
-            <h3 className="member-card-name">
-              {profile.display_name || 'Member'}
-            </h3>
-            <div className="member-card-meta-row">
+            <div className="member-card-top-row">
+              <h3 className="member-card-name">
+                {profile.display_name || 'Member'}
+              </h3>
               {profile.dietary_approach && (
                 <DietaryApproachTag value={profile.dietary_approach} size="sm" />
+              )}
+              {profile.current_streak > 0 && (
+                <StreakBadge streak={profile.current_streak} size="sm" showCount />
               )}
               {isAdmin && profile.status && profile.status !== 'active' && (
                 <span className={`status-pill ${statusColorClass(profile.status)}`}>
                   {statusLabel(profile.status)}
                 </span>
               )}
-              {profile.current_streak > 0 && (
-                <StreakBadge streak={profile.current_streak} size="sm" showCount />
-              )}
             </div>
-            {profile.journey_duration && (
-              <div className="member-card-sub">
-                {journeyLabel(profile.journey_duration)}
+            {(profile.journey_duration || location) && (
+              <div className="member-card-sub-row">
+                {profile.journey_duration && (
+                  <span className="member-card-sub">{journeyLabel(profile.journey_duration)}</span>
+                )}
+                {location && (
+                  <span className="member-card-sub">{location}</span>
+                )}
               </div>
-            )}
-            {location && (
-              <div className="member-card-sub">{location}</div>
             )}
           </div>
 

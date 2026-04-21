@@ -8,7 +8,7 @@
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  overflow: hidden;
+  overflow: visible;
   transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
 .rte-wrap:focus-within {
@@ -59,20 +59,88 @@
   position: relative;
   display: inline-flex;
 }
-.rte-emoji-panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 50;
+
+/* Fixed-position panel escapes any overflow:hidden ancestor */
+.rte-emoji-panel-fixed {
+  position: fixed;
+  z-index: 100;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+}
+
+/* ---------- Link toolbar wrapper + inline popup ---------- */
+.rte-link-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.rte-link-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 51;
+  white-space: nowrap;
+  min-width: 280px;
+}
+.rte-link-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+.rte-link-input:focus {
+  outline: none;
+  border-color: var(--color-green);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+.rte-link-btn {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.rte-link-apply {
+  background: var(--color-green-dark);
+  color: #fff;
+  border-color: var(--color-green-dark);
+}
+.rte-link-apply:hover {
+  background: var(--color-green);
+  border-color: var(--color-green);
+}
+.rte-link-remove {
+  background: transparent;
+  color: var(--color-danger, #c0392b);
+  border-color: var(--color-danger, #c0392b);
+}
+.rte-link-remove:hover {
+  background: var(--color-danger, #c0392b);
+  color: #fff;
 }
 
 /* ---------- Editor content area ---------- */
 .rte-editor-wrap {
   padding: 0.55rem 0.75rem;
   min-height: 80px;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 /* ProseMirror root element */
@@ -178,8 +246,7 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 480px) {
-  .rte-emoji-panel {
-    left: auto;
-    right: 0;
+  .rte-link-popup {
+    min-width: 220px;
   }
 }

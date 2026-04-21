@@ -179,6 +179,20 @@
   }
 }
 
+/* ---------- Floating desktop bell (top-right of content area) ---------- */
+.notif-bell-float {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  z-index: 40;
+}
+
+@media (max-width: 768px) {
+  .notif-bell-float {
+    display: none;
+  }
+}
+
 /* ---------- PostCard broadcast / scheduled indicators ---------- */
 .broadcast-indicator,
 .scheduled-indicator {

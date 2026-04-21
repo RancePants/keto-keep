@@ -174,7 +174,7 @@
 .member-card-link {
   display: flex;
   flex-direction: row;
-  gap: var(--space-4);
+  gap: var(--space-5);
   align-items: flex-start;
   text-decoration: none;
   color: inherit;
@@ -228,7 +228,14 @@
 .member-card-heading {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+}
+/* Top row: name + dietary tag + streak all inline */
+.member-card-top-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 .member-card-name {
   font-family: var(--font-serif);
@@ -238,10 +245,10 @@
   margin: 0;
   line-height: 1.2;
 }
-.member-card-meta-row {
+.member-card-sub-row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-2);
   align-items: center;
 }
 .member-card-sub {

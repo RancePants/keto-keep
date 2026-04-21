@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/useAuth.js';
 import { dietaryLabel } from '../../lib/profileHelpers.js';
 import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
-import NotificationBell from '../notifications/NotificationBell.jsx';
 import ThemeToggle from './ThemeToggle.jsx';
 import SidebarNavLink from './SidebarNavLink.jsx';
 import SidebarSection from './SidebarSection.jsx';
@@ -238,7 +237,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
 
         <div className="sidebar-footer">
           <div className="sidebar-footer-row">
-            <NotificationBell />
             <ThemeToggle />
             <button
               type="button"

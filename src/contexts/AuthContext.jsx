@@ -274,6 +274,7 @@ export function AuthProvider({ children }) {
         'my_why',
         'theme_preference',
         'selected_frame',
+        'guide_character',
       ];
       const payload = {};
       for (const k of allowed) {
@@ -321,6 +322,57 @@ export function AuthProvider({ children }) {
     },
     [session]
   );
+
+  const dismissTip = useCallback(
+    (tipId) => {
+      if (!tipId || !session?.user) return;
+      let shouldPersist = false;
+      setProfile((prev) => {
+        if (!prev || prev.id !== session.user.id) return prev;
+        const current = Array.isArray(prev.dismissed_tips) ? prev.dismissed_tips : [];
+        if (current.includes(tipId)) return prev;
+        shouldPersist = true;
+        return { ...prev, dismissed_tips: [...current, tipId] };
+      });
+      if (!shouldPersist) return;
+      (async () => {
+        try {
+          const { data: row, error: readErr } = await supabase
+            .from('profiles')
+            .select('dismissed_tips')
+            .eq('id', session.user.id)
+            .single();
+          if (readErr) throw readErr;
+          const next = Array.from(new Set([...(row?.dismissed_tips || []), tipId]));
+          const { error: writeErr } = await supabase
+            .from('profiles')
+            .update({ dismissed_tips: next })
+            .eq('id', session.user.id);
+          if (writeErr) throw writeErr;
+        } catch (e) {
+          console.error('dismissTip persist failed:', e);
+        }
+      })();
+    },
+    [session]
+  );
+
+  const resetTips = useCallback(async () => {
+    if (!session?.user) return { error: new Error('Not authenticated') };
+    setProfile((prev) =>
+      prev && prev.id === session.user.id ? { ...prev, dismissed_tips: [] } : prev
+    );
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ dismissed_tips: [] })
+        .eq('id', session.user.id);
+      return { error };
+    } catch (e) {
+      console.error('resetTips threw:', e);
+      return { error: e };
+    }
+  }, [session]);
 
   const deleteOwnAccount = useCallback(async () => {
     if (!session?.user) return { ok: false, error: new Error('Not authenticated') };
@@ -434,8 +486,10 @@ export function AuthProvider({ children }) {
       refreshProfile: () => fetchProfile(session?.user?.id),
       lastMilestone,
       clearLastMilestone,
+      dismissTip,
+      resetTips,
     }),
-    [session, profile, loading, isSuspended, isAdmin, isOwner, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, setTheme, deleteOwnAccount, fetchProfile, lastMilestone, clearLastMilestone]
+    [session, profile, loading, isSuspended, isAdmin, isOwner, signUp, signIn, signOut, resetPassword, updateProfile, uploadAvatar, getAvatarUrl, setTheme, deleteOwnAccount, fetchProfile, lastMilestone, clearLastMilestone, dismissTip, resetTips]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

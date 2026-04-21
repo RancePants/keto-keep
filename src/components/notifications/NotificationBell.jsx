@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
 import { formatRelative } from '../../lib/forumHelpers.js';
 import { notificationIcon } from '../../lib/notificationHelpers.js';
+import GuideTooltip from '../guide/GuideTooltip.jsx';
 
 const POLL_MS = 60_000;
 const PAGE_SIZE = 20;
@@ -165,6 +166,13 @@ export default function NotificationBell() {
 
       {open && (
         <div className="notif-dropdown" role="menu">
+          {items.length > 0 && (
+            <div style={{ padding: 'var(--space-3)', borderBottom: '1px solid var(--color-border)' }}>
+              <GuideTooltip tipId="hint-notification" pose="pointing">
+                You've got a notification! The bell in the corner lights up when something happens — replies to your posts, reactions, events, and more.
+              </GuideTooltip>
+            </div>
+          )}
           <div className="notif-dropdown-head">
             <span className="notif-dropdown-title">Notifications</span>
             <button

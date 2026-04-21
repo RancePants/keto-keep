@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/useAuth.js';
 import CourseCard from '../components/courses/CourseCard.jsx';
 import CourseFormModal from '../components/courses/CourseFormModal.jsx';
 import usePageTitle from '../lib/usePageTitle.js';
+import GuideTooltip from '../components/guide/GuideTooltip.jsx';
 
 export default function CoursesHome() {
   usePageTitle('Courses');
@@ -128,6 +129,10 @@ export default function CoursesHome() {
           </button>
         )}
       </header>
+
+      <GuideTooltip tipId="discover-courses" pose="pointing">
+        Welcome to the Library! These self-paced courses cover the pillars of ancestral health. Work through them at your own speed — your progress is saved automatically.
+      </GuideTooltip>
 
       {error && <div className="form-error">{error}</div>}
 

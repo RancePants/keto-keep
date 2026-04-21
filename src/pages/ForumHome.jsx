@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import usePageTitle from '../lib/usePageTitle.js';
+import GuideTooltip from '../components/guide/GuideTooltip.jsx';
 
 export default function ForumHome() {
   usePageTitle('Forums');
@@ -58,6 +59,9 @@ export default function ForumHome() {
         <h1 className="page-title">Forums</h1>
         <p className="page-sub">Pick a space and jump in.</p>
       </header>
+      <GuideTooltip tipId="discover-forums" pose="pointing">
+        The Forum Spaces are where the community gathers. Each space has its own topic — jump into one that speaks to you, or start a conversation of your own!
+      </GuideTooltip>
       {error && <div className="form-error">{error}</div>}
       <div className="space-grid">
         {spaces.map((space) => (

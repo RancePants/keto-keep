@@ -7,6 +7,7 @@ import MemberFilters from '../components/members/MemberFilters.jsx';
 import AssignAdminTagModal from '../components/members/AssignAdminTagModal.jsx';
 import ManageMemberModal from '../components/members/ManageMemberModal.jsx';
 import usePageTitle from '../lib/usePageTitle.js';
+import GuideTooltip from '../components/guide/GuideTooltip.jsx';
 
 const PAGE_SIZE = 20;
 
@@ -197,6 +198,10 @@ export default function MembersDirectory() {
           Browse the community. Tap a card to view the full profile.
         </p>
       </header>
+
+      <GuideTooltip tipId="discover-members" pose="pointing">
+        The Members Directory lets you find and connect with fellow Keep members. Use the filters to find people who share your interests and approach.
+      </GuideTooltip>
 
       <MemberFilters
         filters={filters}

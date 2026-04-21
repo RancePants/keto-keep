@@ -26,6 +26,7 @@ import StreakBadge from '../components/ui/StreakBadge.jsx';
 import ProfileFrame from '../components/ui/ProfileFrame.jsx';
 import VacationModeModal from '../components/profile/VacationModeModal.jsx';
 import FramePickerModal from '../components/profile/FramePickerModal.jsx';
+import GuideTooltip from '../components/guide/GuideTooltip.jsx';
 import { progressToNext } from '../lib/streakHelpers.js';
 import usePageTitle from '../lib/usePageTitle.js';
 
@@ -166,6 +167,7 @@ async function loadMemberAdminTags(userId) {
 
 function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
   const navigate = useNavigate();
+  const { resetTips } = useAuth();
   const [form, setForm] = useState({
     display_name: profile.display_name || '',
     bio: profile.bio || '',
@@ -175,7 +177,9 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
     state: profile.state || '',
     about_me: profile.about_me || '',
     my_why: profile.my_why || '',
+    guide_character: profile.guide_character || 'knight',
   });
+  const [resetMessage, setResetMessage] = useState(null);
 
   const [allTags, setAllTags] = useState([]);
   const [selectedTagIds, setSelectedTagIds] = useState(new Set());
@@ -238,6 +242,7 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
         state: form.state || null,
         about_me: form.about_me.trim() || null,
         my_why: form.my_why.trim() || null,
+        guide_character: form.guide_character || 'knight',
       };
       const { error } = await updateProfile(payload);
       if (error) {
@@ -496,6 +501,67 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
                 onToggle={toggleTag}
               />
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* Guide character preference */}
+      <section className="profile-edit-section">
+        <h2 className="section-title">Your Guide</h2>
+        <p className="section-sub">
+          Pick a friendly face to show you around The Keep. You can turn tips off entirely if you prefer.
+        </p>
+        <div className="guide-pref-options" role="radiogroup" aria-label="Guide character">
+          {[
+            { value: 'knight', label: 'Sir Cedric', img: '/guide/guide-knight-welcome.png' },
+            { value: 'lady', label: 'Lady Elara', img: '/guide/guide-lady-welcome.png' },
+            { value: 'none', label: 'None', img: null },
+          ].map((opt) => {
+            const selected = form.guide_character === opt.value;
+            return (
+              <label
+                key={opt.value}
+                className={`guide-pref-option${selected ? ' guide-pref-option-selected' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="guide_character"
+                  value={opt.value}
+                  checked={selected}
+                  onChange={onField('guide_character')}
+                />
+                {opt.img ? (
+                  <img src={opt.img} alt="" className="guide-pref-option-avatar" />
+                ) : (
+                  <span className="guide-pref-option-none" aria-hidden="true">🚫</span>
+                )}
+                <span className="guide-pref-option-label">{opt.label}</span>
+              </label>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          className="btn btn-secondary guide-pref-reset"
+          onClick={async () => {
+            setResetMessage(null);
+            const { error } = await resetTips();
+            if (error) {
+              setResetMessage({ type: 'error', text: error.message || 'Could not reset tips.' });
+            } else {
+              setResetMessage({ type: 'success', text: 'Guide tips have been reset. They will reappear as you navigate.' });
+            }
+          }}
+        >
+          Reset guide tips
+        </button>
+        {resetMessage && (
+          <div
+            className={resetMessage.type === 'error' ? 'form-error' : 'form-success'}
+            role={resetMessage.type === 'error' ? 'alert' : 'status'}
+            style={{ marginTop: 'var(--space-2)' }}
+          >
+            {resetMessage.text}
           </div>
         )}
       </section>
@@ -1175,6 +1241,11 @@ function ProfilePage({ profile, isOwnProfile, isAdmin, isOwner, refresh }) {
       <header className="page-header">
         <h1 className="page-title">{isOwnProfile ? 'Your profile' : profile.display_name}</h1>
       </header>
+      {isOwnProfile && profile.selected_frame && profile.selected_frame !== 'none' && (
+        <GuideTooltip tipId="engage-frame" pose="thumbsup">
+          Looking sharp! Your new frame is displayed on your profile and everywhere your avatar appears in The Keep.
+        </GuideTooltip>
+      )}
       <section className="panel profile-panel">
         <ProfileView
           profile={profile}

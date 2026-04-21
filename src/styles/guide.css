@@ -1,0 +1,255 @@
+/* ---------- Guide tooltip ---------- */
+
+.guide-tooltip {
+  animation: guide-tooltip-in 220ms ease-out both;
+}
+
+.guide-tooltip-inline {
+  display: block;
+  margin: var(--space-4) 0;
+}
+
+.guide-tooltip-bubble {
+  position: relative;
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-amber, var(--color-amber-dark));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  max-width: 560px;
+}
+
+.guide-tooltip-character {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+.guide-tooltip-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.guide-tooltip-name {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--color-amber-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+}
+
+.guide-tooltip-message {
+  color: var(--color-ink);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  margin-bottom: var(--space-3);
+}
+
+.guide-tooltip-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.guide-tooltip-dismiss {
+  min-width: 96px;
+}
+
+.guide-tooltip-skip {
+  background: none;
+  border: 0;
+  color: var(--color-muted);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  text-decoration: underline;
+}
+
+.guide-tooltip-skip:hover {
+  color: var(--color-ink);
+}
+
+/* Floating variant — fixed position overlay used by the onboarding tour */
+.guide-tooltip-floating {
+  position: fixed;
+  z-index: 200;
+}
+
+.guide-tooltip-pos-top-left {
+  top: var(--space-5);
+  left: var(--space-5);
+}
+
+.guide-tooltip-pos-top-right {
+  top: var(--space-5);
+  right: var(--space-5);
+}
+
+.guide-tooltip-pos-bottom-left {
+  bottom: var(--space-5);
+  left: var(--space-5);
+}
+
+.guide-tooltip-pos-bottom-right {
+  bottom: var(--space-5);
+  right: var(--space-5);
+}
+
+.guide-tooltip-pos-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Onboarding overlay backdrop */
+.guide-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 199;
+  animation: guide-tooltip-in 220ms ease-out both;
+}
+
+.guide-tooltip-floating .guide-tooltip-bubble {
+  max-width: 420px;
+}
+
+@keyframes guide-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.guide-tooltip-pos-center.guide-tooltip-floating {
+  animation: guide-tooltip-center-in 220ms ease-out both;
+}
+
+@keyframes guide-tooltip-center-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@media (max-width: 640px) {
+  .guide-tooltip-bubble {
+    padding: var(--space-3);
+    gap: var(--space-3);
+  }
+  .guide-tooltip-character {
+    width: 60px;
+    height: 60px;
+  }
+  .guide-tooltip-floating {
+    left: var(--space-3) !important;
+    right: var(--space-3) !important;
+    width: auto;
+  }
+  .guide-tooltip-pos-center.guide-tooltip-floating {
+    top: auto;
+    bottom: var(--space-4);
+    transform: none;
+    animation: guide-tooltip-in 220ms ease-out both;
+  }
+}
+
+/* ---------- Sidebar Guide button ---------- */
+.sidebar-guide-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-soft);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebar-guide-btn:hover {
+  background: var(--color-parchment);
+  color: var(--color-ink);
+}
+
+.sidebar-guide-btn-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ---------- Profile edit: Your Guide section ---------- */
+.guide-pref-options {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.guide-pref-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: var(--color-surface);
+  min-width: 88px;
+}
+
+.guide-pref-option input[type="radio"] {
+  margin: 0;
+}
+
+.guide-pref-option-selected {
+  border-color: var(--color-amber-dark);
+  box-shadow: 0 0 0 2px rgba(194, 139, 61, 0.2);
+}
+
+.guide-pref-option-avatar {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.guide-pref-option-none {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: var(--color-muted);
+}
+
+.guide-pref-option-label {
+  font-size: var(--fs-sm);
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.guide-pref-reset {
+  margin-top: var(--space-3);
+}

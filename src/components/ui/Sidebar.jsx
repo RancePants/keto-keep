@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/useAuth.js';
+import { useGuide } from '../guide/useGuide.js';
+import { tipsForPath } from '../guide/tipPageMap.js';
 import { dietaryLabel } from '../../lib/profileHelpers.js';
 import DietaryApproachTag from '../profile/DietaryApproachTag.jsx';
 import ThemeToggle from './ThemeToggle.jsx';
@@ -54,6 +56,7 @@ function SidebarAvatar({ path, displayName, frameType = 'none', size = 36 }) {
 
 export default function Sidebar({ mobileOpen, onMobileClose }) {
   const { profile, isAdmin, signOut } = useAuth();
+  const { reopenTipsForPage } = useGuide();
   const navigate = useNavigate();
   const location = useLocation();
   const asideRef = useRef(null);
@@ -236,6 +239,18 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
         </nav>
 
         <div className="sidebar-footer">
+          {profile && profile.guide_character !== 'none' && tipsForPath(location.pathname).length > 0 && (
+            <button
+              type="button"
+              className="sidebar-guide-btn"
+              onClick={() => reopenTipsForPage(location.pathname)}
+              aria-label="Show guide tips for this page"
+              title="Show guide tips for this page"
+            >
+              <span className="sidebar-guide-btn-icon" aria-hidden="true">🛡️</span>
+              <span>Guide</span>
+            </button>
+          )}
           <div className="sidebar-footer-row">
             <ThemeToggle />
             <button

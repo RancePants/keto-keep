@@ -5,10 +5,12 @@ import { isoToLocalInput, localInputToIso } from '../../lib/eventHelpers.js';
 import { formatRelative } from '../../lib/forumHelpers.js';
 import { checkAndAwardHonors } from '../../lib/honorHelpers.js';
 import RichTextEditor from '../ui/RichTextEditor.jsx';
+import GuideTooltip from '../guide/GuideTooltip.jsx';
 
 export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
   const { user, isAdmin, isSuspended } = useAuth();
   const [expanded, setExpanded] = useState(false);
+  const [justPosted, setJustPosted] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [imageFile, setImageFile] = useState(null);
@@ -183,6 +185,7 @@ export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
       }
 
       reset();
+      setJustPosted(true);
       if (broadcastInfo) setInfo(broadcastInfo);
       if (onCreated) await onCreated(data);
     } catch (err) {
@@ -206,6 +209,15 @@ export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
     return (
       <div className="post-composer">
         {info && <div className="post-composer-info">{info}</div>}
+        {justPosted && (
+          <GuideTooltip
+            tipId="engage-first-post"
+            pose="celebrating"
+            onDismiss={() => setJustPosted(false)}
+          >
+            Your voice has been heard! You just made your first post. Keep sharing — this community thrives on conversations like yours.
+          </GuideTooltip>
+        )}
         <button
           type="button"
           className="post-composer-prompt"
@@ -242,6 +254,9 @@ export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
         </label>
         <div className="field" style={{ marginTop: 'var(--space-3)' }}>
           <span className="field-label">Body</span>
+          <GuideTooltip tipId="hint-editor" pose="thinking">
+            Quick tip — you can use bold, italic, lists, links, and even emojis in your posts. The toolbar above the editor has everything you need.
+          </GuideTooltip>
           <RichTextEditor
             content={body}
             onChange={setBody}

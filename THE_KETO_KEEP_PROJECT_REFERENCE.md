@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-21 (Session 30 — v0.15.0; Richer Notifications + Dashboard Activity/Honors + Honor Lightbox)
+> **Canonical version date:** 2026-04-21 (Session 31 — v0.16.0; Phase 5I Guide Character — Sir Cedric / Lady Elara tooltips + onboarding tour + 14 contextual tips)
 
 ---
 
@@ -23,7 +23,7 @@ At the beginning of every new chat in this project:
 4. **Agree on the session goal** before writing any code or making any changes.
 5. Do NOT begin work until the start gate is complete.
 
-### Session End Gate (mandatory — 9 items)
+### Session End Gate (mandatory — 10 items)
 Before closing any chat session in this project:
 
 1. **Files saved** — all work products saved to appropriate locations
@@ -38,6 +38,7 @@ Before closing any chat session in this project:
 7. **Canonical versions updated** — if any artifact versions changed, update the versions section in this file
 8. **Export the updated file** — so Rance has the latest version to bring into the next session
 9. **Save dated copy** — save to `D:\The Keto Keep\Project Reference\` using naming convention `THE_KETO_KEEP_PROJECT_REFERENCE_{date}_S{session#}.md`
+10. **Guide tutorial check** — if any user-facing feature was added, renamed, moved, or removed this session, review the tooltip content in `Project Reference/GUIDE_CHARACTER_DESIGN.md` (tips 1–14). Update any affected tip text. If a new feature warrants a new tip, draft it and add it to the design doc + wire it into the app.
 
 ### Interface Routing
 - **Chat (this project)** = planning, decisions, writing, reference file updates
@@ -115,8 +116,8 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.15.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 30 — richer notifications (actor name + space name), dashboard activity/honors cards, honor lightbox |
-| Supabase schema | v5H (adds badge_category + badge_unlock_method enums, 23 new badge_type values, category/unlock_method/sort_order/requirement_meta cols on badges, member_badges self-auto-insert RLS) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 28 — honors schema expansion |
+| Frontend app | v0.16.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 31 — Phase 5I guide character (Sir Cedric / Lady Elara), onboarding tour, 14 contextual tips, sidebar Guide button, profile guide preferences |
+| Supabase schema | v5I (adds profiles.guide_character text + profiles.dismissed_tips text[]) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 31 — guide character schema |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
@@ -746,6 +747,11 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-21 | Session 30: dashboard Quick Links replaced with real-data cards (RecentActivityCard + HonorsProgressCard) | Quick Links were placeholder navigation that duplicated the sidebar. Real-data cards deliver community context (what's happening + how am I progressing) — the actual purpose of a dashboard welcome screen. Two-column grid mirrors the sidebar/main layout mental model; stacks to one column on mobile. Each card is a standalone component with its own Supabase fetch + loading state + empty state. |
 | 2026-04-21 | Session 30: HonorsProgressCard fetches badges catalog + member_badges on mount (not via useMemberBadges hook) | `useMemberBadges` is designed for multi-user fetches (forum feeds, event attendees). HonorsProgressCard needs the full catalog (not just earned ones) to compute total + percentage, plus awarded_at for recency sorting. A direct fetch is 2 parallel queries and stays scoped to this component — no hook generalisation warranted at this scale. |
 | 2026-04-21 | Session 30: honor lightbox reuses the shared Modal (not a custom overlay) | Modal already handles: focus trap, Escape key, backdrop click, aria-dialog, body overflow lock, return-focus-on-close. A bespoke lightbox would reimplement all of this. The `size="sm"` variant at 192px icon content fits naturally without any layout wrestling. The only new CSS is for the centered flex content inside the modal body. |
+| 2026-04-21 | Session 31: guide character stored as profile column (`guide_character` text), not a separate preferences table | A separate `user_preferences` table would require a new join on every profile fetch and a second RLS policy set. `guide_character` is a single-character enum value read on every page — putting it on `profiles` keeps it in the same payload AuthContext already loads. CHECK constraint (`knight`/`lady`/`none`) gives the same guarantees an enum type would without the DDL complexity of ALTER TYPE ADD VALUE if we add characters later (just relax the CHECK). |
+| 2026-04-21 | Session 31: `dismissed_tips` as `text[]` array, not a normalized join table | Tips are small (<50 strings), per-user, and only ever read as a set for "is this tip dismissed?" lookups. A `dismissed_tips_log` table would require an extra INSERT per dismissal and a JOIN on profile load. Array append (`array_append(dismissed_tips, $1)`) is atomic at the row level and the whole set rides along with the profile. No history is kept (intentionally — reset clears everything; we don't need a dismissal audit trail). |
+| 2026-04-21 | Session 31: session-scoped reopen via local Set, not a persisted "reopened_tips" column | When the user clicks the sidebar "Guide" button, we want the tips to reappear *this visit* without undoing all past dismissals. Persisting a reopen state would require clearing it on navigate/reload, which is fragile. A React `useState(new Set())` in `GuideProvider` lives only for the tab's lifetime and resets naturally on reload. `GuideTooltip` checks `isTipReopened(tipId) OR !dismissed` as its visibility condition. |
+| 2026-04-21 | Session 31: extracted `PAGE_TIPS`/`tipsForPath` and `ONBOARDING_STEPS`/`hasActiveOnboardingTour` into dedicated non-component modules | React's `react-refresh/only-export-components` lint rule flags any module that exports both a React component and non-component values (breaks HMR). `GuideProvider.jsx` originally exported `tipsForPath`; `OnboardingTour.jsx` originally exported `ONBOARDING_TIP_IDS`. Split into `tipPageMap.js` and `onboardingHelpers.js` so the component files are component-only. Sidebar imports from `tipPageMap.js`; Dashboard imports from `onboardingHelpers.js`. |
+| 2026-04-21 | Session 31: onboarding tour renders as a centered overlay modal, not inline `GuideTooltip`s | The 3-step welcome tour needs a darkened backdrop and a consistent center position so first-time users can't miss it. Inline tooltips on the dashboard would be visually weaker and would have to jump around the DOM for the "point at the sidebar" step. `OnboardingTour.jsx` mounts `guide-overlay-backdrop` + `guide-tooltip-floating guide-tooltip-pos-center` and uses its own step-tracking state (not `GuideTooltip`). Still writes to the same `dismissed_tips` column so "Skip" and "Got it" persist like any other tip. |
 
 ---
 
@@ -799,18 +805,48 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5H polish complete — v0.14.1 pushed to main
-**Last Updated:** 2026-04-21 (Session 29)
-**Frontend Version:** v0.14.1 — Sage icon fix (SLUG_OVERRIDES map in badgeTypeSlug), interests moved above Hall of Honors in profile view, Hall of Honors collapsed by default with chevron expand/collapse per category, backfill script ran awarding town_crier(1), scribe(2), herald(1), standard_bearer(1) to existing 2 users. Commit `7298d94` pushed to main.
-**Supabase Schema:** v5H (unchanged — backfill was data-only, no DDL)
-**Session 29 — Next Session Handoff:**
-- v0.14.1 deployed to Cloudflare. Test: Hall of Honors on /profile (collapsed by default, chevron expands). Sage honor should show tome artwork (not blank shield). Interests section appears above Hall of Honors.
+**Current Phase:** Phase 5I complete — v0.16.0 pushed to main
+**Last Updated:** 2026-04-21 (Session 31)
+**Frontend Version:** v0.16.0 — Phase 5I Guide Character system: `guide_character` + `dismissed_tips` columns on profiles; `GuideTooltip` component (inline + floating variants); 3-step onboarding tour modal; 14 contextual tips (3 onboarding, 4 discovery, 4 engagement, 3 hints) wired across Dashboard, Forums, Events, Courses, Members, Profile, PostComposer, NotificationBell; sidebar "Guide" button re-opens page tips for current route via session-scoped Set; Profile Edit "Your Guide" section with Sir Cedric / Lady Elara / None radio + Reset tips button.
+**Supabase Schema:** v5I — adds `guide_character text NOT NULL DEFAULT 'knight' CHECK IN (knight,lady,none)` + `dismissed_tips text[] NOT NULL DEFAULT '{}'` on profiles. Existing profile RLS policies cover both columns.
+**Session 31 — Next Session Handoff:**
+- v0.16.0 deployed to Cloudflare. Test: fresh-login account should see 3-step onboarding tour on first dashboard visit. Click "Skip tour" or walk through "Got it!". Change guide in Profile Edit → tooltip character swaps from Sir Cedric to Lady Elara. Click sidebar "Guide" button on /forums → discover-forums tooltip reappears. Click "Reset guide tips" in Profile Edit → tour and all tips return.
 - Next candidates (decide in Chat before Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Justine admin seed, domain cutover planning.
 - No blockers.
 
 ---
 
 ## SESSION LOG
+
+### Session 31 — 2026-04-21 (Claude Code — Phase 5I Guide Character, v0.16.0)
+**Goal:** Introduce the medieval guide character system (Sir Cedric / Lady Elara) — a 3-step onboarding tour on first login plus 14 contextual tips wired across major pages, with a sidebar Guide button and Profile Edit preferences to pick/disable the character or reset tips.
+
+**What was done:**
+- **Schema migration** (`add_guide_character_and_dismissed_tips`): added `guide_character text NOT NULL DEFAULT 'knight' CHECK IN (knight,lady,none)` and `dismissed_tips text[] NOT NULL DEFAULT '{}'` to `profiles`. Verified via `get_advisors(security)` — only the pre-existing leaked-password-protection warning remains.
+- **AuthContext:** added `guide_character` to updateProfile allow-list; added `dismissTip(tipId)` (optimistic local state + async supabase update via array_append) and `resetTips()` (clears to `[]`). Both exposed on context value.
+- **GuideProvider + useGuide:** new `src/components/guide/GuideProvider.jsx` manages a session-scoped `reopenedTips: Set<string>`. `reopenTipsForPage(pathname)` unions `tipsForPath(pathname)` into the set. `clearReopenedTip(tipId)` removes one. `isTipReopened(tipId)` is the read. Wrapped in `App.jsx` above ToastProvider. Hook at `src/components/guide/useGuide.js`.
+- **Tip page map:** extracted `src/components/guide/tipPageMap.js` with `PAGE_TIPS` (pathname → tipId[]) and `tipsForPath(pathname)` — so `GuideProvider.jsx` is component-only (satisfies react-refresh/only-export-components).
+- **GuideTooltip component:** `src/components/guide/GuideTooltip.jsx`. Props `{ tipId, pose, variant='inline'|'floating', position?, children|message, onDismiss }`. Reads `profile.guide_character` + `profile.dismissed_tips` from useAuth. Hidden when character='none' or tipId in dismissed_tips AND not in reopened set. Renders speech bubble with `/guide/guide-${character}-${pose}.png` + name (Sir Cedric / Lady Elara) + message + "Got it!" which calls `dismissTip(tipId)` + `clearReopenedTip(tipId)`.
+- **Onboarding tour:** `src/components/guide/OnboardingTour.jsx` + `onboardingHelpers.js`. 3 steps — welcome (pose:welcome), nav (pose:pointing), profile nudge (pose:thinking). Finds first undismissed step, renders `guide-overlay-backdrop` + centered floating tooltip, shows step counter (e.g. "1/3"), "Skip tour" (dismisses all 3) + "Got it!" (dismisses current, advances via stepOverride). Mounted at top of Dashboard.jsx. `hasActiveOnboardingTour(profile)` helper used to suppress engagement tooltips while tour is open.
+- **14 tips wired in:**
+  - Onboarding (3): `onboarding-welcome`, `onboarding-nav`, `onboarding-profile` (in OnboardingTour).
+  - Discovery (4): `discover-forums` on ForumHome, `discover-events` on EventsHome, `discover-courses` on CoursesHome, `discover-members` on MembersDirectory — each pose:pointing inline under page-header.
+  - Engagement (4): `engage-first-honor` (Dashboard, myBadges>=1), `engage-streak-7` (Dashboard, streak>=7), `engage-first-post` (PostComposer, after successful post), `engage-frame` (Profile, own profile with selected_frame).
+  - Hints (3): `hint-vacation` (Dashboard streak>=7 + Profile), `hint-editor` (PostComposer expanded), `hint-notification` (NotificationBell dropdown when items>0).
+- **Sidebar Guide button:** `src/components/ui/Sidebar.jsx` now imports `useGuide` + `tipsForPath`. Renders a "🛡️ Guide" button in `sidebar-footer` when `profile.guide_character !== 'none'` AND `tipsForPath(location.pathname).length > 0`. Click calls `reopenTipsForPage(pathname)`.
+- **Profile Edit "Your Guide" section:** in Profile.jsx editor, added 3 radio options (Sir Cedric/Lady Elara/None) with image thumbnails + `resetTips()` button (success message). `guide_character` added to form state + save payload.
+- **CSS:** `src/styles/guide.css` (imported from index.css) — tooltip bubble grid (80px PNG + body, 60px on mobile), inline and floating variants (top-left/right, bottom-left/right, center), backdrop, animations, `.sidebar-guide-btn`, `.guide-pref-options` radio grid, mobile breakpoint (<=640px → full-width bottom tooltip).
+- **Reference file protocol update:** Session End Gate from 9 items → 10 items. Added item 10: "Guide tutorial check" (review tip content + update any affected tips when user-facing features change).
+- **Version bump + deploy:** package.json → v0.16.0. Lint clean, build clean (220 modules, up from 213). Committed + pushed to main.
+
+**Files changed:**
+- NEW: `src/components/guide/GuideTooltip.jsx`, `src/components/guide/GuideProvider.jsx`, `src/components/guide/guideContextValue.js`, `src/components/guide/useGuide.js`, `src/components/guide/tipPageMap.js`, `src/components/guide/OnboardingTour.jsx`, `src/components/guide/onboardingHelpers.js`, `src/styles/guide.css`
+- EDITED: `src/contexts/AuthContext.jsx`, `src/App.jsx`, `src/components/ui/Sidebar.jsx`, `src/pages/Dashboard.jsx`, `src/pages/ForumHome.jsx`, `src/pages/EventsHome.jsx`, `src/pages/CoursesHome.jsx`, `src/pages/MembersDirectory.jsx`, `src/pages/Profile.jsx`, `src/components/forum/PostComposer.jsx`, `src/components/notifications/NotificationBell.jsx`, `src/styles/index.css`, `package.json`, `THE_KETO_KEEP_PROJECT_REFERENCE.md`
+
+**Next Session Handoff:**
+- v0.16.0 live on Cloudflare. Smoke test with a freshly-created account: dashboard should show the 3-step welcome tour centered over the page; Skip or walk through. Change guide in Profile Edit → artwork swaps. Sidebar "Guide" button on /forums re-opens discover-forums tip. "Reset guide tips" returns the full onboarding + all tips.
+- Next candidates: member-to-member messaging, auth-level ban hardening via Edge Function, notification opt-out preferences, Justine admin seed, domain cutover planning.
+- No blockers.
 
 ### Session 30 — 2026-04-21 (Claude Code — Phase 5I: Dashboard + Notifications + Honor Lightbox, v0.15.0)
 **Goal:** Three UX improvements: (1) richer notification titles that include actor name and space name, (2) replace dashboard Quick Links with real-data activity and honors cards, (3) honor badge lightbox on Hall of Honors.

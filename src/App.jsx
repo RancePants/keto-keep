@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import { ToastProvider } from './components/ui/Toast.jsx';
 import StreakMilestoneWatcher from './components/ui/StreakMilestoneWatcher.jsx';
+import { GuideProvider } from './components/guide/GuideProvider.jsx';
 import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
@@ -34,6 +35,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <GuideProvider>
         <ToastProvider>
           <StreakMilestoneWatcher />
           <ScrollToTop />
@@ -187,6 +189,7 @@ export default function App() {
           </Route>
         </Routes>
         </ToastProvider>
+        </GuideProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -8,6 +8,7 @@ import YoutubeEmbed from '../components/events/YoutubeEmbed.jsx';
 import EventTypeBadge from '../components/events/EventTypeBadge.jsx';
 import { formatEventDate } from '../lib/eventHelpers.js';
 import usePageTitle from '../lib/usePageTitle.js';
+import GuideTooltip from '../components/guide/GuideTooltip.jsx';
 
 export default function EventsHome() {
   usePageTitle('Events');
@@ -154,6 +155,10 @@ export default function EventsHome() {
           </button>
         )}
       </header>
+
+      <GuideTooltip tipId="discover-events" pose="pointing">
+        This is the Events Hall. Live sessions, Q&amp;As, and workshops happen here. RSVP to save your spot, and check back for recordings of past sessions.
+      </GuideTooltip>
 
       {error && <div className="form-error">{error}</div>}
 

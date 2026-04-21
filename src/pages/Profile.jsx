@@ -177,7 +177,7 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
     state: profile.state || '',
     about_me: profile.about_me || '',
     my_why: profile.my_why || '',
-    guide_character: profile.guide_character || 'knight',
+    guide_character: profile.guide_character || 'lady',
   });
   const [resetMessage, setResetMessage] = useState(null);
 
@@ -242,7 +242,7 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
         state: form.state || null,
         about_me: form.about_me.trim() || null,
         my_why: form.my_why.trim() || null,
-        guide_character: form.guide_character || 'knight',
+        guide_character: form.guide_character || 'lady',
       };
       const { error } = await updateProfile(payload);
       if (error) {
@@ -509,37 +509,21 @@ function ProfileEditor({ profile, updateProfile, uploadAvatar, onSaved }) {
       <section className="profile-edit-section">
         <h2 className="section-title">Your Guide</h2>
         <p className="section-sub">
-          Pick a friendly face to show you around The Keep. You can turn tips off entirely if you prefer.
+          Lady Elara will offer tips as you explore The Keep. Turn her off if you prefer to go it alone.
         </p>
-        <div className="guide-pref-options" role="radiogroup" aria-label="Guide character">
-          {[
-            { value: 'knight', label: 'Sir Cedric', img: '/guide/guide-knight-welcome.png' },
-            { value: 'lady', label: 'Lady Elara', img: '/guide/guide-lady-welcome.png' },
-            { value: 'none', label: 'None', img: null },
-          ].map((opt) => {
-            const selected = form.guide_character === opt.value;
-            return (
-              <label
-                key={opt.value}
-                className={`guide-pref-option${selected ? ' guide-pref-option-selected' : ''}`}
-              >
-                <input
-                  type="radio"
-                  name="guide_character"
-                  value={opt.value}
-                  checked={selected}
-                  onChange={onField('guide_character')}
-                />
-                {opt.img ? (
-                  <img src={opt.img} alt="" className="guide-pref-option-avatar" />
-                ) : (
-                  <span className="guide-pref-option-none" aria-hidden="true">🚫</span>
-                )}
-                <span className="guide-pref-option-label">{opt.label}</span>
-              </label>
-            );
-          })}
-        </div>
+        <label className="guide-pref-toggle">
+          <input
+            type="checkbox"
+            checked={form.guide_character !== 'none'}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                guide_character: e.target.checked ? 'lady' : 'none',
+              }))
+            }
+          />
+          <span>Show guide tips (Lady Elara)</span>
+        </label>
         <button
           type="button"
           className="btn btn-secondary guide-pref-reset"

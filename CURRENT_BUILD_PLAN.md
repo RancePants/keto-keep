@@ -47,16 +47,17 @@
 ## Final Steps
 
 ### F1 — Version bump
-- [ ] `package.json` → 0.15.0
+- [x] `package.json` → 0.15.0
 
 ### F2 — Lint + build
-- [ ] `npm run lint` → 0 errors
-- [ ] `npm run build` → clean
+- [x] `npm run lint` → 0 errors
+- [x] `npm run build` → clean (214 modules, chunk size warning pre-existing)
 
 ### F3 — Commit + push
-- [ ] Commit: "feat: richer notifications, dashboard activity/honors cards, honor lightbox (v0.15.0)"
-- [ ] Push to main
+- [x] Commit c85f6cb: "feat: richer notifications, dashboard activity/honors cards, honor lightbox (v0.15.0)"
+- [x] Pushed to main
 
 ### F4 — End gate
-- [ ] Verify Cloudflare auto-deploy
-- [ ] Save dated reference file copy: `D:\The Keto Keep\Project Reference\THE_KETO_KEEP_PROJECT_REFERENCE_2026-04-21_S30.md`
+- [ ] Verify Cloudflare auto-deploy (triggered; check keto-keep.rance-8c6.workers.dev)
+- [x] Saved dated reference file: `D:\The Keto Keep\Project Reference\THE_KETO_KEEP_PROJECT_REFERENCE_2026-04-21_S30.md`
+- [x] Archived build plan: `D:\The Keto Keep\Project Reference\PHASE5I_BUILD_PLAN_COMPLETED.md`

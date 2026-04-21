@@ -5,7 +5,6 @@ import DietaryApproachTag from '../components/profile/DietaryApproachTag.jsx';
 import BadgesInline from '../components/profile/BadgesInline.jsx';
 import StreakBadge from '../components/ui/StreakBadge.jsx';
 import RecentActivityCard from '../components/dashboard/RecentActivityCard.jsx';
-import HonorsProgressCard from '../components/dashboard/HonorsProgressCard.jsx';
 import { useMemberBadges } from '../components/profile/useMemberBadges.js';
 import usePageTitle from '../lib/usePageTitle.js';
 
@@ -48,10 +47,7 @@ export default function Dashboard() {
 
       <MyLearningCard />
 
-      <div className="dashboard-cards-row">
-        <RecentActivityCard />
-        <HonorsProgressCard />
-      </div>
+      <RecentActivityCard />
     </div>
   );
 }

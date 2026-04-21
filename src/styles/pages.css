@@ -115,18 +115,6 @@
 }
 
 /* ------- Dashboard ------- */
-.dashboard-cards-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
-}
-
-@media (max-width: 768px) {
-  .dashboard-cards-row {
-    grid-template-columns: 1fr;
-  }
-}
-
 .recent-activity-list {
   list-style: none;
   padding: 0;

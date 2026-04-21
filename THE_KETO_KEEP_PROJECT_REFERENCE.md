@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-21 (Session 28 — v0.14.0; Honors System — 28 honor types, Hall of Honors, auto-award engine)
+> **Canonical version date:** 2026-04-21 (Session 29 — v0.14.1; Honors Polish + Backfill Awards)
 
 ---
 
@@ -115,7 +115,7 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.14.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 28 — Honors system (28 types, Hall of Honors, auto-award engine) |
+| Frontend app | v0.14.1 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 29 — Sage icon fix, interests above honors, collapsible Hall of Honors, backfill awards |
 | Supabase schema | v5H (adds badge_category + badge_unlock_method enums, 23 new badge_type values, category/unlock_method/sort_order/requirement_meta cols on badges, member_badges self-auto-insert RLS) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 28 — honors schema expansion |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
@@ -574,6 +574,13 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Member card interest tags: increased display limit from 4 to 8 (`interestTags.slice(0, 8)`) — session 27
 - [x] Version bump to v0.13.2 — session 27
 
+**Phase 5H polish — Sage Icon + Interests Layout + Collapsible Honors + Backfill** (deployed session 29, v0.14.1)
+- [x] `badgeTypeSlug()` in `profileHelpers.js`: added `SLUG_OVERRIDES = { course_complete: 'sage' }` so HonorIcon resolves to `honor-sage.png` instead of broken `honor-course-complete.png` — session 29
+- [x] Profile view: moved interests/tags section above Hall of Honors so it doesn't get buried — session 29
+- [x] Hall of Honors: each category collapsed by default; chevron rotates on expand; header shows "Category (X of Y earned)" when collapsed — session 29
+- [x] Backfill ran via Supabase MCP: town_crier(1), scribe(2), herald(1), standard_bearer(1) awarded to existing members from historical data (idempotent ON CONFLICT DO NOTHING) — session 29
+- [x] Version bump to v0.14.1 — session 29
+
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email) — deferred post-launch
 - [x] Replace `window.confirm` / `window.alert` usage with Toast + Modal primitives — session 21 (9 instances across 8 files)
@@ -775,18 +782,37 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5H (Honors System) complete — v0.14.0 pushed to main
-**Last Updated:** 2026-04-21 (Session 28)
-**Frontend Version:** v0.14.0 — Honors System: 28 honor types across community/growth/building/special categories. HonorIcon component with PNG artwork + SVG fallback. Hall of Honors profile section with locked silhouettes + category counts. AwardBadgeModal limited to 3 manual-award honors (coach_spotlight, founding_member, champions_honor). Auto-award engine (honorHelpers.js) wired into post, reply, reaction, streak, lesson, referral, frame, and tenure triggers. Commit `1057910` pushed to main.
-**Supabase Schema:** v5H — badge_category + badge_unlock_method enums, 23 new badge_type enum values (28 total), 4 new cols on badges (category, unlock_method, sort_order, requirement_meta), 5 existing rows updated + 23 new rows inserted, RLS policy member_badges_self_auto_insert added for authenticated self-award of auto-unlock honors.
-**Session 28 — Next Session Handoff:**
-- v0.14.0 deployed to Cloudflare. Test: Hall of Honors section on /profile (should show 28 honors grouped by category, locked silhouettes for unearned). Try triggering honors: make a post (town_crier), mark a lesson complete (scholar/sage), react to a post (herald), change frame (standard_bearer). Visit /invite to trigger referral honors check.
-- Next candidates (decide in Chat before Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Justine admin seed, domain cutover planning, backfill script to award retroactive honors to existing members (town_crier/scribe/herald/pilgrim/loyal_knight/tenure/scholar/sage from existing data).
+**Current Phase:** Phase 5H polish complete — v0.14.1 pushed to main
+**Last Updated:** 2026-04-21 (Session 29)
+**Frontend Version:** v0.14.1 — Sage icon fix (SLUG_OVERRIDES map in badgeTypeSlug), interests moved above Hall of Honors in profile view, Hall of Honors collapsed by default with chevron expand/collapse per category, backfill script ran awarding town_crier(1), scribe(2), herald(1), standard_bearer(1) to existing 2 users. Commit `7298d94` pushed to main.
+**Supabase Schema:** v5H (unchanged — backfill was data-only, no DDL)
+**Session 29 — Next Session Handoff:**
+- v0.14.1 deployed to Cloudflare. Test: Hall of Honors on /profile (collapsed by default, chevron expands). Sage honor should show tome artwork (not blank shield). Interests section appears above Hall of Honors.
+- Next candidates (decide in Chat before Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Justine admin seed, domain cutover planning.
 - No blockers.
 
 ---
 
 ## SESSION LOG
+
+### Session 29 — 2026-04-21 (Claude Code — Honors Polish + Backfill, v0.14.1)
+**Goal:** Polish the Phase 5H honors system: fix Sage icon, move interests above honors, make Hall of Honors collapsed by default, run one-time backfill to award retroactive honors to existing members.
+
+**What was done:**
+- **Sage icon fix:** Added `SLUG_OVERRIDES = { course_complete: 'sage' }` to `badgeTypeSlug()` in `profileHelpers.js`. HonorIcon now resolves `course_complete` → `honor-sage.png` instead of the broken `honor-course-complete.png` path.
+- **Interests above honors:** In Profile.jsx view mode, moved the interests/tags section above the `<HallOfHonors>` component so it's not buried below a potentially tall honors grid.
+- **Collapsible Hall of Honors:** Each category section in HallOfHonors is collapsed by default. Category header is clickable; chevron (▶/▼) rotates on expand. Collapsed state shows "Category (X of Y)" count. Expanded state shows full honors grid. CSS transition on chevron rotation. State managed with `useState({})` keyed by category.
+- **CSS:** Added `.honors-category-header`, `.honors-chevron`, `.honors-category-collapsed` rules to `profiles.css`.
+- **Backfill:** One-time SQL queries via Supabase MCP awarded retroactive honors based on historical data. Results: town_crier(1), scribe(2), herald(1), standard_bearer(1). All remaining zeros expected — only 2 users with limited historical data.
+- **Version bump + deploy:** package.json → v0.14.1. Lint clean, build clean. Commit `7298d94` pushed to main. Cloudflare auto-deploy triggered.
+
+**Files changed:**
+- EDITED: `src/lib/profileHelpers.js`, `src/pages/Profile.jsx`, `src/styles/profiles.css`, `package.json`
+
+**Next Session Handoff:**
+- v0.14.1 live on Cloudflare. Test: Hall of Honors collapsed by default; chevron expands categories. Sage honor shows tome artwork. Interests appear above Hall of Honors.
+- Next candidates: member-to-member messaging, auth-level ban hardening, notification opt-out, Justine admin seed, domain cutover planning.
+- No blockers.
 
 ### Session 28 — 2026-04-21 (Claude Code — Honors System, v0.14.0, Phase 5H)
 **Goal:** Full Phase 5H build: apply honors schema expansion (schema v5H), build HonorIcon component, Hall of Honors profile section, expand AwardBadgeModal, implement auto-award engine (honorHelpers.js), and wire trigger points throughout the app.

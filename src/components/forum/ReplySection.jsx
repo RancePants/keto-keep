@@ -6,6 +6,7 @@ import {
   notifyReplyToComment,
   notifyReaction,
 } from '../../lib/notificationHelpers.js';
+import { checkAndAwardHonors } from '../../lib/honorHelpers.js';
 import ReplyItem from './ReplyItem.jsx';
 import ReplyComposer from './ReplyComposer.jsx';
 
@@ -108,6 +109,7 @@ export default function ReplySection({
   const handleTopLevelReplyCreated = async (newReply) => {
     if (newReply && user?.id) {
       notifyReplyToPost(supabase, postAuthorId, user.id, postTitle, permalink);
+      checkAndAwardHonors(supabase, user.id, 'reply');
     }
     await load();
   };
@@ -115,6 +117,7 @@ export default function ReplySection({
   const handleNestedReplyCreated = async (parentAuthorId, newReply) => {
     if (newReply && user?.id) {
       notifyReplyToComment(supabase, parentAuthorId, user.id, permalink);
+      checkAndAwardHonors(supabase, user.id, 'reply');
     }
     await load();
   };

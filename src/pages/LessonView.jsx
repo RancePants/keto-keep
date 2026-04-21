@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js';
 import { useAuth } from '../contexts/useAuth.js';
 import LessonContent from '../components/courses/LessonContent.jsx';
 import { flattenLessons, formatMinutes } from '../lib/courseHelpers.js';
+import { checkAndAwardHonors } from '../lib/honorHelpers.js';
 import usePageTitle from '../lib/usePageTitle.js';
 
 export default function LessonView() {
@@ -135,6 +136,7 @@ export default function LessonView() {
       if (nextCompleted) {
         setJustCompleted(true);
         window.setTimeout(() => setJustCompleted(false), 1200);
+        checkAndAwardHonors(supabase, user.id, 'lesson');
       }
     } finally {
       setSavingComplete(false);

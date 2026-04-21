@@ -3,14 +3,14 @@ import Modal from '../events/Modal.jsx';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
 import { notifyBadgeAwarded } from '../../lib/notificationHelpers.js';
-import BadgeIcon from './BadgeIcon.jsx';
+import HonorIcon from './HonorIcon.jsx';
+import { HONOR_CATEGORIES } from '../../lib/profileHelpers.js';
 
-// Admin-only modal for awarding / revoking a badge to/from a member.
-// Only the `coach_spotlight` badge is offered in the dropdown — the
-// tenure badges are auto-awarded later, and course_complete is awarded
-// when a member finishes a course (also later). Those rows are still
-// shown as "already awarded" for visibility.
-const MANUAL_AWARDABLE = ['coach_spotlight'];
+// Admin-only modal for awarding / revoking honors to/from a member.
+// Only manual honors appear in the dropdown — auto-awarded honors
+// (tenure, streaks, posts, etc.) are granted by the honorHelpers
+// engine. Those are still shown in the "Currently awarded" section.
+const MANUAL_AWARDABLE = ['coach_spotlight', 'founding_member', 'champions_honor'];
 
 export default function AwardBadgeModal({
   open,
@@ -35,7 +35,10 @@ export default function AwardBadgeModal({
       if (cancelled) return;
       setErr('');
       const [catRes, ownedRes] = await Promise.all([
-        supabase.from('badges').select('id, badge_type, name, description').order('badge_type'),
+        supabase
+          .from('badges')
+          .select('id, badge_type, name, description, category, unlock_method, sort_order')
+          .order('sort_order'),
         supabase
           .from('member_badges')
           .select('badge_id, badges!inner(badge_type)')
@@ -179,27 +182,46 @@ export default function AwardBadgeModal({
         <section className="award-section">
           <h3 className="award-section-title">Currently awarded</h3>
           {awarded.length === 0 ? (
-            <p className="muted">No badges yet.</p>
+            <p className="muted">No honors yet.</p>
           ) : (
-            <ul className="award-list">
-              {awarded.map((a) => {
-                const meta = catalog.find((c) => c.id === a.badge_id);
+            <div className="award-groups">
+              {HONOR_CATEGORIES.map((cat) => {
+                const inCat = awarded
+                  .map((a) => ({
+                    ...a,
+                    meta: catalog.find((c) => c.id === a.badge_id),
+                  }))
+                  .filter((a) => a.meta?.category === cat.key)
+                  .sort((a, b) => (a.meta?.sort_order ?? 0) - (b.meta?.sort_order ?? 0));
+                if (inCat.length === 0) return null;
                 return (
-                  <li key={a.badge_id} className="award-list-item">
-                    <BadgeIcon badgeType={a.badge_type} size={22} />
-                    <span className="award-list-name">{meta?.name || a.badge_type}</span>
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      onClick={() => setBadgeToRevoke(a.badge_id)}
-                      disabled={busy}
-                    >
-                      Remove
-                    </button>
-                  </li>
+                  <div key={cat.key} className="award-group">
+                    <h4 className="award-group-title">{cat.label}</h4>
+                    <ul className="award-list">
+                      {inCat.map((a) => (
+                        <li key={a.badge_id} className="award-list-item">
+                          <HonorIcon badgeType={a.badge_type} size={28} />
+                          <span className="award-list-name">
+                            {a.meta?.name || a.badge_type}
+                            {a.meta?.unlock_method === 'auto' && (
+                              <span className="award-list-auto"> · earned automatically</span>
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            onClick={() => setBadgeToRevoke(a.badge_id)}
+                            disabled={busy}
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           )}
         </section>
 

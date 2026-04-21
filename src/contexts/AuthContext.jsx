@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { AuthContext } from './authContextValue.js';
+import { checkAndAwardHonors } from '../lib/honorHelpers.js';
 
 // Apply a theme to the <html> element and persist to localStorage as a
 // fast cache for the next page load (the inline script in index.html
@@ -70,6 +71,9 @@ export function AuthProvider({ children }) {
           at: Date.now(),
         });
       }
+      // Fire-and-forget honor checks tied to a login event.
+      checkAndAwardHonors(supabase, userId, 'streak');
+      checkAndAwardHonors(supabase, userId, 'tenure');
     } catch (e) {
       console.error('update_login_streak threw:', e);
     }

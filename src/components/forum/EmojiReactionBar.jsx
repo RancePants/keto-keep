@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { REACTION_EMOJIS, groupReactions } from '../../lib/forumHelpers.js';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
+import { checkAndAwardHonors } from '../../lib/honorHelpers.js';
 
 export default function EmojiReactionBar({ target, reactions, onChange, onReactionAdded }) {
   const { user } = useAuth();
@@ -50,8 +51,9 @@ export default function EmojiReactionBar({ target, reactions, onChange, onReacti
         });
         if (error) {
           console.error('Add reaction failed:', error.message);
-        } else if (onReactionAdded) {
-          onReactionAdded(emoji);
+        } else {
+          checkAndAwardHonors(supabase, user.id, 'reaction');
+          if (onReactionAdded) onReactionAdded(emoji);
         }
       }
       if (onChange) await onChange();

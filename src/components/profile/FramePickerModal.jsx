@@ -4,6 +4,8 @@ import { useToast } from '../ui/toastContext.js';
 import Modal from '../ui/Modal.jsx';
 import ProfileFrame from '../ui/ProfileFrame.jsx';
 import { fetchFrameCatalog, isFrameUnlocked } from '../../lib/frameCatalog.js';
+import { supabase } from '../../lib/supabase.js';
+import { checkAndAwardHonors } from '../../lib/honorHelpers.js';
 
 function useOwnAvatarUrl(path) {
   const { getAvatarUrl } = useAuth();
@@ -92,7 +94,7 @@ function FrameOption({ frame, selected, unlocked, onSelect, avatarUrl, displayNa
 }
 
 export default function FramePickerModal({ open, onClose, profile, onChanged }) {
-  const { isAdmin, updateProfile } = useAuth();
+  const { user, isAdmin, updateProfile } = useAuth();
   const toast = useToast();
   const [catalog, setCatalog] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -132,6 +134,9 @@ export default function FramePickerModal({ open, onClose, profile, onChanged }) 
         return;
       }
       toast.success('Frame updated.');
+      if (user?.id && pending !== 'none') {
+        checkAndAwardHonors(supabase, user.id, 'frame');
+      }
       if (onChanged) await onChanged();
       onClose();
     } catch (e) {

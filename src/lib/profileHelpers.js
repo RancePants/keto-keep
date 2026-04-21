@@ -120,11 +120,60 @@ export function formatLocation({ city, state }) {
 // a warmer color past this threshold but still allows saving.
 export const ABOUT_SOFT_LIMIT = 500;
 
-// Badge display copy fallback in case the catalog row is missing.
+// Honor (badge) display copy fallback in case the catalog row is missing.
+// Covers all 28 honor types from the Phase 5H schema.
 export const BADGE_TYPE_LABEL = {
-  course_complete:  'Course Complete',
-  tenure_1_month:   '1 Month Strong',
-  tenure_6_months:  '6 Months Strong',
-  tenure_1_year:    '1 Year Strong',
-  coach_spotlight:  'Coach Spotlight',
+  // Existing (5)
+  course_complete:      'Sage',
+  tenure_1_month:       '1 Month Strong',
+  tenure_6_months:      '6 Months Strong',
+  tenure_1_year:        '1 Year Strong',
+  coach_spotlight:      'Coach Spotlight',
+  // Community (9)
+  town_crier:           'Town Crier',
+  bard_bronze:          'Bard (Bronze)',
+  bard_silver:          'Bard (Silver)',
+  bard_gold:            'Bard (Gold)',
+  scribe:               'Scribe',
+  herald:               'Herald',
+  good_neighbor_bronze: 'Good Neighbor (Bronze)',
+  good_neighbor_silver: 'Good Neighbor (Silver)',
+  good_neighbor_gold:   'Good Neighbor (Gold)',
+  // Growth (additional 8: 6 loyal_knight + scholar + pilgrim)
+  loyal_knight_7:       'Loyal Knight (7 Days)',
+  loyal_knight_30:      'Loyal Knight (30 Days)',
+  loyal_knight_90:      'Loyal Knight (90 Days)',
+  loyal_knight_180:     'Loyal Knight (180 Days)',
+  loyal_knight_270:     'Loyal Knight (270 Days)',
+  loyal_knight_365:     'Loyal Knight (365 Days)',
+  scholar:              'Scholar',
+  pilgrim:              'Pilgrim',
+  // Building (4)
+  gatekeeper_1:         'Gatekeeper',
+  gatekeeper_5:         'Gatekeeper (Silver)',
+  gatekeeper_10:        'Gatekeeper (Gold)',
+  standard_bearer:      'Standard Bearer',
+  // Special (2 new)
+  founding_member:      'Founding Member',
+  champions_honor:      "Champion's Honor",
 };
+
+// Convert a badge_type enum to its hyphenated slug for image filenames
+// (e.g. 'loyal_knight_30' → 'loyal-knight-30' → /honors/honor-loyal-knight-30.png).
+export function badgeTypeSlug(badgeType) {
+  if (!badgeType) return '';
+  return String(badgeType).replace(/_/g, '-');
+}
+
+// Hall of Honors category ordering + display copy. Mirrors the
+// badge_category enum values and drives the Hall of Honors render order.
+export const HONOR_CATEGORIES = [
+  { key: 'community', label: 'Community' },
+  { key: 'growth',    label: 'Growth' },
+  { key: 'building',  label: 'Building' },
+  { key: 'special',   label: 'Special' },
+];
+
+export const HONOR_CATEGORY_LABEL = Object.fromEntries(
+  HONOR_CATEGORIES.map((c) => [c.key, c.label])
+);

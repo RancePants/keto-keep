@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase.js';
 import {
   ABOUT_SOFT_LIMIT,
   DIETARY_APPROACHES,
+  HONOR_CATEGORIES,
   JOURNEY_DURATIONS,
   US_STATES,
   dietaryLabel,
@@ -15,7 +16,7 @@ import {
 } from '../lib/profileHelpers.js';
 import { safeTagColor, statusColorClass, statusLabel } from '../lib/memberHelpers.js';
 import DietaryApproachTag from '../components/profile/DietaryApproachTag.jsx';
-import BadgeIcon from '../components/profile/BadgeIcon.jsx';
+import HonorIcon from '../components/profile/HonorIcon.jsx';
 import InterestTagChip from '../components/profile/InterestTagChip.jsx';
 import AwardBadgeModal from '../components/profile/AwardBadgeModal.jsx';
 import AssignAdminTagModal from '../components/members/AssignAdminTagModal.jsx';
@@ -116,7 +117,7 @@ async function loadMemberBadges(userId) {
   if (!userId) return [];
   const { data, error } = await supabase
     .from('member_badges')
-    .select('awarded_at, badges!inner(badge_type, name, description, icon_url)')
+    .select('awarded_at, badges!inner(badge_type, name, description, icon_url, category, sort_order)')
     .eq('user_id', userId)
     .order('awarded_at', { ascending: false });
   if (error) {
@@ -129,7 +130,21 @@ async function loadMemberBadges(userId) {
     name: r.badges?.name,
     description: r.badges?.description,
     icon_url: r.badges?.icon_url,
+    category: r.badges?.category,
+    sort_order: r.badges?.sort_order,
   }));
+}
+
+async function loadHonorCatalog() {
+  const { data, error } = await supabase
+    .from('badges')
+    .select('badge_type, name, description, icon_url, category, sort_order')
+    .order('sort_order');
+  if (error) {
+    console.error('loadHonorCatalog:', error.message);
+    return [];
+  }
+  return data || [];
 }
 
 async function loadMemberAdminTags(userId) {
@@ -603,6 +618,83 @@ function DeleteAccountSection({ isOwner }) {
   );
 }
 
+// ---------------- Hall of Honors ----------------
+
+function formatEarnedDate(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return '';
+  }
+}
+
+function HallOfHonors({ catalog, earned, showEmptyState }) {
+  const earnedByType = new Map(earned.map((b) => [b.badge_type, b]));
+
+  return (
+    <div className="hall-of-honors">
+      {showEmptyState && (
+        <p className="hall-of-honors-empty">
+          No honors earned yet. Start posting, replying, and engaging to unlock
+          your first honor!
+        </p>
+      )}
+      {HONOR_CATEGORIES.map((cat) => {
+        const inCat = catalog
+          .filter((h) => h.category === cat.key)
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        if (inCat.length === 0) return null;
+        const earnedCount = inCat.filter((h) => earnedByType.has(h.badge_type)).length;
+        return (
+          <div key={cat.key} className="honors-category">
+            <h4 className="honors-category-title">
+              {cat.label}
+              <span className="honors-category-count">
+                {earnedCount} / {inCat.length}
+              </span>
+            </h4>
+            <div className="honors-grid">
+              {inCat.map((honor) => {
+                const got = earnedByType.get(honor.badge_type);
+                const isEarned = Boolean(got);
+                return (
+                  <div
+                    key={honor.badge_type}
+                    className={`honor-item${isEarned ? '' : ' honor-item-locked'}`}
+                  >
+                    <HonorIcon
+                      badgeType={honor.badge_type}
+                      size={64}
+                      title={honor.name}
+                      locked={!isEarned}
+                    />
+                    <div className="honor-item-meta">
+                      <div className="honor-item-name">{honor.name}</div>
+                      {honor.description && (
+                        <div className="honor-item-desc">{honor.description}</div>
+                      )}
+                      {isEarned && got.awarded_at && (
+                        <div className="honor-item-earned">
+                          Earned {formatEarnedDate(got.awarded_at)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ---------------- Viewer ----------------
 
 function ProfileView({
@@ -618,14 +710,16 @@ function ProfileView({
   onChanged,
 }) {
   const [badges, setBadges] = useState([]);
+  const [honorCatalog, setHonorCatalog] = useState([]);
   const [memberTags, setMemberTags] = useState([]);
   const [adminTags, setAdminTags] = useState([]);
   const [loadingMeta, setLoadingMeta] = useState(true);
 
   const load = useCallback(async () => {
     await Promise.resolve();
-    const [b, tagRows, aTags] = await Promise.all([
+    const [b, catalog, tagRows, aTags] = await Promise.all([
       loadMemberBadges(profile.id),
+      loadHonorCatalog(),
       supabase
         .from('member_tags')
         .select('tag_id, tags!inner(id, name)')
@@ -633,6 +727,7 @@ function ProfileView({
       isAdmin ? loadMemberAdminTags(profile.id) : Promise.resolve([]),
     ]);
     setBadges(b);
+    setHonorCatalog(catalog);
     if (tagRows.error) {
       console.error('member_tags load failed:', tagRows.error.message);
       setMemberTags([]);
@@ -736,25 +831,27 @@ function ProfileView({
       )}
 
       <section className="profile-block">
-        <h3 className="profile-block-title">Badges</h3>
+        <div className="hall-of-honors-header">
+          <h3 className="profile-block-title">
+            <span className="hall-of-honors-shield" aria-hidden="true">🛡️</span>
+            Hall of Honors
+          </h3>
+          {!loadingMeta && honorCatalog.length > 0 && (
+            <span className="hall-of-honors-count">
+              {badges.length} / {honorCatalog.length} earned
+            </span>
+          )}
+        </div>
         {loadingMeta ? (
-          <div className="muted">Loading badges…</div>
-        ) : badges.length === 0 ? (
-          <p className="muted">No badges yet.</p>
+          <div className="muted">Loading honors…</div>
+        ) : honorCatalog.length === 0 ? (
+          <p className="muted">No honors catalog loaded.</p>
         ) : (
-          <div className="badge-showcase">
-            {badges.map((b) => (
-              <div key={b.badge_type} className="badge-showcase-item">
-                <BadgeIcon badgeType={b.badge_type} size={40} />
-                <div className="badge-showcase-meta">
-                  <div className="badge-showcase-name">{b.name}</div>
-                  {b.description && (
-                    <div className="badge-showcase-desc">{b.description}</div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <HallOfHonors
+            catalog={honorCatalog}
+            earned={badges}
+            showEmptyState={badges.length === 0}
+          />
         )}
       </section>
 

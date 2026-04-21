@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../contexts/useAuth.js';
 import { isoToLocalInput, localInputToIso } from '../../lib/eventHelpers.js';
 import { formatRelative } from '../../lib/forumHelpers.js';
+import { checkAndAwardHonors } from '../../lib/honorHelpers.js';
 import RichTextEditor from '../ui/RichTextEditor.jsx';
 
 export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
@@ -175,6 +176,10 @@ export default function PostComposer({ spaceId, spaceSlug, onCreated }) {
         } else {
           broadcastInfo = `Broadcast sent to ${count ?? 0} member${count === 1 ? '' : 's'}.`;
         }
+      }
+
+      if (data?.id) {
+        checkAndAwardHonors(supabase, user.id, 'post');
       }
 
       reset();

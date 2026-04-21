@@ -7,6 +7,8 @@ import {
   ensureMyCode,
   getMyReferrals,
 } from '../lib/referralHelpers.js';
+import { supabase } from '../lib/supabase.js';
+import { checkAndAwardHonors } from '../lib/honorHelpers.js';
 import usePageTitle from '../lib/usePageTitle.js';
 
 function ReferredAvatar({ path, displayName }) {
@@ -54,7 +56,7 @@ function formatDate(iso) {
 export default function InviteFriends() {
   usePageTitle('Invite friends');
   const toast = useToast();
-  const { isSuspended } = useAuth();
+  const { user, isSuspended } = useAuth();
 
   const [code, setCode] = useState(null);
   const [loadingCode, setLoadingCode] = useState(true);
@@ -93,11 +95,14 @@ export default function InviteFriends() {
       if (cancelled) return;
       setReferrals(list);
       setLoadingRefs(false);
+      if (user?.id && list.length > 0) {
+        checkAndAwardHonors(supabase, user.id, 'referral');
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user?.id]);
 
   const onCopy = useCallback(async () => {
     if (!inviteUrl) return;

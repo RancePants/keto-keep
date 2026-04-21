@@ -1,62 +1,107 @@
-# Session 27 Build Plan — Three UI Bug Fixes
+# Session 28 Build Plan — Honors System (Phase 5H)
 
-**Session:** 27
-**Starting version:** v0.13.1
-**Target version:** v0.13.2
-**Schema changes:** None
+**Session:** 28
+**Starting version:** v0.13.2
+**Target version:** v0.14.0
+**Schema changes:** Yes — phase5h_honors_system migration
 
 ---
 
-## 1. Admin Menu Dropdown Clipping (Desktop)
+## 0. Pre-Build: Schema Application
 
-**Problem:** On desktop, the 3-dot admin menu on member cards opens a dropdown that gets clipped by the card's `overflow: hidden`. The dropdown renders inside the card, but the card clips it.
+**Reference file:** `Project Reference/PHASE5H_SCHEMA_DRAFT.sql`
 
-**Files:** `src/styles/members.css`, possibly `src/components/members/MemberCard.jsx`
+- [ ] 0A. Create the two new enums: `badge_category` ('community','growth','building','special') and `badge_unlock_method` ('auto','manual'). Run as a single `execute_sql` call.
+- [ ] 0B. Add 23 new values to `badge_type` enum. IMPORTANT: `ALTER TYPE ... ADD VALUE` cannot run inside a transaction block. Run each ADD VALUE as its own `execute_sql` call (23 calls). Order: town_crier, bard_bronze, bard_silver, bard_gold, scribe, herald, good_neighbor_bronze, good_neighbor_silver, good_neighbor_gold, loyal_knight_7, loyal_knight_30, loyal_knight_90, loyal_knight_180, loyal_knight_270, loyal_knight_365, scholar, pilgrim, gatekeeper_1, gatekeeper_5, gatekeeper_10, standard_bearer, founding_member, champions_honor.
+- [ ] 0C. Add 4 new columns to `badges` table: `category badge_category`, `unlock_method badge_unlock_method`, `threshold integer`, `sort_order integer NOT NULL DEFAULT 0`. Single `execute_sql` call.
+- [ ] 0D. Update existing 5 badge rows with new column values + icon_url paths. 5 UPDATE statements (can batch in one call). Key: `course_complete` gets renamed to 'Sage' with new description and icon_url `/honors/honor-sage.png`.
+- [ ] 0E. Insert 23 new honor catalog rows. Single INSERT with ON CONFLICT (badge_type) DO UPDATE. Copy exactly from the schema draft.
+- [ ] 0F. Run Supabase **security** advisor. Expect only pre-existing `auth_leaked_password_protection` WARN.
+- [ ] 0G. Run Supabase **performance** advisor. Expect zero `auth_rls_initplan` (no new RLS), zero `unindexed_foreign_keys` (no new FKs). Possible `unused_index` INFOs expected.
 
-- [ ] 1A. In `src/styles/members.css`, remove `overflow: hidden` from `.member-card`. The bio already handles its own overflow via `-webkit-line-clamp`. The card's `border-radius` does not require `overflow: hidden` since no child elements extend beyond the card borders in normal flow.
-- [ ] 1B. Verify on desktop: click the 3-dot button on a member card near the bottom of the card — the full dropdown (Manage tags, View profile, Suspend, Ban, Delete…) should be fully visible, not clipped.
-- [ ] 1C. Verify the card still looks correct without `overflow: hidden` — rounded corners, hover shadow, bio truncation all still work.
-- [ ] 1D. If removing `overflow: hidden` causes any visual regression (unlikely), use an alternative approach: render the dropdown menu via a React portal so it escapes the card's stacking context entirely. This would require changes to `MemberCard.jsx`.
+## 1. Frontend: HonorIcon Component (replaces BadgeIcon)
 
-## 2. Frame-to-Text Spacing (Mobile Profile + Member Cards)
+**Old:** `src/components/profile/BadgeIcon.jsx` — inline SVG shields with glyphs
+**New:** PNG-based component using honor artwork from `/honors/`
 
-**Problem:** When a user has a profile frame, the name/text sits too close to the bottom edge of the frame image. This affects both the mobile profile view (`/profile/:id`) and the member search cards. The frame overflows the avatar area by `size * FRAME_OFFSET_RATIO` (0.25) in each direction — for a 140px avatar on profile that's 35px overflow; for 64px on member cards that's 16px overflow.
+- [ ] 1A. Create `src/components/profile/HonorIcon.jsx`:
+  - Props: `badgeType` (string), `size` (number, default 24), `title` (string), `className` (string)
+  - Renders `<img src={/honors/honor-${slug}.png} />` where slug is badgeType with underscores replaced by hyphens
+  - Fallback: if image fails to load, show a generic shield placeholder (could be a simple colored circle or the old SVG)
+  - Tooltip on hover showing the honor name (via `title` attr)
+  - CSS class: `.honor-icon` with size control
+- [ ] 1B. Update `src/lib/profileHelpers.js` — expand `BADGE_TYPE_LABEL` to include all 28 badge types with their display names. Add a `BADGE_TYPE_SLUG` map (badge_type → hyphenated slug for image paths).
+- [ ] 1C. Update `src/components/profile/BadgesInline.jsx` to use `HonorIcon` instead of `BadgeIcon`. Keep the same interface (badges array, limit, size props).
+- [ ] 1D. Update all files that import `BadgeIcon` to use `HonorIcon` instead. Check: `Profile.jsx`, `BadgesInline.jsx`, `AwardBadgeModal.jsx`, `PostCard.jsx`, `ReplyItem.jsx`, `Dashboard.jsx`.
+- [ ] 1E. Delete `BadgeIcon.jsx` once all imports are updated.
+- [ ] 1F. Add `.honor-icon` CSS to `profiles.css`: `display: inline-block; object-fit: contain; vertical-align: middle;`
 
-**Files:** `src/styles/profiles.css`, `src/styles/members.css`
+## 2. Frontend: AwardBadgeModal Updates
 
-### Profile page (mobile)
-- [ ] 2A. In `src/styles/profiles.css`, in the `@media (max-width: 600px)` block where `.profile-top` goes to `flex-direction: column`, add a rule for `.profile-top .avatar-wrap` (or `.profile-top .profile-frame:not(.profile-frame-none)`) that adds `margin-bottom: 24px` to clear the frame's bottom overflow (35px overflow, 24px margin gives ~60px total clearance for name text). Adjust the exact value visually.
-- [ ] 2B. On desktop, `.profile-top` is already `flex-direction: row` and has `margin-right: var(--space-4)` on `.avatar-wrap`. Check if the existing `margin-top: 35px` on `.profile-top .profile-frame:not(.profile-frame-none)` (from session 24) is still present. If the frame is pushing too close to the name in the row layout, add a small `margin-right` or `padding-right` to the frame wrapper. But the primary complaint is mobile — desktop is likely fine.
+- [ ] 2A. In `AwardBadgeModal.jsx`, expand `MANUAL_AWARDABLE` from `['coach_spotlight']` to `['coach_spotlight', 'founding_member', 'champions_honor']`.
+- [ ] 2B. Update the modal to use `HonorIcon` instead of `BadgeIcon`.
+- [ ] 2C. Add category grouping to the "Currently awarded" section — group earned honors by category (community, growth, building, special) with section headers.
+- [ ] 2D. The award dropdown should only show manual honors. Auto honors should show as "Earned automatically" in the currently-awarded list (not offered in the dropdown).
 
-### Member cards
-- [ ] 2C. In `src/styles/members.css`, the `.member-card-avatar-col-framed` has `margin-top: 16px` to push the frame down. Add `margin-bottom: 8px` (or similar) to give the frame's bottom overflow clearance from content below. This applies on desktop row layout.
-- [ ] 2D. On mobile (≤480px), the `.member-card-avatar-col-framed` resets `margin-top: 0`. Also add `margin-bottom: 12px` here so that when the card stacks vertically, the frame bottom doesn't crowd the name text below.
-- [ ] 2E. Verify with a framed profile (your account) and a non-framed profile (Test Account): both should look properly spaced on mobile and desktop. The frame bottom edge should have visible breathing room before the name text.
+## 3. Frontend: Hall of Honors (Profile Page)
 
-## 3. Desktop Member Card — Fill Empty Space
+- [ ] 3A. In `Profile.jsx` (view mode), replace the existing badge showcase section with a "Hall of Honors" section:
+  - Section title: "Hall of Honors" with a shield icon
+  - Group earned honors by category (community, growth, building, special)
+  - Each category is a collapsible section with a header showing category name + count
+  - Each honor shows: HonorIcon (64px), name, description, earned date
+  - Unearned honors shown as locked/greyed out silhouettes with "???" or the honor name visible but dimmed — this creates a "collection" feel and shows members what they can work toward
+  - If the member has no honors at all, show a brief message: "No honors earned yet. Start posting, replying, and engaging to unlock your first honor!"
+- [ ] 3B. Add CSS for `.hall-of-honors`, `.honors-category`, `.honor-item`, `.honor-item-locked` in `profiles.css`.
+- [ ] 3C. Fetch the full badge catalog (`badges` table ordered by `sort_order`) alongside the member's `member_badges` to build the earned/unearned display.
 
-**Problem:** On wide desktop screens, the right side of member cards feels empty. The card is single-column full-width, with avatar left and stacked text content, but the text doesn't fill the horizontal space.
+## 4. Frontend: Honors on Member Cards
 
-**Files:** `src/components/members/MemberCard.jsx`, `src/styles/members.css`
+- [ ] 4A. In `MemberCard.jsx`, the existing `BadgesInline` already displays earned badges. After switching to `HonorIcon` (step 1C), the member cards will automatically show honor PNGs instead of SVGs. Verify this works.
+- [ ] 4B. Consider increasing the `BadgesInline` display limit from 4 to 5 or 6, since the honor count is now much larger and members will want to show off their collection.
+- [ ] 4C. Add a tooltip on the "+N more" overflow indicator showing the names of hidden honors.
 
-### Add `about_me` excerpt
-- [ ] 3A. In `MemberCard.jsx`, the component already receives and renders `profile.bio`. The `about_me` field is also on the profile object. Below the existing bio line, add an `about_me` excerpt (if available and different from bio). Render it as a 2-3 line clamped paragraph (like the bio but slightly longer). Use a CSS class `.member-card-about` with `-webkit-line-clamp: 3`.
-- [ ] 3B. In `members.css`, add `.member-card-about` styling: `font-size: var(--fs-sm); color: var(--color-ink-soft); line-height: 1.5; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;`
+## 5. Frontend: Auto-Award Helper
 
-### Show more interest tags
-- [ ] 3C. In `MemberCard.jsx`, increase the interest tag display limit from `4` to `8`. Change `const showInterests = interestTags.slice(0, 4);` → `interestTags.slice(0, 8);`. The "+N" overflow indicator still shows if there are more than 8.
+- [ ] 5A. Create `src/lib/honorHelpers.js` with the core function:
+  ```
+  checkAndAwardHonors(supabase, userId, triggerContext)
+  ```
+  - `triggerContext` determines which checks to run: 'post' | 'reply' | 'reaction' | 'streak' | 'lesson' | 'event' | 'referral' | 'frame' | 'tenure'
+  - Fetches the relevant badge catalog rows (filtered by unlock_method='auto') and the user's existing member_badges
+  - For each applicable honor, queries the relevant metric count and compares against threshold
+  - Inserts missing awards (fire-and-forget, swallow errors, skip if already awarded via ON CONFLICT DO NOTHING)
+  - Sends notification via `notifyBadgeAwarded` for each newly awarded honor
+  - Returns array of newly awarded badge_types (for UI celebration)
 
-### Verify
-- [ ] 3D. Verify on desktop: cards with bio + about_me + 5+ interest tags should fill the horizontal space much better. Cards with minimal data (no bio, no about_me, few tags) should still look clean and not awkwardly sparse.
-- [ ] 3E. Verify on mobile (≤480px): stacked layout still looks good, about_me excerpt doesn't make the card too tall.
+- [ ] 5B. Implement metric queries per trigger context:
+  - `post` → COUNT forum_posts WHERE author_id = userId → checks town_crier (≥1), bard_bronze (≥10), bard_silver (≥25), bard_gold (≥50)
+  - `reply` → COUNT forum_replies WHERE author_id = userId → checks scribe (≥1)
+  - `reaction` → COUNT forum_reactions WHERE user_id = userId → checks herald (≥1). ALSO count reactions received (reactions on posts/replies authored by userId) → checks good_neighbor_bronze/silver/gold
+  - `streak` → read profiles.longest_streak → checks loyal_knight_7/30/90/180/270/365
+  - `lesson` → check module completion + course completion → checks scholar, course_complete (Sage)
+  - `event` → check event_rsvps joined with events WHERE status='completed' → checks pilgrim
+  - `referral` → COUNT referrals WHERE referrer_id = userId → checks gatekeeper_1/5/10
+  - `frame` → check profiles.selected_frame != 'none' → checks standard_bearer
+  - `tenure` → DAYS since profiles.created_at → checks tenure_1_month (≥30), tenure_6_months (≥180), tenure_1_year (≥365)
 
-## 4. Final Steps
+## 6. Frontend: Wire Auto-Award Checks
 
-- [ ] 4A. Run `npm run lint` — fix any errors
-- [ ] 4B. Run `npm run build` — verify clean build
-- [ ] 4C. Bump version in `package.json` to `0.13.2`
-- [ ] 4D. Git commit: "fix: admin menu clipping, frame spacing, card content density (v0.13.2)"
-- [ ] 4E. Git push to `main`
-- [ ] 4F. Verify Cloudflare auto-deploy picks up the build
-- [ ] 4G. Update `THE_KETO_KEEP_PROJECT_REFERENCE.md`: canonical version → v0.13.2, add session 27 log entry, update Phase 5G section with new checklist items
-- [ ] 4H. Save dated copy: `D:\The Keto Keep\Project Reference\THE_KETO_KEEP_PROJECT_REFERENCE_2026-04-21_S27.md`
+- [ ] 6A. `PostComposer.jsx` — after successful post insert, call `checkAndAwardHonors(supabase, userId, 'post')`
+- [ ] 6B. `ReplySection.jsx` (or wherever replies are created) — after successful reply insert, call `checkAndAwardHonors(supabase, userId, 'reply')`
+- [ ] 6C. `EmojiReactionBar.jsx` — after reaction insert, call `checkAndAwardHonors(supabase, userId, 'reaction')`. ALSO call for the post/reply author: `checkAndAwardHonors(supabase, authorId, 'reaction')` (for good_neighbor checks)
+- [ ] 6D. `AuthContext.jsx` (streak update logic) — after streak is updated on login, call `checkAndAwardHonors(supabase, userId, 'streak')` and `checkAndAwardHonors(supabase, userId, 'tenure')`
+- [ ] 6E. `LessonView.jsx` — after marking lesson complete, call `checkAndAwardHonors(supabase, userId, 'lesson')`
+- [ ] 6F. Signup flow (after referral insert) — call `checkAndAwardHonors(supabase, referrerId, 'referral')`
+- [ ] 6G. Profile edit (after frame change) — call `checkAndAwardHonors(supabase, userId, 'frame')`
+
+## 7. Final Steps
+
+- [ ] 7A. Run `npm run lint` — fix any errors
+- [ ] 7B. Run `npm run build` — verify clean build
+- [ ] 7C. Bump version in `package.json` to `0.14.0`
+- [ ] 7D. Git commit: "feat: Honors system — 28 honor types, Hall of Honors, auto-award engine (v0.14.0)"
+- [ ] 7E. Git push to `main`
+- [ ] 7F. Verify Cloudflare auto-deploy
+- [ ] 7G. Update `THE_KETO_KEEP_PROJECT_REFERENCE.md`: canonical versions → v0.14.0 + schema v5H, add session 28 log entry, add Phase 5H section with checked items, update architecture decisions
+- [ ] 7H. Save dated copy: `D:\The Keto Keep\Project Reference\THE_KETO_KEEP_PROJECT_REFERENCE_2026-04-21_S28.md`

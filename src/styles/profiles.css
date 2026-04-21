@@ -482,4 +482,5 @@
   .profile-meta { align-items: center; }
   .badge-showcase { grid-template-columns: 1fr; }
   .admin-tag-form { flex-direction: column; }
+  .profile-top .profile-frame:not(.profile-frame-none) { margin-bottom: 24px; }
 }

@@ -42,7 +42,7 @@ export default function MemberCard({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = formatLocation({ city: profile.city, state: profile.state });
-  const showInterests = interestTags.slice(0, 4);
+  const showInterests = interestTags.slice(0, 8);
   const hiddenInterests = interestTags.length - showInterests.length;
   const hasFrame = profile.selected_frame && profile.selected_frame !== 'none';
 
@@ -106,6 +106,10 @@ export default function MemberCard({
 
           {profile.bio && (
             <p className="member-card-bio">{profile.bio}</p>
+          )}
+
+          {profile.about_me && profile.about_me !== profile.bio && (
+            <p className="member-card-about">{profile.about_me}</p>
           )}
 
           {badges.length > 0 && (

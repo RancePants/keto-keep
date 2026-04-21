@@ -163,7 +163,6 @@
   padding: var(--space-4);
   box-shadow: var(--shadow-sm);
   transition: box-shadow var(--t-fast), transform var(--t-fast);
-  overflow: hidden;
 }
 .member-card:hover {
   box-shadow: var(--shadow-md);
@@ -190,6 +189,7 @@
    size = 64 → overlayOffset = 16 px. */
 .member-card-avatar-col-framed {
   margin-top: 16px;
+  margin-bottom: 8px;
 }
 
 .member-card-avatar {
@@ -265,6 +265,16 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.member-card-about {
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .member-card-badges {
   min-height: 20px;
 }
@@ -295,6 +305,7 @@
   }
   .member-card-avatar-col-framed {
     margin-top: 0;
+    margin-bottom: 12px;
   }
 }
 .admin-tag-badge {

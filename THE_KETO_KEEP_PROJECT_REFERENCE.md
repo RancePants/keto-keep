@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-21 (Session 27 — v0.13.2; admin menu clipping, frame spacing, card content density)
+> **Canonical version date:** 2026-04-21 (Session 28 — v0.14.0; Honors System — 28 honor types, Hall of Honors, auto-award engine)
 
 ---
 
@@ -115,14 +115,15 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.13.2 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 27 — admin menu clipping, frame spacing, card content density |
-| Supabase schema | v5E (owner role, referral_codes, referrals, profiles+terms/deletion/streak/frame cols, frame_catalog, legal pages) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 22 — owner role (22a), referrals+legal+deletion (22b), streaks+frames (22c) |
+| Frontend app | v0.14.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 28 — Honors system (28 types, Hall of Honors, auto-award engine) |
+| Supabase schema | v5H (adds badge_category + badge_unlock_method enums, 23 new badge_type values, category/unlock_method/sort_order/requirement_meta cols on badges, member_badges self-auto-insert RLS) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 28 — honors schema expansion |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
 | Phase 4 schema draft | APPLIED (reference copy) | `Project Reference/PHASE4_SCHEMA_DRAFT.sql` | session 10 — matches applied migration |
 | Phase 5A schema draft | APPLIED (reference copy) | `Project Reference/PHASE5A_SCHEMA_DRAFT.sql` | session 13 — matches applied migration (incl. FK cover indexes) |
 | Phase 5B-1 schema draft | APPLIED (reference copy) | `Project Reference/PHASE5B1_SCHEMA_DRAFT.sql` | session 15 — matches applied migration |
 | Phase 5B-2 schema draft | APPLIED (reference copy) | `Project Reference/PHASE5B2_SCHEMA_DRAFT.sql` | session 17 — matches applied migration |
+| Phase 5H schema draft | APPLIED (reference copy) | `Project Reference/PHASE5H_SCHEMA_DRAFT.sql` | session 28 — matches applied migration |
 
 ---
 
@@ -716,6 +717,11 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-20 | Session 26b: emoji picker uses fixed positioning (not absolute) to escape parent overflow clips | The emoji panel was getting clipped by `.rte-wrap`'s `overflow: hidden`, and potentially by `.post-composer` or other ancestors. Moving `.rte-wrap` to `overflow: visible` wasn't enough because other ancestor containers also clip. Solution: compute the trigger button's bounding rect via `getBoundingClientRect()` on `emojiTriggerRef`, store `{ top: rect.bottom + 4, left }` in state, render `<div class="rte-emoji-panel-fixed" style={{top, left}}>` with `position: fixed`. Fixed positioning escapes all overflow-clipping ancestors by bypassing the stacking context entirely. |
 | 2026-04-20 | Session 26b: link popup as inline component instead of `window.prompt` | `window.prompt` is a native browser dialog that blocks the main thread, can't be styled, and behaves differently across browsers. The inline `<LinkPopup>` component is absolutely positioned below `.rte-link-wrap` (which is `position: relative`). It pre-fills the existing href if editing a link, shows Remove only when editing, auto-focuses the input on mount, and closes on Escape or outside click. The popup uses the same CSS variables as the rest of the UI for automatic dark mode support. |
 | 2026-04-20 | Session 26b: notification bell moved from sidebar footer to floating fixed position (desktop only) | The sidebar footer bell was hard to discover (bottom-left corner, visually crowded with theme toggle and sign-out) and its dropdown opened downward off-screen. Moving to `position: fixed; top: 16px; right: 24px` follows the established UI convention (most apps put the bell top-right). The dropdown already uses `right: 0; top: calc(100% + 8px)` which opens correctly in this new position. Hidden at ≤768px since `SidebarMobileHeader` has its own bell at that breakpoint. |
+| 2026-04-21 | Session 28: honors schema uses two enums (`badge_category`, `badge_unlock_method`) layered onto existing `badges.badge_type` | The existing `badges` table already had `badge_type` enum + a single hardcoded category per type. Instead of introducing a new `honors` table and data migration, we extended the existing table: added `badge_category` (community/growth/building/special) + `badge_unlock_method` (manual/auto) enums, plus `category`, `unlock_method`, `sort_order`, `requirement_meta` columns. 23 new `badge_type` enum values brought the total to 28. Benefit: no FK churn across `member_badges`, notifications, existing queries. Drawback: ALTER TYPE ADD VALUE must run outside transactions, so enum-value additions required one execute_sql call per value (not batched). |
+| 2026-04-21 | Session 28: auto-award honors enforced client-side with RLS guard, not server-side triggers | Auto-award uses `checkAndAwardHonors(supabase, userId, triggerContext)` — a fire-and-forget helper mirroring notificationHelpers. Each trigger counts the relevant table client-side and inserts into `member_badges`. The RLS policy `member_badges_self_auto_insert` restricts self-insertion to badges where `unlock_method = 'auto'`. Alternative (Postgres triggers + SECURITY DEFINER function) was rejected because: (a) client already has the data, (b) notification dispatch already lives client-side, and (c) keeps schema portable. A malicious client cannot award manual honors (coach_spotlight/founding_member/champions_honor) because RLS blocks them. |
+| 2026-04-21 | Session 28: cross-user honor (good_neighbor) uses "fan-in on recipient action" pattern, not reactor-awards-author | good_neighbor counts reactions *received*. The reactor cannot self-award the target author due to RLS (auth.uid must equal user_id on insert). Instead, the check runs *on the recipient's* own next action: `ALSO_CHECK_GOOD_NEIGHBOR` fires the good_neighbor counter whenever the user themselves posts, replies, reacts, or triggers streak/tenure checks. The honor is eventually consistent — earned on the user's next self-action after crossing the threshold. Avoids server-side triggers entirely. |
+| 2026-04-21 | Session 28: referral honor triggers on InviteFriends page view, not during signup | At signup the authenticated user is the *referred* user, not the referrer. The referrer cannot self-award during that request (wrong auth.uid). Firing `checkAndAwardHonors(referrerId, 'referral')` on InviteFriends mount when `referrals.length > 0` means the referrer earns gatekeeper honors the next time they check on their invites — a natural, user-scoped checkpoint. Lives alongside the existing `getMyReferrals` call so no extra round-trips. |
+| 2026-04-21 | Session 28: HonorIcon uses PNG-with-SVG-fallback, not pure SVG | Artwork is delivered as 28 pre-rendered PNGs in `public/honors/` (matches existing frame_catalog asset pipeline). HonorIcon renders an `<img>` with `onError` fallback to a gray shield SVG. Benefits: designer hand-off is simpler (Gemini-generated PNGs), tree-shakeable because the SVG path is only hit on error, and artwork can be swapped without code changes. Locked-honor styling uses `filter: grayscale(100%)` + `opacity: 0.4` on the same PNG — no second asset required. |
 
 ---
 
@@ -769,18 +775,51 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5G bug fix pass complete — v0.13.2 pushed to main
-**Last Updated:** 2026-04-21 (Session 27)
-**Frontend Version:** v0.13.2 — Admin dropdown menu unclipped, frame-to-text spacing fixed (profile mobile + member cards), member cards show about_me excerpt + up to 8 interest tags. Commit `191f432` pushed to main.
-**Supabase Schema:** v5E — unchanged. No schema changes in Session 27.
-**Session 27 — Next Session Handoff:**
-- v0.13.2 deployed to Cloudflare. Test: admin menu dropdown fully visible on member cards, frame-bottom spacing on mobile profile + member cards, about_me field showing on cards, 8 interest tags visible.
-- Next candidates (decide in Chat before Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Justine admin seed, domain cutover planning.
+**Current Phase:** Phase 5H (Honors System) complete — v0.14.0 pushed to main
+**Last Updated:** 2026-04-21 (Session 28)
+**Frontend Version:** v0.14.0 — Honors System: 28 honor types across community/growth/building/special categories. HonorIcon component with PNG artwork + SVG fallback. Hall of Honors profile section with locked silhouettes + category counts. AwardBadgeModal limited to 3 manual-award honors (coach_spotlight, founding_member, champions_honor). Auto-award engine (honorHelpers.js) wired into post, reply, reaction, streak, lesson, referral, frame, and tenure triggers. Commit `1057910` pushed to main.
+**Supabase Schema:** v5H — badge_category + badge_unlock_method enums, 23 new badge_type enum values (28 total), 4 new cols on badges (category, unlock_method, sort_order, requirement_meta), 5 existing rows updated + 23 new rows inserted, RLS policy member_badges_self_auto_insert added for authenticated self-award of auto-unlock honors.
+**Session 28 — Next Session Handoff:**
+- v0.14.0 deployed to Cloudflare. Test: Hall of Honors section on /profile (should show 28 honors grouped by category, locked silhouettes for unearned). Try triggering honors: make a post (town_crier), mark a lesson complete (scholar/sage), react to a post (herald), change frame (standard_bearer). Visit /invite to trigger referral honors check.
+- Next candidates (decide in Chat before Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Justine admin seed, domain cutover planning, backfill script to award retroactive honors to existing members (town_crier/scribe/herald/pilgrim/loyal_knight/tenure/scholar/sage from existing data).
 - No blockers.
 
 ---
 
 ## SESSION LOG
+
+### Session 28 — 2026-04-21 (Claude Code — Honors System, v0.14.0, Phase 5H)
+**Goal:** Full Phase 5H build: apply honors schema expansion (schema v5H), build HonorIcon component, Hall of Honors profile section, expand AwardBadgeModal, implement auto-award engine (honorHelpers.js), and wire trigger points throughout the app.
+
+**What was done:**
+- **Schema v5H applied** via Supabase MCP: added `badge_category` enum (community/growth/building/special) and `badge_unlock_method` enum (manual/auto). Added 23 new `badge_type` enum values in separate execute_sql calls (ALTER TYPE ADD VALUE must run outside a transaction). Added 4 cols on `badges` table: `category`, `unlock_method`, `sort_order`, `requirement_meta`. Updated 5 existing rows + inserted 23 new rows, bringing total honors to 28. Added RLS policy `member_badges_self_auto_insert` to permit authenticated users to self-award honors where `unlock_method = 'auto'`.
+- **HonorIcon component** (`src/components/profile/HonorIcon.jsx`): renders `/honors/honor-{slug}.png` with shield-SVG fallback on image error. Props: badgeType, size, title, className, locked.
+- **profileHelpers.js updated:** BADGE_TYPE_LABEL expanded from 5 → 28 entries. Added `badgeTypeSlug(badgeType)` helper (underscores → hyphens). Added `HONOR_CATEGORIES` list and `HONOR_CATEGORY_LABEL` map.
+- **BadgesInline.jsx rewritten** to use HonorIcon. Default limit=5, size=16. Overflow "+N" pill tooltip lists hidden honor names.
+- **BadgeIcon.jsx deleted**, all consumers swapped to HonorIcon.
+- **AwardBadgeModal updated:** `MANUAL_AWARDABLE = ['coach_spotlight', 'founding_member', 'champions_honor']`. Catalog query now selects category/unlock_method/sort_order ordered by sort_order. "Currently awarded" section now groups by HONOR_CATEGORIES and labels auto-unlock honors with "earned automatically".
+- **Hall of Honors** section added to Profile.jsx: loads honor catalog (`loadHonorCatalog`) alongside profile data. `HallOfHonors` component groups all 28 honors by category, shows locked silhouettes (grayscale + dashed border + cream bg) for unearned, displays "X / Y earned" per category. Replaced prior badge showcase.
+- **CSS** (`profiles.css`): removed `.badge-icon`, `.badge-[type]` color classes, `.badge-showcase`. Added `.honor-icon`, `.honor-icon-locked` (grayscale + 0.4 opacity), `.hall-of-honors`, `.hall-of-honors-header`, `.hall-of-honors-shield`, `.hall-of-honors-count`, `.hall-of-honors-empty`, `.honors-category`, `.honors-category-title`, `.honors-category-count`, `.honors-grid` (auto-fill 240px, 1-col on mobile), `.honor-item`, `.honor-item-locked`, `.honor-item-meta`, `.honor-item-name`, `.honor-item-desc`, `.honor-item-earned`, `.award-groups`, `.award-group-title`, `.award-list-auto`.
+- **honorHelpers.js** (`src/lib/honorHelpers.js`, ~270 lines): `checkAndAwardHonors(supabase, userId, triggerContext)` — fire-and-forget matching notificationHelpers pattern. Handlers for post, reply, reaction, streak, lesson, event, referral, frame, tenure. `ALSO_CHECK_GOOD_NEIGHBOR` fans good_neighbor check into post/reply/reaction/streak/tenure triggers (avoids RLS cross-user writes). Each award fires notifyBadgeAwarded. Lesson handler walks lesson_progress → modules (all-lessons-complete = scholar) → courses (all-modules-complete = sage).
+- **Trigger wire-up:** PostComposer ('post'), ReplySection top-level + nested ('reply'), EmojiReactionBar actor ('reaction'), AuthContext runStreakUpdate ('streak' + 'tenure'), LessonView toggleComplete ('lesson'), InviteFriends on load when referrals > 0 ('referral'), FramePickerModal on save when pending !== 'none' ('frame').
+- **Lint + build:** Clean. Version bumped to v0.14.0. Commit `1057910` pushed to main.
+
+**Design decisions:**
+- **Client-side threshold enforcement with RLS guard:** Auto-award runs client-side, matching the notification pattern. RLS policy `member_badges_self_auto_insert` restricts self-inserts to badges where `unlock_method = 'auto'`, so a malicious client cannot award manual honors.
+- **Cross-user awards handled indirectly:** good_neighbor counts reactions received — the reactor cannot award the target author due to RLS. Instead, good_neighbor is re-checked whenever the author themselves take any self-driven action (post/reply/reaction/streak/tenure). This eventually-consistent pattern avoids server-side triggers.
+- **Referral honor triggers on InviteFriends view, not signup:** During signup the authenticated user is the *referred* user, not the referrer — so the referrer cannot award themselves via RLS. Firing the check when the referrer visits their own /invite page is a natural, user-scoped checkpoint.
+- **Course completion detection:** Lesson handler builds a `{ module_id → Set(completed_lesson_ids) }` map, marks a module complete when its full lesson set is contained, then aggregates completed modules by course_id.
+
+**Files changed:**
+- NEW: `src/components/profile/HonorIcon.jsx`, `src/lib/honorHelpers.js`
+- DELETED: `src/components/profile/BadgeIcon.jsx`
+- EDITED: `src/lib/profileHelpers.js`, `src/components/profile/BadgesInline.jsx`, `src/components/profile/AwardBadgeModal.jsx`, `src/components/profile/FramePickerModal.jsx`, `src/pages/Profile.jsx`, `src/styles/profiles.css`, `src/components/forum/PostComposer.jsx`, `src/components/forum/ReplySection.jsx`, `src/components/forum/EmojiReactionBar.jsx`, `src/contexts/AuthContext.jsx`, `src/pages/LessonView.jsx`, `src/pages/InviteFriends.jsx`, `package.json`
+- ASSETS: 28 honor PNGs in `public/honors/`
+
+**Next Session Handoff:**
+- v0.14.0 live on Cloudflare. Sanity: open Hall of Honors on /profile, verify 28 honors in 4 categories with locked silhouettes. Take a self-action (post/reply/react/lesson/frame/invite) and watch for notification.
+- Backfill candidate: write a one-time script (or SQL function) to retroactively award town_crier/bard_*/scribe/herald/pilgrim/loyal_knight_*/tenure_*/scholar/sage to existing members based on historical data.
+- Next feature candidates: messaging, auth-level ban hardening, notification opt-out, Justine admin seed, domain cutover.
 
 ### Session 27 — 2026-04-21 (Claude Code — three UI bug fixes, v0.13.2)
 **Goal:** Three CSS + minor JSX bug fixes: (1) admin dropdown clipped by member card overflow, (2) frame-to-text spacing on mobile profile + member cards, (3) member card content density (about_me excerpt + more interest tags).

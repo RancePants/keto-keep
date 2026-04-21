@@ -36,10 +36,11 @@ export default function PostCard({
   reactions,
   replyCount,
   spaceSlug,
+  spaceName,
   onChanged,
   initiallyExpanded = false,
 }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, profile } = useAuth();
   const isAuthor = user?.id === post.author_id;
 
   const [expanded, setExpanded] = useState(initiallyExpanded);
@@ -205,7 +206,8 @@ export default function PostCard({
             post.author_id,
             user?.id,
             emoji,
-            spaceSlug ? `/forums/${spaceSlug}/${post.id}` : null
+            spaceSlug ? `/forums/${spaceSlug}/${post.id}` : null,
+            profile?.display_name
           );
         }}
       />
@@ -231,6 +233,7 @@ export default function PostCard({
           postAuthorId={post.author_id}
           postTitle={post.title}
           permalink={spaceSlug ? `/forums/${spaceSlug}/${post.id}` : null}
+          spaceName={spaceName}
           onReplyCountChange={setLiveReplyCount}
         />
       )}

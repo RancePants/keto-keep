@@ -252,6 +252,7 @@ export default function SpaceView() {
             reactions={reactions.filter((r) => r.post_id === post.id)}
             replyCount={replyCounts[post.id] ?? 0}
             spaceSlug={space.slug}
+            spaceName={space.name}
             onChanged={refresh}
           />
         ))

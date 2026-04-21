@@ -1,16 +1,17 @@
-import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth.js';
 import UpcomingEventsCard from '../components/events/UpcomingEventsCard.jsx';
 import MyLearningCard from '../components/courses/MyLearningCard.jsx';
 import DietaryApproachTag from '../components/profile/DietaryApproachTag.jsx';
 import BadgesInline from '../components/profile/BadgesInline.jsx';
 import StreakBadge from '../components/ui/StreakBadge.jsx';
+import RecentActivityCard from '../components/dashboard/RecentActivityCard.jsx';
+import HonorsProgressCard from '../components/dashboard/HonorsProgressCard.jsx';
 import { useMemberBadges } from '../components/profile/useMemberBadges.js';
 import usePageTitle from '../lib/usePageTitle.js';
 
 export default function Dashboard() {
   usePageTitle('Dashboard');
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile } = useAuth();
   const name = profile?.display_name || 'friend';
   const userIds = user?.id ? [user.id] : [];
   const badgeMap = useMemberBadges(userIds);
@@ -47,37 +48,10 @@ export default function Dashboard() {
 
       <MyLearningCard />
 
-      <section className="panel">
-        <h2 className="panel-title">Quick links</h2>
-        <ul className="quick-links">
-          <li>
-            <Link to="/profile">Your profile</Link>
-            <span className="muted">Add a photo and a short bio.</span>
-          </li>
-          <li>
-            <Link to="/forums">Forums</Link>
-            <span className="muted">Posts, replies, and reactions.</span>
-          </li>
-          <li>
-            <Link to="/events">Events</Link>
-            <span className="muted">Live calls, workshops, recordings.</span>
-          </li>
-          <li>
-            <Link to="/courses">Courses</Link>
-            <span className="muted">Self-paced lessons and modules.</span>
-          </li>
-          <li>
-            <Link to="/members">Members</Link>
-            <span className="muted">Browse the community.</span>
-          </li>
-          {isAdmin && (
-            <li>
-              <Link to="/admin">Admin · The Keep</Link>
-              <span className="muted">Hosts-only tools and tags.</span>
-            </li>
-          )}
-        </ul>
-      </section>
+      <div className="dashboard-cards-row">
+        <RecentActivityCard />
+        <HonorsProgressCard />
+      </div>
     </div>
   );
 }

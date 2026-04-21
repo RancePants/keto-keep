@@ -17,50 +17,68 @@ async function safeInsert(supabase, payload) {
   }
 }
 
-export async function notifyReplyToPost(supabase, postAuthorId, actorId, postTitle, link) {
+export async function notifyReplyToPost(supabase, postAuthorId, actorId, postTitle, link, actorName, spaceName) {
   if (!postAuthorId || !actorId || actorId === postAuthorId) return;
   const trimmed = (postTitle || '').trim();
   const titleSnippet = trimmed.length > 80 ? `${trimmed.slice(0, 77)}…` : trimmed;
+  let title;
+  if (actorName && spaceName) {
+    title = titleSnippet
+      ? `${actorName} replied to "${titleSnippet}" in ${spaceName}`
+      : `${actorName} replied to your post in ${spaceName}`;
+  } else if (actorName) {
+    title = titleSnippet ? `${actorName} replied to "${titleSnippet}"` : `${actorName} replied to your post`;
+  } else {
+    title = titleSnippet ? `New reply on "${titleSnippet}"` : 'New reply on your post';
+  }
   await safeInsert(supabase, {
     user_id: postAuthorId,
     actor_id: actorId,
     type: 'reply_to_post',
-    title: titleSnippet ? `New reply on "${titleSnippet}"` : 'New reply on your post',
+    title,
     link: link || null,
   });
 }
 
-export async function notifyReplyToComment(supabase, commentAuthorId, actorId, link) {
+export async function notifyReplyToComment(supabase, commentAuthorId, actorId, link, actorName) {
   if (!commentAuthorId || !actorId || actorId === commentAuthorId) return;
   await safeInsert(supabase, {
     user_id: commentAuthorId,
     actor_id: actorId,
     type: 'reply_to_comment',
-    title: 'Someone replied to your comment',
+    title: actorName ? `${actorName} replied to your comment` : 'Someone replied to your comment',
     link: link || null,
   });
 }
 
-export async function notifyReaction(supabase, contentAuthorId, actorId, emoji, link) {
+export async function notifyReaction(supabase, contentAuthorId, actorId, emoji, link, actorName) {
   if (!contentAuthorId || !actorId || actorId === contentAuthorId) return;
   await safeInsert(supabase, {
     user_id: contentAuthorId,
     actor_id: actorId,
     type: 'reaction',
-    title: emoji ? `Someone reacted ${emoji}` : 'Someone reacted to your post',
+    title: actorName
+      ? (emoji ? `${actorName} reacted ${emoji} to your post` : `${actorName} reacted to your post`)
+      : (emoji ? `Someone reacted ${emoji}` : 'Someone reacted to your post'),
     body: emoji || null,
     link: link || null,
   });
 }
 
-export async function notifyBadgeAwarded(supabase, recipientId, badgeName, actorId, link) {
+export async function notifyBadgeAwarded(supabase, recipientId, badgeName, actorId, link, actorName) {
   if (!recipientId) return;
   if (actorId && actorId === recipientId) return;
+  let title;
+  if (actorName) {
+    title = badgeName ? `Coach ${actorName} awarded you "${badgeName}"` : 'You were awarded an honor';
+  } else {
+    title = badgeName ? `You earned the "${badgeName}" honor` : 'You earned a new honor';
+  }
   await safeInsert(supabase, {
     user_id: recipientId,
     actor_id: actorId || null,
     type: 'badge_awarded',
-    title: badgeName ? `You earned the "${badgeName}" badge` : 'You earned a new badge',
+    title,
     link: link || null,
   });
 }

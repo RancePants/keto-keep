@@ -19,7 +19,7 @@ export default function AwardBadgeModal({
   targetName,
   onChanged,
 }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [catalog, setCatalog] = useState([]);
   const [awarded, setAwarded] = useState([]); // array of { badge_id, badge_type }
   const [selected, setSelected] = useState('');
@@ -95,7 +95,8 @@ export default function AwardBadgeModal({
       targetUserId,
       badgeMeta?.name,
       user?.id,
-      `/profile/${targetUserId}`
+      `/profile/${targetUserId}`,
+      profile?.display_name
     );
     if (onChanged) await onChanged();
     onClose?.();

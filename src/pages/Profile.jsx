@@ -635,6 +635,7 @@ function formatEarnedDate(iso) {
 
 function HallOfHonors({ catalog, earned, showEmptyState }) {
   const [expanded, setExpanded] = useState(new Set());
+  const [selectedHonor, setSelectedHonor] = useState(null);
   const earnedByType = new Map(earned.map((b) => [b.badge_type, b]));
 
   const toggle = (key) => {
@@ -684,6 +685,15 @@ function HallOfHonors({ catalog, earned, showEmptyState }) {
                     <div
                       key={honor.badge_type}
                       className={`honor-item${isEarned ? '' : ' honor-item-locked'}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedHonor({ badge: honor, earned: isEarned, awardedAt: got?.awarded_at || null })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedHonor({ badge: honor, earned: isEarned, awardedAt: got?.awarded_at || null });
+                        }
+                      }}
                     >
                       <HonorIcon
                         badgeType={honor.badge_type}
@@ -710,6 +720,30 @@ function HallOfHonors({ catalog, earned, showEmptyState }) {
           </div>
         );
       })}
+
+      {selectedHonor && (
+        <Modal open onClose={() => setSelectedHonor(null)} size="sm" title={selectedHonor.badge.name}>
+          <div className="honor-lightbox-content">
+            <HonorIcon
+              badgeType={selectedHonor.badge.badge_type}
+              size={192}
+              locked={!selectedHonor.earned}
+              title={selectedHonor.badge.name}
+            />
+            <h3 style={{ margin: 0 }}>{selectedHonor.badge.name}</h3>
+            {selectedHonor.badge.description && (
+              <p className="honor-lightbox-desc">{selectedHonor.badge.description}</p>
+            )}
+            {selectedHonor.earned && selectedHonor.awardedAt ? (
+              <p className="honor-lightbox-earned">
+                Earned on {new Date(selectedHonor.awardedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+            ) : !selectedHonor.earned && selectedHonor.badge.description ? (
+              <p className="honor-lightbox-locked">{selectedHonor.badge.description}</p>
+            ) : null}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -15,9 +15,10 @@ export default function ReplySection({
   postAuthorId,
   postTitle,
   permalink,
+  spaceName,
   onReplyCountChange,
 }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [replies, setReplies] = useState([]);
   const [authors, setAuthors] = useState({});
   const [reactions, setReactions] = useState([]);
@@ -108,7 +109,7 @@ export default function ReplySection({
 
   const handleTopLevelReplyCreated = async (newReply) => {
     if (newReply && user?.id) {
-      notifyReplyToPost(supabase, postAuthorId, user.id, postTitle, permalink);
+      notifyReplyToPost(supabase, postAuthorId, user.id, postTitle, permalink, profile?.display_name, spaceName);
       checkAndAwardHonors(supabase, user.id, 'reply');
     }
     await load();
@@ -116,7 +117,7 @@ export default function ReplySection({
 
   const handleNestedReplyCreated = async (parentAuthorId, newReply) => {
     if (newReply && user?.id) {
-      notifyReplyToComment(supabase, parentAuthorId, user.id, permalink);
+      notifyReplyToComment(supabase, parentAuthorId, user.id, permalink, profile?.display_name);
       checkAndAwardHonors(supabase, user.id, 'reply');
     }
     await load();
@@ -124,7 +125,7 @@ export default function ReplySection({
 
   const handleReplyReaction = (replyAuthorId, emoji) => {
     if (!user?.id) return;
-    notifyReaction(supabase, replyAuthorId, user.id, emoji, permalink);
+    notifyReaction(supabase, replyAuthorId, user.id, emoji, permalink, profile?.display_name);
   };
 
   return (

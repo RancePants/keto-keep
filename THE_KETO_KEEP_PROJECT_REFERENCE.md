@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-21 (Session 29 — v0.14.1; Honors Polish + Backfill Awards)
+> **Canonical version date:** 2026-04-21 (Session 30 — v0.15.0; Richer Notifications + Dashboard Activity/Honors + Honor Lightbox)
 
 ---
 
@@ -115,7 +115,7 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.14.1 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 29 — Sage icon fix, interests above honors, collapsible Hall of Honors, backfill awards |
+| Frontend app | v0.15.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 30 — richer notifications (actor name + space name), dashboard activity/honors cards, honor lightbox |
 | Supabase schema | v5H (adds badge_category + badge_unlock_method enums, 23 new badge_type values, category/unlock_method/sort_order/requirement_meta cols on badges, member_badges self-auto-insert RLS) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 28 — honors schema expansion |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
@@ -581,6 +581,17 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Backfill ran via Supabase MCP: town_crier(1), scribe(2), herald(1), standard_bearer(1) awarded to existing members from historical data (idempotent ON CONFLICT DO NOTHING) — session 29
 - [x] Version bump to v0.14.1 — session 29
 
+**Phase 5I — Richer Notifications + Dashboard Cards + Honor Lightbox** (deployed session 30, v0.15.0)
+- [x] `notificationHelpers.js`: added optional `actorName` and `spaceName` params to `notifyReplyToPost`, `notifyReplyToComment`, `notifyReaction`, `notifyBadgeAwarded` — session 30. Personal titles ("Rance replied to…") with graceful fallback to generic titles when params absent.
+- [x] Call sites updated: `ReplySection.jsx` (spaceName prop + profile from useAuth), `PostCard.jsx` (spaceName prop + profile from useAuth), `SpaceView.jsx` (passes spaceName={space.name}), `AwardBadgeModal.jsx` (passes profile.display_name) — session 30.
+- [x] Dashboard: removed Quick Links section; replaced with `dashboard-cards-row` grid containing `RecentActivityCard` + `HonorsProgressCard` — session 30.
+- [x] `RecentActivityCard`: fetches 5 most recent non-admin-hq forum posts with space join + author profiles; linked rows with space pill + relative time; "View all →" footer — session 30.
+- [x] `HonorsProgressCard`: fetches badges catalog + member_badges; shows "X of Y" + ProgressBar + 3 most recently earned honors at 32px; "View all →" footer — session 30.
+- [x] Dashboard grid CSS: 2-column on desktop, 1-column on mobile (≤768px); plus activity/honors/footer utility classes — session 30.
+- [x] HallOfHonors (Profile.jsx): each honor item now clickable; lightbox Modal shows HonorIcon at 192px + name + description + "Earned on {date}" or locked criteria — session 30.
+- [x] Honor item hover state + `cursor: pointer`; lightbox CSS classes added to `profiles.css` — session 30.
+- [x] Version bump to v0.15.0 — session 30.
+
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email) — deferred post-launch
 - [x] Replace `window.confirm` / `window.alert` usage with Toast + Modal primitives — session 21 (9 instances across 8 files)
@@ -731,6 +742,10 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-21 | Session 29: Hall of Honors collapsed by default — category headers expand on click | All 28 honors across 4 categories would render a tall unbroken grid by default, pushing bio, interests, and admin sections far down the page. Collapsed-by-default gives the profile a cleaner first impression and lets members deliberately explore categories they're curious about. Header shows "Category (X of Y earned)" so the summary is visible without expanding. Chevron (▶/▼) rotates via CSS transition to signal interactivity. State: `useState({})` keyed by category slug — empty object means all collapsed; no localStorage persistence (reset on each profile view is the right default). |
 | 2026-04-21 | Session 28: referral honor triggers on InviteFriends page view, not during signup | At signup the authenticated user is the *referred* user, not the referrer. The referrer cannot self-award during that request (wrong auth.uid). Firing `checkAndAwardHonors(referrerId, 'referral')` on InviteFriends mount when `referrals.length > 0` means the referrer earns gatekeeper honors the next time they check on their invites — a natural, user-scoped checkpoint. Lives alongside the existing `getMyReferrals` call so no extra round-trips. |
 | 2026-04-21 | Session 28: HonorIcon uses PNG-with-SVG-fallback, not pure SVG | Artwork is delivered as 28 pre-rendered PNGs in `public/honors/` (matches existing frame_catalog asset pipeline). HonorIcon renders an `<img>` with `onError` fallback to a gray shield SVG. Benefits: designer hand-off is simpler (Gemini-generated PNGs), tree-shakeable because the SVG path is only hit on error, and artwork can be swapped without code changes. Locked-honor styling uses `filter: grayscale(100%)` + `opacity: 0.4` on the same PNG — no second asset required. |
+| 2026-04-21 | Session 30: notification helpers use optional trailing params (actorName, spaceName) — not a new helper overload | Adding new positional params after `link` preserves all existing call sites (callers that omit the new params continue to produce generic titles). Alternatives: a new `notifyReplyToPostPersonal()` overload would double the surface; an options-object restructure would touch every call site. The trailing-optional approach is the smallest surface area and the fallback (generic title when params absent) is the right default since not all call sites have the context. |
+| 2026-04-21 | Session 30: dashboard Quick Links replaced with real-data cards (RecentActivityCard + HonorsProgressCard) | Quick Links were placeholder navigation that duplicated the sidebar. Real-data cards deliver community context (what's happening + how am I progressing) — the actual purpose of a dashboard welcome screen. Two-column grid mirrors the sidebar/main layout mental model; stacks to one column on mobile. Each card is a standalone component with its own Supabase fetch + loading state + empty state. |
+| 2026-04-21 | Session 30: HonorsProgressCard fetches badges catalog + member_badges on mount (not via useMemberBadges hook) | `useMemberBadges` is designed for multi-user fetches (forum feeds, event attendees). HonorsProgressCard needs the full catalog (not just earned ones) to compute total + percentage, plus awarded_at for recency sorting. A direct fetch is 2 parallel queries and stays scoped to this component — no hook generalisation warranted at this scale. |
+| 2026-04-21 | Session 30: honor lightbox reuses the shared Modal (not a custom overlay) | Modal already handles: focus trap, Escape key, backdrop click, aria-dialog, body overflow lock, return-focus-on-close. A bespoke lightbox would reimplement all of this. The `size="sm"` variant at 192px icon content fits naturally without any layout wrestling. The only new CSS is for the centered flex content inside the modal body. |
 
 ---
 
@@ -796,6 +811,24 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 ---
 
 ## SESSION LOG
+
+### Session 30 — 2026-04-21 (Claude Code — Phase 5I: Dashboard + Notifications + Honor Lightbox, v0.15.0)
+**Goal:** Three UX improvements: (1) richer notification titles that include actor name and space name, (2) replace dashboard Quick Links with real-data activity and honors cards, (3) honor badge lightbox on Hall of Honors.
+
+**What was done:**
+- **Richer notifications:** Added optional `actorName` and `spaceName` trailing params to `notifyReplyToPost`, `notifyReplyToComment`, `notifyReaction`, and `notifyBadgeAwarded` in `notificationHelpers.js`. Titles now read "Rance replied to 'Post Title' in General Discussion" when params are present; fallback to existing generic titles when absent. Updated call sites: `ReplySection.jsx` (added spaceName prop + destructured profile from useAuth), `PostCard.jsx` (added spaceName prop + profile), `SpaceView.jsx` (passes spaceName={space.name}), `AwardBadgeModal.jsx` (passes profile.display_name). ManageMemberModal and EventFormModal left unchanged as per spec.
+- **Dashboard redesign:** Removed Quick Links section from Dashboard.jsx. Created `src/components/dashboard/RecentActivityCard.jsx` (5 most recent non-admin-hq forum posts with space join + author profiles; linked rows; space pill; relative time) and `src/components/dashboard/HonorsProgressCard.jsx` (catalog + member_badges; X of Y summary + ProgressBar; 3 most recently earned honors at 32px). Placed in `dashboard-cards-row` grid after MyLearningCard. Dashboard CSS updated in pages.css (Quick Links styles replaced with dashboard card styles: grid, activity list, honors list, footer link).
+- **Honor lightbox:** In HallOfHonors (Profile.jsx), each honor item is now clickable (role=button, tabIndex, onKeyDown). Clicking opens a shared Modal (size="sm") showing HonorIcon at 192px + name + description + "Earned on {date}" for earned honors, locked description text for unearned. Added cursor/hover CSS to `.honor-item` and lightbox content classes to `profiles.css`.
+- **Version bump + deploy:** package.json → v0.15.0. Lint clean, build clean (214 modules). Commit `c85f6cb` pushed to main. Cloudflare auto-deploy triggered.
+
+**Files changed:**
+- EDITED: `src/lib/notificationHelpers.js`, `src/components/forum/ReplySection.jsx`, `src/components/forum/PostCard.jsx`, `src/pages/SpaceView.jsx`, `src/components/profile/AwardBadgeModal.jsx`, `src/pages/Dashboard.jsx`, `src/pages/Profile.jsx`, `src/styles/pages.css`, `src/styles/profiles.css`, `package.json`
+- NEW: `src/components/dashboard/RecentActivityCard.jsx`, `src/components/dashboard/HonorsProgressCard.jsx`
+
+**Next Session Handoff:**
+- v0.15.0 live on Cloudflare. Test: post a reply → notification should include your name and space name. Dashboard shows Recent Forum Activity + Your Honors cards. Click any honor in Hall of Honors → lightbox opens with large PNG + description.
+- Next candidates: member-to-member messaging, auth-level ban hardening, notification opt-out, Justine admin seed, domain cutover planning.
+- No blockers.
 
 ### Session 29 — 2026-04-21 (Claude Code — Honors Polish + Backfill, v0.14.1)
 **Goal:** Polish the Phase 5H honors system: fix Sage icon, move interests above honors, make Hall of Honors collapsed by default, run one-time backfill to award retroactive honors to existing members.

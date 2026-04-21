@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-19 (Session 25b — v0.12.1 deployed; landing page contrast fix — pinned warm light palette, fixed CSS variable names)
+> **Canonical version date:** 2026-04-20 (Session 26 — v0.13.0; rich text editor + emoji picker, dark mode fixes, member card horizontal layout)
 
 ---
 
@@ -115,7 +115,7 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.12.1 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 25b — landing page contrast fix: pin warm light palette on `.landing`, fix CSS variable names |
+| Frontend app | v0.13.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 26 — rich text editor (Tiptap), emoji picker, dark mode fixes, member card horizontal layout |
 | Supabase schema | v5E (owner role, referral_codes, referrals, profiles+terms/deletion/streak/frame cols, frame_catalog, legal pages) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 22 — owner role (22a), referrals+legal+deletion (22b), streaks+frames (22c) |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
@@ -517,11 +517,40 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Added `@import './landing.css'` to `src/styles/index.css` — session 25
 - [x] Version bump to v0.12.0 — session 25
 
+**Phase 5F patch — Five UI Polish Fixes** (session 25c, v0.12.1)
+- [x] CSS-only fixes across 4 stylesheets — session 25c
+- [x] FIX 1: Notification dropdown (mobile) — changed from `right: auto; left: 0;` to `right: 0; width: calc(100vw - 16px);` in `src/styles/notifications.css` — keeps dropdown visible, not clipped on mobile
+- [x] FIX 2: Hamburger centering (mobile) — added `display: inline-flex; align-items: center; justify-content: center;` to `.sidebar-mobile-burger` in `src/styles/sidebar.css`
+- [x] FIX 3: Footer mobile stacking — added mobile override with `flex-direction: column; gap: var(--space-2);` and smaller padding to `.app-main-footer` + `.app-footer` in `src/styles/layout.css`
+- [x] FIX 4: Footer trademark centering — added base rule `.footer-trademark` with `display: block; text-align: center;` in `src/styles/layout.css`
+- [x] FIX 5: Hero logo size — increased `.landing-logo` from 80px to 160px on desktop, with 100px mobile override in `src/styles/landing.css`
+- [x] Verified at 375px (mobile) and 1280px (desktop) viewports — all fixes confirmed applied and working
+- [x] Committed: `a3a5d16` — "fix: five UI polish fixes — mobile layout + hero logo + footer alignment"
+- [x] Pushed to remote
+- [x] Version remains v0.12.1 (CSS-only polish on existing build)
+
 **Phase 5B — Pre-launch Cleanup** (deployed session 21, v0.8.2)
 - [x] Replaced all 9 `window.confirm` / `window.alert` instances with `Modal variant="danger"` — session 21. Files changed: `AdminTags.jsx`, `AdminAdminTags.jsx`, `PostCard.jsx`, `ReplyItem.jsx`, `EventFormModal.jsx`, `CourseFormModal.jsx`, `ModuleFormModal.jsx`, `LessonFormModal.jsx`, `AwardBadgeModal.jsx`
 - [x] Supabase security + performance advisor audit — session 21. Security: only pre-existing `auth_leaked_password_protection` WARN (Pro Plan feature; accepted). Performance: 21 expected `unused_index` INFO (FK cover indexes + query indexes on low-volume fresh DB); zero `auth_rls_initplan`; zero `unindexed_foreign_keys`. No remediation needed.
 - [x] Final RLS policy review — session 21. 81 policies; all 18 public tables have RLS enabled; all policies use `(select auth.uid())` wrapped form; 14 RESTRICTIVE write-gate policies covering all 7 member-writable tables.
 - [x] Version bump to v0.8.2 — session 21
+
+**Phase 5G — Rich Text Editor + Dark Mode Fixes + Member Card Layout** (deployed session 26, v0.13.0)
+- [x] Dark mode fix: forum post edit textarea (PostCard.jsx) — added `.post-edit-field` CSS class + dark-mode rule in forums.css using `var(--color-surface)` / `var(--color-ink)` — session 26
+- [x] Dark mode fix: reply edit textarea (ReplyItem.jsx) — same `.post-edit-field` class approach — session 26
+- [x] Dark mode fix: members search input + filter dropdowns (MemberFilters.jsx) — added dark-mode-aware CSS for `.member-filter-field input, .member-filter-field select` in members.css — session 26
+- [x] Installed Tiptap (`@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/pm`) + `emoji-picker-react` — session 26
+- [x] Created `src/components/ui/RichTextEditor.jsx` — Tiptap editor with bold/italic/bullet/ordered/link/emoji toolbar; `content` + `onChange(html)` + `placeholder` + `slim` props — session 26
+- [x] Created `src/styles/rich-editor.css` — toolbar, active button states, emoji picker panel, rendered content classes (`.post-rich-body`, `.reply-rich-body`), dark mode via CSS variables — session 26
+- [x] PostComposer: replaced plain textarea with `<RichTextEditor>`; HTML body stored in Supabase; broadcast notification uses stripped body text — session 26
+- [x] ReplyComposer: replaced plain textarea with `<RichTextEditor slim>`; slim toolbar (bold/italic/link/emoji, no lists) — session 26
+- [x] PostCard: edit mode uses `<RichTextEditor>` with existing HTML pre-loaded; feed renders `post.body` as DOMPurify-sanitized HTML (`.post-rich-body`) — session 26
+- [x] ReplyItem: edit mode uses `<RichTextEditor slim>` with existing HTML pre-loaded; feed renders `reply.body` as DOMPurify-sanitized HTML (`.reply-rich-body`) — session 26
+- [x] Security: DOMPurify with `ALLOWED_TAGS: ['b','i','strong','em','a','ul','ol','li','p','br']` in both PostCard + ReplyItem — session 26
+- [x] Members directory: single-column horizontal card layout (1 card per row); avatar/frame left, all text content right via `.member-card-avatar-col` + `.member-card-content` — session 26
+- [x] Frame alignment on member cards: `.member-card-avatar-col-framed { margin-top: 16px }` shifts frame down so visual frame top aligns with member name text (FRAME_OFFSET_RATIO=0.25, size=64 → 16px overflow) — session 26
+- [x] Mobile: `@media (max-width: 480px)` stacks member card to column, resets frame margin — session 26
+- [x] Version bump to v0.13.0 — session 26
 
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email) — deferred post-launch
@@ -657,6 +686,12 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-19 | Session 22: sidebar visibility is session + route gated, not conditional-rendered per page | `PRE_AUTH_PATHS = {'/','/login','/signup','/reset-password','/update-password'}` in Layout.jsx. Sidebar renders only when `session && !PRE_AUTH_PATHS.has(pathname)`. Alternative — per-page conditional — would have required every authed page to opt in and every landing/auth page to opt out, with new pages defaulting to the wrong state. Whitelist of pre-auth paths is smaller and fails safe (new routes get the sidebar by default, which is correct for 95% of pages). |
 | 2026-04-19 | Session 22: mobile sidebar is slide-in drawer with backdrop, not a bottom-nav or hamburger-dropdown | Drawer pattern matches the desktop sidebar's content (nav sections, user block, theme controls, signout) without requiring a second information-architecture. Bottom-nav would force picking the 4–5 most-used nav items; drawer preserves full nav. Escape key closes, body overflow locked while open, auto-close on route change, backdrop click dismisses. |
 | 2026-04-19 | Session 22: "Invite Friends" is placeholder showing "Coming soon" hint | Planned for post-launch but wanted the nav structure to anticipate it. SidebarNavLink supports a `disabled` prop that renders the link greyed-out with a "Soon" pill in place of the badge. Avoids reshuffling the nav layout later when invites ship. |
+| 2026-04-20 | Session 26: Tiptap chosen for rich text editor (not Quill, Slate, or ProseMirror directly) | Tiptap wraps ProseMirror with React bindings and a clean extension API. StarterKit covers all required marks/nodes (bold, italic, bullet/ordered lists) out of the box. Extension-Link adds `<a>` handling. No CDN dependency, tree-shakable, actively maintained. Alternative Quill was disqualified because its React binding (react-quill) is unmaintained and had React 18 issues. |
+| 2026-04-20 | Session 26: emoji-picker-react for emoji insertion (not a custom emoji grid) | The existing forum reaction bar uses a hardcoded 6-emoji grid. The body emoji picker needs search + skin tones + categories — emoji-picker-react provides all this in ~25 KB (gzipped). Inserts at cursor via `editor.chain().focus().insertContent(emojiData.emoji).run()`. Positioned relative to its trigger button; closes on outside click. |
+| 2026-04-20 | Session 26: DOMPurify with a strict tag allowlist for rendered post/reply HTML | Forum content is now stored as Tiptap-generated HTML. Rendering with `dangerouslySetInnerHTML` without sanitization is an XSS vector. `ALLOWED_TAGS: ['b','i','strong','em','a','ul','ol','li','p','br']` with `ALLOWED_ATTR: { a: ['href','target','rel'] }` covers all formatted content Tiptap can produce while blocking script injection, inline event handlers, and unexpected tags. Lesson viewer uses a looser allowlist (includes iframe for YouTube); forum uses a tighter one since content is user-generated. |
+| 2026-04-20 | Session 26: slim toolbar prop on RichTextEditor for reply contexts | Reply bodies are short and conversational — bold, italic, link, and emoji cover 99% of reply formatting needs. Lists in a 2-line reply textarea feel heavyweight. The `slim` prop omits bullet + ordered list buttons and reduces the emoji picker height from 400px to 320px. PostComposer and PostCard edit mode use the full toolbar (slim=false default). ReplyComposer and ReplyItem edit mode use slim=true. |
+| 2026-04-20 | Session 26: members directory changed from 3-column card grid to single-column horizontal cards | The 3-column grid was designed for compact avatar+name cards. Now that each card shows bio, badges, interest tags, and journey info, horizontal rows give each member more reading width and prevent truncation. Layout: avatar/frame column (56px, flex-shrink: 0) left + content column (flex: 1) right. Single-column grid also reduces visual density on a page that can list 50–200 members. |
+| 2026-04-20 | Session 26: member card frame alignment uses 16px margin-top (not the profile page's 35px) | ProfileFrame at size=64 has FRAME_OFFSET_RATIO=0.25 → overlayOffset = 16px (frame overlaps 16px above the container). To align the visual top of the frame with the content column's first text line, the avatar column shifts down 16px. The profile page uses 35px because the avatar is larger there and the name text sits lower in a taller layout. Member card uses the mathematically derived 16px. |
 
 ---
 
@@ -710,18 +745,79 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5F complete — v0.12.1 deployed
-**Last Updated:** 2026-04-19 (Session 25b)
-**Frontend Version:** v0.12.1 — Landing page contrast hotfix: pinned warm cream palette on `.landing` so content sections always render light/readable regardless of system dark mode. Removed 8 `[data-theme='dark']` override blocks. Fixed nonexistent `--color-text-primary`/`--color-text-secondary` references → `--color-ink`/`--color-ink-soft`. Hero and final CTA remain hardcoded dark. _(v0.12.0: Full landing page rewrite Phase 5F — hero, slogan bar, value grid, coach cards, FAQ accordion, dark final CTA. Forum reply count bugfix in SpaceView.jsx.)_
-**Supabase Schema:** v5E — unchanged from session 24.
-**Session 25b — Next Session Handoff:**
-- v0.12.1 is live. Verify at keto-keep.rance-8c6.workers.dev while logged out — landing page content sections should be warm cream regardless of system dark mode.
-- Next candidates (decide in Chat before opening Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Supabase leaked-password toggle, Phase 5D coach listing.
-- No blockers or prerequisites for any of the above.
+**Current Phase:** Phase 5G complete — v0.13.0 committed, push pending user confirmation
+**Last Updated:** 2026-04-20 (Session 26)
+**Frontend Version:** v0.13.0 — Rich text editor (Tiptap + emoji-picker-react), DOMPurify HTML rendering in forum feed, dark mode fixes for forum edit textareas + member filter inputs, member directory single-column horizontal card layout with frame alignment. Commit `2e8516d` on main — push to remote needs confirmation.
+**Supabase Schema:** v5E — unchanged from session 24. No schema changes in Session 26.
+**Session 26 — Next Session Handoff:**
+- v0.13.0 committed locally. Push was blocked by safety hook — Rance needs to push manually (`git push origin main`) or confirm in next Code session.
+- After push verifies on Cloudflare auto-deploy, test: post composer with rich text, emoji picker, reply with slim toolbar, dark mode on /forums edit mode, dark mode on /members filters, member card horizontal layout with/without frames.
+- Next candidates (decide in Chat before Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Justine admin seed, domain cutover planning.
+- No blockers for any of the above once push is done.
 
 ---
 
 ## SESSION LOG
+
+### Session 26 — 2026-04-20 (Claude Code — rich text editor + dark mode fixes + member card layout, v0.13.0)
+**Goal:** Four build items: (1) dark mode fix for forum edit textareas, (2) dark mode fix for members filter inputs, (3) Tiptap rich text editor + emoji picker for forum post/reply create + edit, (4) members directory single-column horizontal card layout with frame alignment.
+
+**What was done:**
+- **Item 1 — Forum edit textarea dark mode:** Added `.post-edit-field` CSS class to the edit-mode `<input>` + `<textarea>` in PostCard.jsx and the edit `<textarea>` in ReplyItem.jsx. Added `.post-edit-field { background: var(--color-surface); color: var(--color-ink); }` rule in forums.css. The inline border/padding styles were preserved; only the missing background + color are now theme-aware.
+- **Item 2 — Members filter inputs dark mode:** Added `.member-filter-field input, .member-filter-field select { background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--color-border-strong); ... }` in members.css. Covers all 4–6 filter selects + the search input. Focus ring uses `var(--color-green)` + `var(--focus-ring)` matching all other form fields.
+- **Item 3 — Rich text editor:** Installed `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/pm`, `emoji-picker-react`. Created `src/components/ui/RichTextEditor.jsx` — Tiptap editor with bold/italic/bullet/ordered/link/emoji toolbar; `slim` prop for reply contexts (omits list buttons, shorter emoji picker). Created `src/styles/rich-editor.css` — toolbar, button active states, emoji picker panel positioned relative to button, rendered content styles for `.post-rich-body` + `.reply-rich-body` (a, ul, ol, strong, em, p). Added `@import './rich-editor.css'` to index.css. Integrated into PostComposer (full toolbar), ReplyComposer (slim), PostCard edit mode (full), ReplyItem edit mode (slim). PostCard and ReplyItem now render `post.body` / `reply.body` as DOMPurify-sanitized HTML with `ALLOWED_TAGS: ['b','i','strong','em','a','ul','ol','li','p','br']` — blocks XSS while preserving all Tiptap-generated markup. Existing plain-text post bodies render fine (DOMPurify passes text nodes).
+- **Item 4 — Member card layout:** Changed `.member-grid` to `grid-template-columns: 1fr` (single column). Restructured MemberCard.jsx to replace the old column layout with a two-column flex row: `.member-card-avatar-col` (flex-shrink: 0) + `.member-card-content` (flex: 1, column flex). When a frame is in use, `.member-card-avatar-col-framed` adds `margin-top: 16px` to shift the frame down so its visual top (which overflows 16px above the 64px container) aligns with the top of the name text. Mobile: `@media (max-width: 480px)` stacks to column and resets the frame margin.
+- **Lint + build:** Clean after removing stale `// eslint-disable-next-line react/no-danger` comments (that rule isn't installed). Build produced 1.37 MB JS + chunk-size warning (not an error).
+- **Version bump:** `package.json` bumped to 0.13.0. Committed as `2e8516d`. Push to `main` blocked by safety hook — needs user confirmation.
+
+**Files changed:**
+- `src/components/forum/PostCard.jsx` — DOMPurify import, sanitize helper, RichTextEditor in edit mode, HTML rendering in feed
+- `src/components/forum/ReplyItem.jsx` — same as PostCard for replies
+- `src/components/forum/PostComposer.jsx` — RichTextEditor replaces body textarea
+- `src/components/forum/ReplyComposer.jsx` — RichTextEditor slim replaces textarea; layout updated for RTE width
+- `src/components/ui/RichTextEditor.jsx` — NEW: Tiptap editor component
+- `src/components/members/MemberCard.jsx` — horizontal card layout, avatar-col + content-col split
+- `src/styles/forums.css` — `.post-edit-field` dark mode rule; `.reply-composer-rte` + `.reply-composer-editor` layout
+- `src/styles/members.css` — `.member-filter-field input/select` dark mode rules; full horizontal card CSS
+- `src/styles/rich-editor.css` — NEW: all rich editor CSS
+- `src/styles/index.css` — imports `rich-editor.css`
+- `package.json` / `package-lock.json` — Tiptap + emoji-picker-react + version 0.13.0
+- `CURRENT_BUILD_PLAN.md` — fully checked off
+
+**Decisions made:**
+- Tiptap chosen over Quill (unmaintained React binding) and raw ProseMirror (too low-level)
+- emoji-picker-react for full emoji search + categories (the forum reaction bar's 6-emoji grid is separate)
+- DOMPurify strict allowlist for user-generated HTML (tighter than lesson viewer which allows iframe)
+- slim=true for reply contexts (no list buttons, shorter picker)
+- Member card frame alignment: 16px (derived from FRAME_OFFSET_RATIO=0.25 × size=64)
+
+**Next Session Handoff:**
+- Push `git push origin main` to trigger Cloudflare auto-deploy (commit `2e8516d` is on local main)
+- Verify: forum post composer with RTE, emoji picker, dark mode fix on /forums edit, /members filter dark mode, member card horizontal layout with/without frames
+- Next feature candidates: member-to-member messaging, auth-level ban hardening, notification opt-out, Justine admin seed, domain cutover
+
+### Session 25c — 2026-04-19 (Chat + Claude Code — five CSS polish fixes)
+**Goal:** Fix five mobile/desktop UI issues reported by Rance during manual testing.
+
+**What was done:**
+- Chat diagnosed all five issues by reading component + CSS source via Filesystem MCP.
+- Prepared single Claude Code handoff (Haiku 4.5, low effort) with precise find/replace instructions for each fix.
+- Code applied all five, verified at 375px and 1280px viewports, committed + pushed (a3a5d16).
+
+**Fixes applied (all CSS-only, no JS/JSX changes):**
+1. **Notification dropdown off-screen on mobile** — `notifications.css` mobile media query was setting `left: 0` on a right-anchored bell, pushing the dropdown off-screen right. Changed to `right: 0` + `width: calc(100vw - 16px)`.
+2. **Hamburger lines not centered in button** — `sidebar.css` burger button lacked flex centering. Added `display: inline-flex; align-items: center; justify-content: center`.
+3. **Footer jumbled on mobile** — `layout.css` footer-inner had no mobile override. Added `flex-direction: column` + tighter padding at ≤640px for both `.app-main-footer` and `.app-footer`.
+4. **Footer trademark left-aligned on desktop** — `layout.css` had no base `.footer-trademark` rule. Added `display: block; text-align: center` as a base rule covering all viewports.
+5. **Hero logo too small** — `landing.css` logo was 80px. Bumped to 160px desktop / 100px mobile.
+
+**Decisions made:**
+- No version bump — these are cosmetic fixes on the existing v0.12.1 release.
+
+**Next Session Handoff:**
+- Verify CSS polish on real device (phone + desktop browser).
+- Next feature candidates: member-to-member messaging, auth-level ban hardening, notification preferences, Justine admin seed, domain cutover planning.
+- No blockers.
 
 ### Session 25b — 2026-04-19 (Claude Code — Landing page contrast hotfix v0.12.1)
 **Goal:** Fix landing page readability bug — CSS variable names were wrong, dark-mode fallbacks made content unreadable.

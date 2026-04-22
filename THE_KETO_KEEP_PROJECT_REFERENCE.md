@@ -116,7 +116,7 @@ All three co-hosts need full admin access within the platform.
 
 | Artifact | Version | Location | Last Commit |
 |----------|---------|----------|-------------|
-| Frontend app | v0.16.0 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 31 — Phase 5I guide character (Sir Cedric / Lady Elara), onboarding tour, 14 contextual tips, sidebar Guide button, profile guide preferences |
+| Frontend app | v0.16.3 | Cloudflare Workers (keto-keep.rance-8c6.workers.dev) | session 31 — Lady Elara guide system, richer notifications, dashboard redesign, honor lightbox |
 | Supabase schema | v5I (adds profiles.guide_character text + profiles.dismissed_tips text[]) | Supabase project madzamkdedtbfhuesmej (us-east-1) | session 31 — guide character schema |
 | Project reference | canonical in repo | THE_KETO_KEEP_PROJECT_REFERENCE.md (repo root) | session 22 — v0.9.0 owner role + sidebar |
 | Phase 3 schema draft | APPLIED (reference copy) | `Project Reference/PHASE3_SCHEMA_DRAFT.sql` | session 8 — matches applied migration |
@@ -593,6 +593,19 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Honor item hover state + `cursor: pointer`; lightbox CSS classes added to `profiles.css` — session 30.
 - [x] Version bump to v0.15.0 — session 30.
 
+**Phase 5I — Guide Character (Lady Elara)** (deployed sessions 31–31 Bugfix, v0.16.0→v0.16.3)
+- [x] Schema: `guide_character` + `dismissed_tips` columns on profiles — session 31
+- [x] `GuideTooltip` component + `guide.css` — session 31
+- [x] 4-step onboarding tour: Lady Elara intro → dashboard → nav → profile nudge — sessions 31/31-bugfix
+- [x] 14 contextual tips wired across Dashboard, Forums, Events, Courses, Members, Profile, PostComposer, NotificationBell — session 31
+- [x] Sidebar Guide button with page-scoped re-trigger — session 31
+- [x] Profile Edit: guide on/off toggle + Reset Tips button — sessions 31/31-bugfix
+- [x] Simplified to Lady Elara only (removed Sir Cedric / character choice) — session 31 Bugfix
+- [x] Full-body character images (5 poses, 200×400 PNG) — session 31 Bugfix
+- [x] Guide button contrast fix (semi-transparent dark bg, cream text) — session 31 Bugfix
+- [x] Cloudflare build cache fix (case-sensitive Guide/ → guide/ path) — session 31 Bugfix
+- [x] Version bumps: v0.16.0 → v0.16.1 → v0.16.2 → v0.16.3 — sessions 31/31-bugfix
+
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email) — deferred post-launch
 - [x] Replace `window.confirm` / `window.alert` usage with Toast + Modal primitives — session 21 (9 instances across 8 files)
@@ -752,6 +765,8 @@ These patterns were learned through trial and error on the MST project. Follow t
 | 2026-04-21 | Session 31: session-scoped reopen via local Set, not a persisted "reopened_tips" column | When the user clicks the sidebar "Guide" button, we want the tips to reappear *this visit* without undoing all past dismissals. Persisting a reopen state would require clearing it on navigate/reload, which is fragile. A React `useState(new Set())` in `GuideProvider` lives only for the tab's lifetime and resets naturally on reload. `GuideTooltip` checks `isTipReopened(tipId) OR !dismissed` as its visibility condition. |
 | 2026-04-21 | Session 31: extracted `PAGE_TIPS`/`tipsForPath` and `ONBOARDING_STEPS`/`hasActiveOnboardingTour` into dedicated non-component modules | React's `react-refresh/only-export-components` lint rule flags any module that exports both a React component and non-component values (breaks HMR). `GuideProvider.jsx` originally exported `tipsForPath`; `OnboardingTour.jsx` originally exported `ONBOARDING_TIP_IDS`. Split into `tipPageMap.js` and `onboardingHelpers.js` so the component files are component-only. Sidebar imports from `tipPageMap.js`; Dashboard imports from `onboardingHelpers.js`. |
 | 2026-04-21 | Session 31: onboarding tour renders as a centered overlay modal, not inline `GuideTooltip`s | The 3-step welcome tour needs a darkened backdrop and a consistent center position so first-time users can't miss it. Inline tooltips on the dashboard would be visually weaker and would have to jump around the DOM for the "point at the sidebar" step. `OnboardingTour.jsx` mounts `guide-overlay-backdrop` + `guide-tooltip-floating guide-tooltip-pos-center` and uses its own step-tracking state (not `GuideTooltip`). Still writes to the same `dismissed_tips` column so "Skip" and "Got it" persist like any other tip. |
+| 2026-04-21 | Session 31: guide dismissal is fire-and-forget with read-then-merge persistence | `dismissTip()` updates local profile state immediately (instant hide), then reads current `dismissed_tips` from DB, merges the new tipId, and writes back. Avoids race conditions when multiple tips dismiss in quick succession. Pattern matches `notificationHelpers` (side-effect, no await, no UI block on failure). |
+| 2026-04-22 | Session 31 Bugfix: onboarding tour expanded to 4 steps with Lady Elara self-introduction | Step 0 is Lady Elara introducing herself and explaining her role ("Hello, traveler! I'm Lady Elara…"). Steps 1–3 cover dashboard, sidebar navigation, and profile setup. "Skip tour" dismisses all 4 tip IDs at once. Tour only triggers on `/dashboard` exact path. Added during bugfix session after initial 3-step tour was tested in production. |
 | 2026-04-22 | Session 31 Bugfix: simplify to Lady Elara only (drop knight character option) | Initial design offered two characters (Sir Cedric / Lady Elara) to let users pick their guide style. In testing, having two nearly-identical characters created UX friction: more PNGs to maintain (20 instead of 10), Profile Edit complexity (3-option radio), and user confusion ("which is better?"). Feedback: simplify. Lady Elara is now hardcoded; `guide_character` column still allows knight/lady/none values for backward compat, but UI shows only on/off checkbox. If users later request character selection, the DB schema supports it (no migration needed). |
 
 ---
@@ -806,7 +821,7 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5I complete — v0.16.3 pushed to main (bugfix polish)
+**Current Phase:** Phase 5I complete — v0.16.3 pushed. Schema v5I. Lady Elara guide system live with 14 tips + 4-step onboarding. Session 31.
 **Last Updated:** 2026-04-22 (Session 31 Bugfix)
 **Frontend Version:** v0.16.3 — Phase 5I Guide Character (bugfix polish): Lady Elara only (removed knight option); 4-step onboarding intro (self-introduction + welcome + nav + profile); full-body character images (60×120 px, 48×96 mobile); improved sidebar Guide button contrast (semi-transparent dark bg); removed "says…" from character name display; tipsForPath exact match (fixes Guide button on sub-routes); Profile Edit simplified to on/off checkbox.
 **Supabase Schema:** v5I (unchanged) — `guide_character` now defaults to 'lady' (not 'knight'); CHECK constraint still allows knight/lady/none for backward compat.

@@ -3,7 +3,7 @@
 > **This file is the single source of truth for the community platform build.**
 > It must be shared at the start of every new chat session within this project.
 > It must be updated at the end of every session before closing.
-> **Canonical version date:** 2026-04-22 (Session 31 Bugfix — v0.16.3; Guide polish — Lady Elara only, full-body images, 4-step intro)
+> **Canonical version date:** 2026-04-21 (Session 32 — Foundations course seeded; guide button polish deployed)
 
 ---
 
@@ -605,6 +605,16 @@ These patterns were learned through trial and error on the MST project. Follow t
 - [x] Guide button contrast fix (semi-transparent dark bg, cream text) — session 31 Bugfix
 - [x] Cloudflare build cache fix (case-sensitive Guide/ → guide/ path) — session 31 Bugfix
 - [x] Version bumps: v0.16.0 → v0.16.1 → v0.16.2 → v0.16.3 — sessions 31/31-bugfix
+- [x] Guide button contrast fix: `color` changed from `--color-cream` to `--sidebar-text` / `--sidebar-active-text` — no version bump, deployed as commit e6b5f2c
+- [x] Tutorial character image size increased: 60×120 → 80×160 desktop, 48×96 → 60×120 mobile — no version bump, same commit
+
+**Phase 5J — Foundations Course Content Seed** (session 32, DB-only, no version bump)
+- [x] Deleted test module + lesson for Foundations of Ancestral Living — session 32
+- [x] Updated course description — session 32
+- [x] Seeded 7 modules + 21 lessons with full HTML content (markdown → HTML via Node.js/marked seed script, run locally, applied via Supabase MCP) — session 32
+- [x] Verified: 7 modules ✓, 21 lessons ✓, HTML spot-checked ✓, estimated_minutes correct ✓ — session 32
+- [x] Seed script + temp SQL files deleted; marked npm dep removed — session 32
+- [x] CURRENT_BUILD_PLAN.md deleted — session 32
 
 **Phase 5B — later waves**
 - [ ] Member-to-member messaging (approach TBD — in-app DMs vs. email) — deferred post-launch
@@ -821,18 +831,46 @@ Large Claude Code sessions hit context limits and trigger compaction, which can 
 
 ## CURRENT STATUS
 
-**Current Phase:** Phase 5I complete — v0.16.3 pushed. Schema v5I. Lady Elara guide system live with 14 tips + 4-step onboarding. Session 31.
-**Last Updated:** 2026-04-22 (Session 31 Bugfix)
-**Frontend Version:** v0.16.3 — Phase 5I Guide Character (bugfix polish): Lady Elara only (removed knight option); 4-step onboarding intro (self-introduction + welcome + nav + profile); full-body character images (60×120 px, 48×96 mobile); improved sidebar Guide button contrast (semi-transparent dark bg); removed "says…" from character name display; tipsForPath exact match (fixes Guide button on sub-routes); Profile Edit simplified to on/off checkbox.
-**Supabase Schema:** v5I (unchanged) — `guide_character` now defaults to 'lady' (not 'knight'); CHECK constraint still allows knight/lady/none for backward compat.
-**Session 31 Bugfix — Next Session Handoff:**
-- v0.16.3 deployed to Cloudflare. Test: fresh account sees 4-step onboarding with Lady Elara intro. Profile Edit shows simple "Show guide tips" checkbox (Lady Elara only, no character selection). Sidebar Guide button shows only on exact routes where tips render. Full-body character images display at 60×120 px.
-- Next candidates (decide in Chat before Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Justine admin seed, domain cutover planning.
+**Current Phase:** Phase 5J complete — course content seeded (session 32, DB-only). Frontend v0.16.3 + guide button polish live.
+**Last Updated:** 2026-04-21 (Session 32)
+**Frontend Version:** v0.16.3 + guide polish (commit e6b5f2c, no bump) — guide button uses `--sidebar-text` / `--sidebar-active-text` for correct contrast in light + dark mode; Lady Elara tutorial images enlarged to 80×160 px desktop / 60×120 px mobile.
+**Supabase Schema:** v5I — no schema changes this session. Course content seeded: 7 modules + 21 lessons for "Foundations of Ancestral Living" (course ID `00000000-0000-4000-8000-000000000001`).
+**Session 32 — Next Session Handoff:**
+- Course "Foundations of Ancestral Living" is fully live in Supabase. Smoke test: navigate to /courses/foundations, verify 7 modules expand with correct lesson titles and estimated times. Open a lesson — confirm HTML renders (not raw markdown), tables display in lesson 2.2, 🎯 emoji visible in action steps.
+- Guide button contrast and larger character images deployed to Cloudflare (no version bump). Test in light and dark mode.
+- Next candidates (decide in Chat before Code): member-to-member messaging, auth-level ban hardening via Edge Function, notification preferences (opt-out per type), Justine admin seed (jvrbrts@gmail.com), domain cutover planning.
 - No blockers.
 
 ---
 
 ## SESSION LOG
+
+### Session 32 — 2026-04-21 (Claude Code — Course Content Seed, DB-only)
+**Goal:** Replace the single test module/lesson in "Foundations of Ancestral Living" with the full course: 7 modules, 21 lessons, real HTML content converted from `COURSE_CONTENT.md`.
+
+**What was done:**
+- Queried existing test content; confirmed 1 module (display_order 0) with test data.
+- Deleted test lessons + module via Supabase MCP `execute_sql`.
+- Updated course description to the canonical copy from `COURSE_CONTENT.md`.
+- Wrote one-time Node.js seed script (`seed-course.js`) using `marked` npm package to convert each lesson's markdown body to HTML. Script used `crypto.randomUUID()` for IDs, extracted `estimated_minutes` from `**Estimated time:** N min` lines, and generated per-module INSERT batches.
+- Executed 7 module + 7 lesson-batch INSERTs via Supabase MCP (one module at a time to stay within query length limits).
+- Verified: 7 modules ✓, 21 lessons ✓ (3+5+3+3+3+2+2 — build plan said "22" but actual content has 21; reference table was correct), proper HTML in `content_html` ✓, `<table>` elements in lesson 2.2 ✓, 🎯 emoji preserved ✓, `estimated_minutes` correct ✓.
+- Cleaned up: deleted `seed-course.js`, all temp SQL files, uninstalled `marked`.
+- Deleted `CURRENT_BUILD_PLAN.md`.
+- Also deployed in this window (Haiku, no session number): guide button contrast fix (`--sidebar-text` / `--sidebar-active-text` replacing `--color-cream`) + tutorial character images enlarged (80×160 / 60×120). Committed as e6b5f2c, no version bump.
+
+**Decisions made:**
+- 21 lessons is the correct count — the "22" in the build plan was a miscounting error in the spec; the actual reference table had 21 and the content file confirms it.
+- Seed script batched per module (one INSERT per module + one multi-row INSERT for its lessons) — stays within MCP query length limits for the largest module (~15KB for Module 2 with 3 food tables).
+- marked `--no-save` install + `npm uninstall` after ensures no package.json pollution.
+
+**Next Session Handoff:**
+- Smoke test /courses/foundations: 7 modules, lesson HTML renders, tables in 2.2, 🎯 emoji in action steps.
+- Guide button contrast + larger Lady Elara images live on Cloudflare (commit e6b5f2c).
+- Next candidates: messaging, auth-level ban hardening, notification opt-out, Justine admin seed, domain cutover planning.
+- No blockers.
+
+---
 
 ### Session 31 Bugfix — 2026-04-22 (Claude Code — Guide Polish & Simplification, v0.16.1 → v0.16.3)
 **Goal:** Polish Phase 5I guide system based on initial testing — simplify to Lady Elara only, add intro step, improve button contrast, add full-body character images, fix re-trigger bug.

@@ -19,8 +19,7 @@ export default function OnboardingTour() {
   const step = ONBOARDING_STEPS[activeStep];
   if (!step) return null;
 
-  const character = profile?.guide_character || 'knight';
-  const characterName = character === 'lady' ? 'Lady Elara' : 'Sir Cedric';
+  const characterName = 'Lady Elara';
 
   const handleSkip = () => {
     for (const s of ONBOARDING_STEPS) {
@@ -44,7 +43,7 @@ export default function OnboardingTour() {
       >
         <div className="guide-tooltip-bubble">
           <img
-            src={`/guide/guide-${character}-${step.pose}.png`}
+            src={`/guide/guide-lady-${step.pose}.png`}
             alt=""
             className="guide-tooltip-character"
             loading="lazy"

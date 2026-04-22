@@ -18,8 +18,5 @@ export const PAGE_TIPS = {
 
 export function tipsForPath(pathname) {
   if (!pathname) return [];
-  const matchKey = Object.keys(PAGE_TIPS).find(
-    (key) => pathname === key || pathname.startsWith(`${key}/`)
-  );
-  return matchKey ? PAGE_TIPS[matchKey] : [];
+  return PAGE_TIPS[pathname] || [];
 }

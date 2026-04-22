@@ -23,8 +23,7 @@ export default function GuideTooltip({
   const { isTipReopened, clearReopenedTip } = useGuide();
 
   if (!profile) return null;
-  const character = profile.guide_character || 'knight';
-  if (character === 'none') return null;
+  if ((profile.guide_character || 'lady') === 'none') return null;
 
   const dismissed = Array.isArray(profile.dismissed_tips)
     ? profile.dismissed_tips
@@ -34,8 +33,8 @@ export default function GuideTooltip({
   if (alreadyDismissed && !reopened) return null;
 
   const safePose = VALID_POSES.has(pose) ? pose : 'thinking';
-  const src = `/guide/guide-${character}-${safePose}.png`;
-  const characterName = character === 'lady' ? 'Lady Elara' : 'Sir Cedric';
+  const src = `/guide/guide-lady-${safePose}.png`;
+  const characterName = 'Lady Elara';
 
   const handleDismiss = () => {
     if (reopened) {

@@ -50,7 +50,7 @@ export default function OnboardingTour() {
           />
           <div className="guide-tooltip-body">
             <div className="guide-tooltip-name">
-              {characterName} says…
+              {characterName}
               <span className="guide-tour-step">
                 {' '}
                 ({activeStep + 1}/{ONBOARDING_STEPS.length})

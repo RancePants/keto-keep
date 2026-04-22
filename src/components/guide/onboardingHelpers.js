@@ -1,9 +1,15 @@
 export const ONBOARDING_STEPS = [
   {
-    tipId: 'onboarding-welcome',
+    tipId: 'onboarding-intro',
     pose: 'welcome',
     message:
-      "Welcome to The Keep, traveler! This is your Great Hall — your home base. You'll find the latest news, upcoming events, and your learning journey all right here.",
+      "Hello, traveler! I'm Lady Elara, your guide through The Keto Keep. I'll pop up from time to time to help you find your way around the Keep, celebrate your achievements, and share helpful tips. Let's get started!",
+  },
+  {
+    tipId: 'onboarding-welcome',
+    pose: 'pointing',
+    message:
+      "This is your Great Hall — your home base. You'll find the latest news, upcoming events, and your learning journey all right here.",
   },
   {
     tipId: 'onboarding-nav',

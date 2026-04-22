@@ -3,6 +3,7 @@
 // for the current page (session-scoped — not persisted).
 export const PAGE_TIPS = {
   '/dashboard': [
+    'onboarding-intro',
     'onboarding-welcome',
     'onboarding-profile',
     'engage-first-honor',

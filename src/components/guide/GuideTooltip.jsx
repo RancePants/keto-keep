@@ -61,7 +61,7 @@ export default function GuideTooltip({
           loading="lazy"
         />
         <div className="guide-tooltip-body">
-          <div className="guide-tooltip-name">{characterName} says…</div>
+          <div className="guide-tooltip-name">{characterName}</div>
           <div className="guide-tooltip-message">{message || children}</div>
           <div className="guide-tooltip-actions">
             <button
